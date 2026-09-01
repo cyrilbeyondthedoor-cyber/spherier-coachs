@@ -29,6 +29,7 @@
     --d-accent: #d97a4a;
     --diff-1: #7c9c6e;
     --diff-2: #d08b3f;
+    --diff-3: #a6789a;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -38,7 +39,7 @@
     background: var(--night-deep);
     color: var(--paper);
     line-height: 1.5;
-    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   .cosmos {
@@ -186,6 +187,15 @@
   /* DIMENSIONS */
   .dimensions { display: flex; flex-direction: column; gap: 12px; }
   .dimensions[hidden] { display: none; }
+  .categorie-dimensions + .categorie-dimensions { margin-top: 22px; }
+  .categorie-dimensions-titre {
+    margin: 0 2px 10px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 14px;
+    font-style: italic;
+    color: var(--paper-dim);
+  }
+  .categorie-dimensions-liste { display: flex; flex-direction: column; gap: 12px; }
 
   .dimension {
     border: 1px solid var(--line-faint);
@@ -845,6 +855,25 @@
   .syn-vide { font-family: 'Cormorant Garamond', serif; font-style: italic;
     font-size: 13.5px; color: var(--stone); padding: 22px 2px; }
 
+  .syn-maitrise {
+    margin: 18px 0 16px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .syn-maitrise-item {
+    padding: 13px 14px 12px;
+    border: 1px solid color-mix(in srgb, var(--dc) 34%, transparent);
+    border-radius: 11px;
+    background: color-mix(in srgb, var(--dc) 7%, transparent);
+  }
+  .syn-maitrise-tete { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  .syn-maitrise-nom { font-family: 'Cormorant Garamond', serif; font-size: 15px; color: var(--paper); }
+  .syn-maitrise-score { font-size: 11px; color: var(--paper-dim); font-variant-numeric: tabular-nums; }
+  .syn-maitrise-barre { height: 5px; margin-top: 10px; border-radius: 999px; overflow: hidden; background: var(--line-faint); }
+  .syn-maitrise-barre i { display: block; height: 100%; border-radius: inherit; background: var(--dc); }
+  .syn-maitrise-detail { margin-top: 7px; font-size: 10.5px; color: var(--stone); }
+
   .syn-dim + .syn-dim { margin-top: 10px; }
   .syn-ligne {
     display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px 12px;
@@ -900,70 +929,35 @@
   .ciel { position: relative; }
   .ciel[hidden], .detail[hidden] { display: none; }
 
-  .ciel-piste {
-    /* La carte n'est pas du texte : elle déborde la colonne de lecture plutôt que
-       d'amputer la dimension la plus large. « Moi et les autres » mesure 973 px, contre
-       892 px de colonne ; la resserrer pour l'y faire entrer ramènerait son plus petit
-       écart entre libellés à 30 unités, là où « Moi », validé tel quel, en garde 53.
-       C'est donc le cadre qui s'élargit, pas la géométrie du référentiel.
-       Débordement symétrique et borné au viewport : la page ne défile jamais de côté. */
-    width: min(1240px, 100vw - 16px);
-    margin-left: calc(50% - min(620px, 50vw - 8px));
-    display: flex; align-items: stretch; gap: 0;
-    overflow-x: auto; overflow-y: hidden;
-    padding-bottom: 10px;
-    scrollbar-width: thin; scrollbar-color: rgba(240,235,224,.18) transparent;
-    scroll-snap-type: x proximity;
+  .ciel-piste { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .ciel-categorie {
+    min-width: 0;
+    border: 1px solid var(--line-faint);
+    border-radius: 16px;
+    background: rgba(240,235,224,.025);
+    padding: 20px;
   }
-  .ciel-piste::-webkit-scrollbar { height: 5px; }
-  .ciel-piste::-webkit-scrollbar-thumb { background: rgba(240,235,224,.18); border-radius: 3px; }
-
-  .ciel-bloc { flex: 0 0 auto; scroll-snap-align: center; padding: 0 8px; }
-  .ciel-tete { text-align: center; padding: 4px 0 14px; }
-  .ciel-nom {
-    display: inline-flex; align-items: center; gap: 11px;
-    background: none; border: none; cursor: pointer; padding: 0;
-    font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 24px;
-    color: var(--paper); transition: color .25s ease;
+  .ciel-categorie-titre {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1.15;
   }
-  .ciel-nom:hover { color: var(--h); }
-  .ciel-nom i { width: 11px; height: 11px; border-radius: 50%; background: var(--h);
-    box-shadow: 0 0 14px var(--h); flex-shrink: 0; }
-  .ciel-compte {
-    display: block; margin-top: 5px;
-    font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--stone);
+  .ciel-categorie-def { margin-top: 8px; font-size: 12.5px; line-height: 1.55; color: var(--stone); }
+  .ciel-categorie-dims { display: grid; gap: 8px; margin-top: 18px; }
+  .ciel-dimension {
+    width: 100%; min-height: 72px; padding: 12px 13px;
+    display: grid; grid-template-columns: 11px 1fr; gap: 3px 11px; align-items: center;
+    border: 1px solid color-mix(in srgb, var(--h) 28%, transparent);
+    border-radius: 11px; background: color-mix(in srgb, var(--h) 5%, transparent);
+    color: inherit; font: inherit; text-align: left; cursor: pointer;
+    transition: transform .18s cubic-bezier(.23,1,.32,1), border-color .18s ease, background .18s ease;
   }
-  /* Visé sur la seule constellation : un `svg` non qualifié étirait aussi les petits
-     repères de 20 px qu'on dessine ailleurs dans la carte. */
-  .ciel-carte > svg.constellation { width: 100%; height: auto; display: block; }
-
-
-  /* Entrée de bloc : au premier jour, tout est éteint — c'est elle qui doit donner
-     envie de commencer plutôt que de laisser face à un vide. Elle est donc placée sous
-     le compteur, dans le premier écran : au pied du bloc, elle tombait à neuf cents
-     pixels de là, invisible précisément quand elle sert le plus. */
-  .ciel-cta {
-    margin-top: 12px;
-    display: inline-flex; align-items: center; gap: 9px;
-    padding: 10px 20px; border-radius: 999px; cursor: pointer;
-    border: 1px solid color-mix(in srgb, var(--h) 50%, transparent);
-    background: color-mix(in srgb, var(--h) 12%, transparent);
-    color: var(--paper); font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 14px;
-    transition: all .25s ease;
-  }
-  .ciel-cta:hover { background: color-mix(in srgb, var(--h) 24%, transparent); }
-  .ciel-cta.discret {
-    border-color: var(--line-faint); background: rgba(240,235,224,.03); color: var(--paper-dim);
-  }
-  .ciel-cta.discret:hover { border-color: var(--line); color: var(--paper); }
-
-  /* Fil entre les blocs : purement visuel, aucune sémantique d'ouverture. */
-  /* Le fil est purement décoratif : sa largeur ne porte aucun sens, on peut donc la
-     dépenser. Elle sert à égaliser ce que MONTRE chaque amorce latérale — voir
-     LARGEURS_FIL. */
-  .ciel-lien { flex: 0 0 auto; width: var(--fil, 96px); display: flex; align-items: center; }
-  .ciel-lien svg { width: 100%; height: 120px; overflow: visible; }
-  .ciel-lien path { fill: none; stroke: var(--paper); stroke-opacity: .13; stroke-width: 1.2; stroke-dasharray: 4 8; }
+  .ciel-dimension:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--h) 58%, transparent); background: color-mix(in srgb, var(--h) 10%, transparent); }
+  .ciel-dimension:active { transform: scale(.98); }
+  .ciel-dimension i { grid-row: 1 / 3; width: 9px; height: 9px; border-radius: 50%; background: var(--h); box-shadow: 0 0 11px color-mix(in srgb, var(--h) 70%, transparent); }
+  .ciel-dimension-nom { font-family: 'Cormorant Garamond', serif; font-size: 16px; line-height: 1.2; }
+  .ciel-dimension-compte { font-size: 10px; color: var(--stone); font-variant-numeric: tabular-nums; }
 
   .ciel-guide {
     text-align: center; margin-top: 6px;
@@ -985,6 +979,7 @@
        y est l'accordéon replié, et c'est l'en-tête d'une dimension qui la referme. */
     .detail-retour { display: none; }
     .ciel { display: none; }
+    .syn-maitrise { grid-template-columns: 1fr; }
   }
 
   @media (max-width: 640px) {
@@ -1031,7 +1026,7 @@
       <div class="brand-mark"></div>
       <div class="brand-text">
         Les Sommets
-        <small>Club de Dev Perso</small>
+        <small>Club de coachs</small>
       </div>
     </div>
     <div class="header-etat" id="header-etat" hidden>
@@ -1133,10 +1128,9 @@
   const TEINTES_HEX = {};
   const DIFFICULTES = {};
   let MAX_MAINTENANT = 3;
-  let NIVEAU_ACQUIS = 2;
-  let ORDRE_CIEL = null;
-  let CIEL_CENTRE = null;
-  let LARGEURS_FIL = {};
+  let NIVEAU_ACQUIS = 3;
+  let CATEGORIES = [];
+  let DIFFICULTES_ORDRE = [];
 
   function appliquerConfigClub(referentiel) {
     const racine = document.documentElement;
@@ -1157,27 +1151,24 @@
       racine.style.setProperty(cle, d.couleur);
       DIFFICULTES[d.nom] = { couleur: `var(${cle})`, hex: d.couleur };
     });
+    DIFFICULTES_ORDRE = referentiel.difficulties || [];
+    CATEGORIES = referentiel.categories || [];
 
     // La phrase d'accueil annonce le nombre de dimensions : elle ne peut pas dire
     // « Trois » en dur, une autre instance n'en aura pas trois.
     const intro = document.getElementById('titre-intro');
-    const combien = referentiel.dimensions.length;
+    const combien = CATEGORIES.length || referentiel.dimensions.length;
     const enLettres = { 1: 'Une', 2: 'Deux', 3: 'Trois', 4: 'Quatre', 5: 'Cinq', 6: 'Six' }[combien] || String(combien);
     if (intro) {
       intro.textContent = combien === 1
         ? "Une dimension à explorer. Ouvre-la pour découvrir ses thématiques et t'y évaluer."
-        : `${enLettres} dimensions à explorer. Ouvre celle qui t'appelle pour découvrir ses thématiques et t'y évaluer.`;
+        : CATEGORIES.length
+          ? `${enLettres} territoires à explorer. Choisis celui qui t'appelle, puis une dimension pour commencer.`
+          : `${enLettres} dimensions à explorer. Ouvre celle qui t'appelle pour découvrir ses thématiques et t'y évaluer.`;
     }
 
     MAX_MAINTENANT = referentiel.limites?.maxCiblesMaintenant ?? MAX_MAINTENANT;
     NIVEAU_ACQUIS = referentiel.limites?.niveauAcquis ?? NIVEAU_ACQUIS;
-
-    // Ciel : ordre visuel et bloc centré. Sans configuration, on retombe sur l'ordre
-    // canonique et le premier bloc — ce qui reste juste pour une instance qui n'aurait
-    // pas trois dimensions disposées autour d'un centre.
-    ORDRE_CIEL = referentiel.ciel?.ordre ?? null;
-    CIEL_CENTRE = referentiel.ciel?.centre ?? referentiel.dimensions[0]?.id ?? null;
-    LARGEURS_FIL = referentiel.ciel?.largeursFil ?? {};
 
     // Les filtres de difficulté de la vue d'ensemble sont eux aussi engendrés.
     (referentiel.difficulties || []).forEach((d) => {
@@ -1292,9 +1283,7 @@
   }
 
   function rendreDimensions() {
-    // L'ordre d'affichage est celui du serveur : Intériorité, Alignement, Communication,
-    // Relations, Trajectoire.
-    elDimensions.innerHTML = etat.referentiel.dimensions.map((d) => {
+    const carteDimension = (d) => {
       const themes = etat.referentiel.themes.filter((t) => t.dimension === d.name);
       const competences = competencesDeDimension(d);
       return `
@@ -1323,6 +1312,18 @@
           </div>
         </section>
       `;
+    };
+
+    const categories = CATEGORIES.length
+      ? CATEGORIES
+      : [{ id: 'TOUT', name: '', dimensions: etat.referentiel.dimensions.map((d) => d.id) }];
+    elDimensions.innerHTML = categories.map((categorie) => {
+      const dimensions = etat.referentiel.dimensions.filter((d) => d.category === categorie.id || categorie.id === 'TOUT');
+      if (!dimensions.length) return '';
+      return `<section class="categorie-dimensions">
+        ${categorie.name ? `<h2 class="categorie-dimensions-titre">${echapper(categorie.name)}</h2>` : ''}
+        <div class="categorie-dimensions-liste">${dimensions.map(carteDimension).join('')}</div>
+      </section>`;
     }).join('');
 
     elDimensions.querySelectorAll('[data-toggle]').forEach((btn) => {
@@ -1999,7 +2000,6 @@
         <div>
           <p class="marche-palier">${echapper(etat.referentiel.scale[n])}
             ${n === niveau ? '<span class="marche-vous">Ton niveau</span>' : ''}</p>
-          <p class="marche-enonce">${echapper(competence.statements[n] || '')}</p>
         </div>
       </button>`;
     }).join('');
@@ -2011,6 +2011,8 @@
         : 'Tu es à la marche la plus haute. Reclique dessus pour revenir en arrière.');
 
     return `<section class="panneau-section">
+      ${competence.markers ? `<p class="panneau-label">Marqueurs observables</p>
+        <p class="marche-enonce" style="white-space:pre-line;margin-bottom:18px">${echapper(competence.markers)}</p>` : ''}
       <p class="panneau-label">Où tu en es</p>
       <div class="escalier">${marches}</div>
       <p class="escalier-note">${note}</p>
@@ -2350,7 +2352,8 @@
         <p class="situer-fil">${echapper(theme ? theme.name : '')}</p>
         <h2 class="situer-nom" id="panneau-titre">${echapper(c.name)}</h2>
         ${pastilleDifficulte(c)}
-        ${c.definition ? `<p class="situer-def">${echapper(c.definition)}</p>` : ''}
+        ${(c.statement || c.definition) && (c.statement || c.definition) !== c.name
+          ? `<p class="situer-def">${echapper(c.statement || c.definition)}</p>` : ''}
         <div style="margin-top:18px">${escalier(c, niveau, situer.teinte)}</div>
         <div class="situer-pied">
           <button type="button" class="situer-btn" id="situer-precedent" ${situer.index === 0 ? 'disabled' : ''}>← Précédente</button>
@@ -2524,6 +2527,21 @@
         ${echapper(f.libelle)}<span class="n">${n}</span></button>`;
     }).join('');
 
+    const maitrise = DIFFICULTES_ORDRE.map((d) => {
+      const comps = etat.referentiel.competencies.filter((c) => c.difficulty === d.nom);
+      const evaluees = comps.filter((c) => (brouillon.levels[c.id] ?? 0) > 0).length;
+      const maitrisees = comps.filter((c) => (brouillon.levels[c.id] ?? 0) >= NIVEAU_ACQUIS).length;
+      const pct = comps.length ? Math.round((maitrisees / comps.length) * 100) : 0;
+      return `<article class="syn-maitrise-item" style="--dc:${echapper(d.couleur)}">
+        <div class="syn-maitrise-tete">
+          <span class="syn-maitrise-nom">${echapper(d.nom)}</span>
+          <span class="syn-maitrise-score">${maitrisees}/${comps.length}</span>
+        </div>
+        <div class="syn-maitrise-barre" role="progressbar" aria-label="${echapper(d.nom)} maîtrisé à ${pct} %" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div>
+        <p class="syn-maitrise-detail">${pct} % maîtrisées · ${evaluees}/${comps.length} évaluées</p>
+      </article>`;
+    }).join('');
+
     elPanneauTete.innerHTML = `
       <p class="panneau-fil"><b>Vue d'ensemble</b></p>
       <h2 class="panneau-titre" id="panneau-titre">Où j'en suis</h2>
@@ -2576,7 +2594,8 @@
       </section>`;
     }).join('');
 
-    elPanneauCorps.innerHTML = actionSituer
+    elPanneauCorps.innerHTML = `<section class="syn-maitrise" aria-label="Progression par niveau de difficulté">${maitrise}</section>`
+      + actionSituer
       + (corps || `<p class="syn-vide">Aucune compétence ne correspond à ce croisement de filtres.</p>`);
     elPanneauCorps.scrollTop = 0;
 
@@ -2684,7 +2703,8 @@
       ${retour ? `<button type="button" class="panneau-retour" id="panneau-retour">← ${echapper(theme ? theme.name : '')}</button>` : ''}
       <p class="panneau-fil">${echapper(dimension ? dimension.name : '')} <span>›</span> <b>${echapper(theme ? theme.name : '')}</b></p>
       <h2 class="panneau-titre" id="panneau-titre">${echapper(competence.name)}</h2>
-      ${competence.definition ? `<p class="panneau-def">${echapper(competence.definition)}</p>` : ''}
+      ${(competence.statement || competence.definition) && (competence.statement || competence.definition) !== competence.name
+        ? `<p class="panneau-def">${echapper(competence.statement || competence.definition)}</p>` : ''}
       ${pastilleDifficulte(competence, 'panneau-diff')}
     `;
     elPanneauCorps.innerHTML = escalier(competence, niveau, teinte)
@@ -2902,194 +2922,48 @@
     return { codes, situees: codes.filter((c) => (brouillon.levels[c] ?? 0) > 0).length };
   }
 
-  // Largeur du fil décoratif, de part et d'autre de « Moi ».
-  //
-  // « Moi » est centré, donc chaque côté dispose de la même place ; mais à place égale
-  // les deux voisines ne montrent PAS la même chose. Le bord droit de « Moi et les
-  // autres » est clairsemé là où le bord gauche de « Moi et le monde » est dense : à
-  // 295 px chacune, on lisait 3 thématiques à gauche contre 7 à droite, ce qui donnait
-  // l'impression fausse d'un sphérier déséquilibré.
-  //
-  // Le fil ne portant aucun sens, sa largeur est le seul réglage libre. On la dépense
-  // pour égaliser ce que révèle chaque amorce : 5 thématiques entières de chaque côté.
-  // Mesuré sur le rendu — il faut 328 px de AUT et 292 px de MON pour en montrer cinq,
-  // et chaque côté dispose de 388 px sur une piste de 1240. À refaire si la police de
-  // la constellation ou les positions changent : ces largeurs en dépendent.
-  // Fil décoratif entre deux blocs. Il ne dit rien de l'ouverture : la filiation reste
-  // interne à chaque dimension. Il est là pour que le ciel se lise comme une carte
-  // unique plutôt que comme trois pages côte à côte.
-  //
-  // `voisine` est la dimension située du côté extérieur du fil, c'est-à-dire celle dont
-  // ce fil règle l'amorce.
-  function filEntreBlocs(voisine) {
-    const largeur = LARGEURS_FIL[voisine];
-    return `<div class="ciel-lien" aria-hidden="true"${largeur ? ` style="--fil:${largeur}px"` : ''}>
-      <svg viewBox="0 0 100 120" preserveAspectRatio="none">
-        <path d="M0,60 C34,26 66,94 100,60"/>
-      </svg>
-    </div>`;
-  }
-
-  // Ordre VISUEL du ciel, délibérément distinct de l'ordre canonique du référentiel.
-  //
-  // « Moi » est le centre du modèle : les deux autres dimensions sont nommées par
-  // rapport à lui. Une disposition radiale dit cette structure ; une disposition
-  // linéaire suggérerait un ordre de lecture qui n'existe pas.
-  //
-  // Cet ordre ne vaut QUE pour le ciel. L'API, la vue d'ensemble, le parcours
-  // « M'évaluer » et la navigation par dimension gardent l'ordre canonique
-  // Moi · Moi et les autres · Moi et le monde, qui reste porté par
-  // `etat.referentiel.dimensions` et n'est modifié nulle part.
-  function dimensionsDuCiel() {
-    // Sans ordre visuel configuré, le ciel suit l'ordre canonique.
-    if (!ORDRE_CIEL) return etat.referentiel.dimensions.slice();
-    const parId = new Map(etat.referentiel.dimensions.map((d) => [d.id, d]));
-    // Une dimension qui ne serait pas dans l'ordre du ciel reste affichée, à la suite :
-    // le ciel ne doit jamais escamoter une dimension que le référentiel déclare.
-    return [
-      ...ORDRE_CIEL.map((id) => parId.get(id)).filter(Boolean),
-      ...etat.referentiel.dimensions.filter((d) => !ORDRE_CIEL.includes(d.id)),
-    ];
-  }
-
   function rendreCiel() {
-    // Sur mobile le ciel n'est jamais affiché : trois constellations dessinées pour
-    // rien coûteraient un temps de rendu sensible sur téléphone. Il sera dessiné si
-    // l'écran s'élargit — voir l'écoute de `requeteMobile`.
+    // Sur mobile, l'accueil par catégories est remplacé par les dimensions en accordéon.
+    // Il sera redessiné si l'écran s'élargit, voir l'écoute de `requeteMobile`.
     if (surMobile()) return;
 
-    const ordreVisuel = dimensionsDuCiel();
-    const blocs = ordreVisuel.map((d) => {
-      const { codes, situees } = situeesDe(d);
-      const teinte = TEINTES_HEX[d.id];
-      const vierge = situees === 0;
-      return `<section class="ciel-bloc" data-bloc="${echapper(d.id)}" style="--h:${teinte}">
-        <div class="ciel-tete">
-          <button type="button" class="ciel-nom" data-ouvrir="${echapper(d.id)}">
-            <i></i>${echapper(d.name)}
-          </button>
-          <span class="ciel-compte">${vierge ? `${codes.length} compétences` : `${situees} / ${codes.length} évaluées`}</span>
-          <button type="button" class="ciel-cta${vierge ? '' : ' discret'}" data-situer-ciel="${echapper(d.id)}">
-            ${vierge ? 'Commencer par ici' : "Continuer à m'évaluer"}
-          </button>
-        </div>
-        <div class="ciel-carte" data-ciel-carte="${echapper(d.id)}"></div>
+    const categories = CATEGORIES.length
+      ? CATEGORIES
+      : [{ id: 'TOUT', name: 'Mes dimensions', definition: '' }];
+    elCielPiste.innerHTML = categories.map((categorie) => {
+      const dimensions = etat.referentiel.dimensions.filter((d) => d.category === categorie.id || categorie.id === 'TOUT');
+      const boutons = dimensions.map((d) => {
+        const { codes, situees } = situeesDe(d);
+        const compte = situees === 0 ? `${codes.length} compétences` : `${situees}/${codes.length} évaluées`;
+        return `<button type="button" class="ciel-dimension" data-ouvrir="${echapper(d.id)}" style="--h:${TEINTES_HEX[d.id]}">
+          <i></i><span class="ciel-dimension-nom">${echapper(d.name)}</span><span class="ciel-dimension-compte">${compte}</span>
+        </button>`;
+      }).join('');
+      return `<section class="ciel-categorie">
+        <h2 class="ciel-categorie-titre">${echapper(categorie.name)}</h2>
+        ${categorie.definition ? `<p class="ciel-categorie-def">${echapper(categorie.definition)}</p>` : ''}
+        <div class="ciel-categorie-dims">${boutons}</div>
       </section>`;
-    });
-
-    // Chaque fil est réglé par la dimension qu'il borde du côté extérieur : c'est
-    // l'amorce de celle-là qu'il découvre ou qu'il masque.
-    elCielPiste.innerHTML = blocs.reduce((html, bloc, i) => {
-      if (i === 0) return bloc;
-      const a = ordreVisuel[i - 1];
-      const b = ordreVisuel[i];
-      const exterieure = (a.id === CIEL_CENTRE) ? b.id : a.id;
-      return html + filEntreBlocs(exterieure) + bloc;
-    }, '');
-
-    ordreVisuel.forEach((d) => {
-      const carte = elCielPiste.querySelector(`[data-ciel-carte="${d.id}"]`);
-      rendreConstellation(d.id, carte, { avecLegende: false });
-      // Le bloc doit prendre la largeur de SA constellation. Un SVG en width:100% dans
-      // un parent de largeur automatique est circulaire : on fixe donc la largeur du
-      // conteneur d'après la géométrie calculée, pour que chaque dimension occupe son
-      // emprise propre et garde ses libellés lisibles.
-      const svg = carte.querySelector('svg');
-      if (svg) {
-        carte.style.width = svg.style.minWidth || `${Math.round(svg.viewBox.baseVal.width * ECHELLE_MINI)}px`;
-        svg.style.minWidth = '';
-      }
-    });
-
-    // Depuis le ciel, une thématique mène au détail de sa dimension plutôt que
-    // d'ouvrir un panneau : on plonge, on ne consulte pas de biais.
-    elCielPiste.querySelectorAll('.theme[data-theme]').forEach((g) => {
-      const bloc = g.closest('[data-bloc]');
-      const nouveau = g.cloneNode(true);
-      g.replaceWith(nouveau);
-      nouveau.addEventListener('click', () => ouvrirDetail(bloc.dataset.bloc, nouveau.dataset.theme));
-    });
-    elCielPiste.querySelectorAll('.etoile[data-competence]').forEach((g) => {
-      const bloc = g.closest('[data-bloc]');
-      const nouveau = g.cloneNode(true);
-      g.replaceWith(nouveau);
-      nouveau.addEventListener('click', (e) => {
-        e.stopPropagation();
-        ouvrirDetail(bloc.dataset.bloc);
-        ouvrirCompetence(nouveau.dataset.competence, bloc.dataset.bloc);
-      });
-    });
+    }).join('');
 
     elCielPiste.querySelectorAll('[data-ouvrir]').forEach((btn) => {
       btn.addEventListener('click', () => ouvrirDetail(btn.dataset.ouvrir));
     });
-    elCielPiste.querySelectorAll('[data-situer-ciel]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const d = etat.referentiel.dimensions.find((x) => x.id === btn.dataset.situerCiel);
-        const codes = codesDeDimension(d);
-        ouvrirMeSituer({
-          codes, titre: d.name, teinte: TEINTES_HEX[d.id], depart: premiereNonSituee(codes),
-        });
-      });
-    });
-
     const total = etat.referentiel.competencies.length;
     const situeesTotal = etat.referentiel.competencies.filter((c) => (brouillon.levels[c.id] ?? 0) > 0).length;
     elCielGuide.textContent = situeesTotal === 0
       ? 'Rien n’est encore allumé. Choisis une dimension et pose un premier repère : chaque étoile s’éclaire à mesure que tu t’évalues.'
       : `${situeesTotal} étoiles allumées sur ${total}. Touche une thématique pour entrer dedans.`;
 
-    centrerCielSurMoi();
   }
-
-  // Point d'ancrage horizontal d'un bloc dans la piste : le milieu de ses thématiques
-  // RACINES, et non le milieu géométrique de sa boîte. Sur desktop les deux coïncident
-  // presque. Sur mobile, où un bloc est plus large que la piste, c'est la différence
-  // entre s'ouvrir sur les thématiques par lesquelles on peut commencer et s'ouvrir sur
-  // une zone verrouillée. Même raisonnement que pour l'ouverture d'une constellation.
-  function ancreHorizontale(bloc, idDimension) {
-    const centreBoite = bloc.offsetLeft + bloc.offsetWidth / 2;
-    const dimension = etat.referentiel.dimensions.find((d) => d.id === idDimension);
-    const svg = bloc.querySelector('svg.constellation');
-    if (!dimension || !svg) return centreBoite;
-
-    const themes = etat.referentiel.themes.filter((t) => t.dimension === dimension.name);
-    const racines = themes.filter((t) => !themes.some((o) => o.feeds.includes(t.id)));
-    if (racines.length === 0) return centreBoite;
-
-    const vb = svg.viewBox.baseVal;
-    const rSvg = svg.getBoundingClientRect();
-    if (rSvg.width === 0) return centreBoite;
-    const echelle = rSvg.width / vb.width;
-    const centre = racines.reduce((somme, t) => somme + t.x, 0) / racines.length;
-    // Coordonnée dans le repère défilant de la piste, indépendante de l'offsetParent.
-    return (rSvg.left - elCielPiste.getBoundingClientRect().left)
-      + elCielPiste.scrollLeft + (centre - vb.x) * echelle;
-  }
-
-  // Le ciel s'ouvre centré sur « Moi », qui est le centre du modèle : les deux autres
-  // dimensions sont nommées par rapport à lui. Le défilement part donc du milieu, avec
-  // une amorce de chaque côté, et non d'un bord.
-  function centrerCielSurMoi() {
-    if (!CIEL_CENTRE) return;
-    const bloc = elCielPiste.querySelector(`[data-bloc="${CIEL_CENTRE}"]`);
-    if (!bloc) return;
-    const x = ancreHorizontale(bloc, CIEL_CENTRE);
-    elCielPiste.scrollLeft = Math.max(0, Math.min(x - elCielPiste.clientWidth / 2,
-      elCielPiste.scrollWidth - elCielPiste.clientWidth));
-  }
-
 
   // ============================================================
   // NAVIGATION ENTRE LES DEUX LIEUX
   // ============================================================
   // Le ciel est une vue DESKTOP, et seulement celle-là.
   //
-  // Sur téléphone la piste fait moins de 400 px là où le seul bloc « Moi » en réclame
-  // 464 pour garder ses libellés lisibles : aucune amorce latérale n'y tient, ni trois
-  // ni deux, et la disposition radiale ne dit donc rien qu'on puisse voir. L'accueil
-  // mobile est la navigation par dimension, accordéon entièrement replié : les trois
-  // portes l'une sous l'autre, chacune avec son nom, son compte et son entrée.
+  // L'accueil mobile est la navigation par dimension, regroupée sous les trois
+  // catégories et entièrement repliée.
   //
   // Les deux accueils restent la même VUE (`etat.vue === 'ciel'`) : c'est le lieu où
   // l'on revient, quel que soit l'écran qui le dessine.
@@ -3111,7 +2985,7 @@
 
     elDetail.hidden = true;
     elCiel.hidden = false;
-    requestAnimationFrame(centrerCielSurMoi);
+    window.scrollTo({ top: 0, behavior: 'auto' });
   }
 
   // Passer d'un format à l'autre — rotation, fenêtre redimensionnée — doit redessiner

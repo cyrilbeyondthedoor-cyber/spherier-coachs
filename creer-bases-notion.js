@@ -61,10 +61,21 @@ const THEMES = {
 const COMPETENCES = (idThemes) => ({
   Name: { title: {} },
   Code: { rich_text: {} },
+  'ID source': { rich_text: {} },
   Description: { rich_text: {} },
   'Énoncé N1': { rich_text: {} },
   'Énoncé N2': { rich_text: {} },
   'Énoncé N3': { rich_text: {} },
+  Marqueurs: { rich_text: {} },
+  Revue: {
+    select: {
+      options: [
+        { name: 'OK', color: 'green' },
+        { name: 'À revoir', color: 'red' },
+        { name: 'Marqueurs à revoir', color: 'yellow' },
+      ],
+    },
+  },
   // Les noms d'options doivent correspondre aux `nom` de DIFFICULTES dans
   // club.config.js. Renommer une option depuis l'interface Notion en
   // redéfinissant la liste EFFACE toutes les valeurs assignées : passer par
@@ -72,8 +83,9 @@ const COMPETENCES = (idThemes) => ({
   'Difficulté': {
     select: {
       options: [
-        { name: 'Fondamental', color: 'green' },
-        { name: 'Avancé', color: 'orange' },
+        { name: 'Socle fondamental', color: 'green' },
+        { name: 'TTC', color: 'orange' },
+        { name: 'A-player', color: 'purple' },
       ],
     },
   },
@@ -129,7 +141,8 @@ async function creerBase(nom, proprietes) {
   const base = await notion.databases.create({
     parent: { type: 'page_id', page_id: PARENT },
     title: titre(nom).title,
-    properties: proprietes,
+    is_inline: false,
+    initial_data_source: { properties: proprietes },
   });
   // Depuis l'API 2025-09-03, les propriétés vivent sur la « data source » de la
   // base. C'est cet identifiant qu'il faut pour déclarer une relation.
@@ -152,10 +165,10 @@ async function principal() {
   const competences = await creerBase('⚒️ Compétences', COMPETENCES(themes.dsId));
 
   // 3. Ressources, avec ses deux relations duales.
-  await creerBase('📋 Ressources', RESSOURCES(themes.dsId, competences.dsId));
+  const ressources = await creerBase('📋 Ressources', RESSOURCES(themes.dsId, competences.dsId));
 
   // 4. Clients.
-  await creerBase('Clients', CLIENTS);
+  const clients = await creerBase('Clients', CLIENTS);
 
   // 5. La relation réflexive de Thèmes, en second temps — voir le piège 2.
   //    « Nourrit » signifie « travailler ici éclaire là-bas ». C'est le graphe de
@@ -187,7 +200,8 @@ async function principal() {
   console.log('\n=== À reporter dans les variables d\'environnement Netlify ===');
   console.log(`DB_THEMES=${themes.id}`);
   console.log(`DB_COMPETENCES=${competences.id}`);
-  console.log('DB_RESSOURCES=<affiché ci-dessus pour 📋 Ressources>');
+  console.log(`DB_RESSOURCES=${ressources.id}`);
+  console.log(`DB_CLIENTS=${clients.id} (pilotage uniquement, non requis par Netlify)`);
   console.log('\nEt à faire ensuite, à la main :');
   console.log('  1. Partager les QUATRE bases avec l\'intégration (••• > Connexions).');
   console.log('     C\'est Clients qu\'on avait oubliée la première fois.');
@@ -195,7 +209,11 @@ async function principal() {
   console.log('     avec EXACTEMENT les `name` déclarés dans club.config.js.');
 }
 
-principal().catch((err) => {
-  console.error('ÉCHEC :', err.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  principal().catch((err) => {
+    console.error('ÉCHEC :', err.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { THEMES, COMPETENCES, RESSOURCES, CLIENTS };

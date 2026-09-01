@@ -1,7 +1,7 @@
 require('dotenv').config({ quiet: true });
 
 const { Client, collectPaginatedAPI } = require('@notionhq/client');
-const { DIMENSIONS, ECHELLE, VERSION_REFERENTIEL, DIFFICULTES, CIEL,
+const { CATEGORIES, DIMENSIONS, ECHELLE, VERSION_REFERENTIEL, DIFFICULTES,
         MAX_CIBLES_MAINTENANT, NIVEAU_ACQUIS, CLUB, verifierClub } = require('./club.config.js');
 
 const { NOTION_TOKEN, DB_THEMES, DB_COMPETENCES, DB_RESSOURCES } = process.env;
@@ -160,12 +160,9 @@ async function lireReferentielDepuisNotion() {
         theme: themesLies[0] ?? null,
         name: texte(p, 'Name'),
         definition: texte(p, 'Description'),
-        statements: {
-          1: texte(p, 'Énoncé N1'),
-          2: texte(p, 'Énoncé N2'),
-          3: texte(p, 'Énoncé N3'),
-        },
-        // Fondamental / Avancé, pour la pastille de difficulté.
+        statement: texte(p, 'Énoncé N1') || texte(p, 'Description'),
+        markers: texte(p, 'Marqueurs'),
+        // Socle fondamental / TTC / A-player, pour la pastille de difficulté.
         difficulty: selection(p, 'Difficulté') || null,
         // Rang d'affichage DANS la thématique. Les codes restent des identifiants
         // permanents : on insère une compétence en lui donnant un rang intermédiaire,
@@ -193,7 +190,7 @@ async function lireReferentielDepuisNotion() {
     // ou renommer un palier ne demande alors de toucher qu'à club.config.js.
     difficulties: DIFFICULTES,
     limites: { maxCiblesMaintenant: MAX_CIBLES_MAINTENANT, niveauAcquis: NIVEAU_ACQUIS },
-    ciel: CIEL,
+    categories: CATEGORIES,
     dimensions: DIMENSIONS,
     themes,
     competencies,

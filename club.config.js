@@ -74,30 +74,80 @@ const VERSION_REFERENTIEL = 1;
 // `couleur` est la teinte de la dimension. Elle voyage jusqu'au navigateur, qui en
 // fabrique ses variables CSS : aucun identifiant de dimension n'est écrit dans la
 // feuille de style.
-const DIMENSIONS = [
-  // ---------------------------------------------------------------------------
-  // À REMPLACER par les dimensions du club de coachs.
-  //
-  // Ce qui compte :
-  //   `id`      court, stable, en MAJUSCULES. Il sert de clé partout dans le code et
-  //             de préfixe conventionnel aux codes de compétences. Le changer après
-  //             coup casse les teintes et l'ordre du ciel, jamais les données.
-  //   `name`    DOIT correspondre EXACTEMENT à l'option du select `Dimension` de la
-  //             base Thèmes dans Notion : c'est par ce nom que les thématiques sont
-  //             rattachées à leur dimension. Une faute de frappe vide la dimension
-  //             sans le moindre message d'erreur.
-  //   `couleur` teinte de la dimension ; le navigateur en fabrique ses variables CSS.
-  //             Éviter le doré (#c9a661), réservé à la sélection « ce mois ».
-  //
-  // L'ordre du tableau est l'ordre canonique : API, vue d'ensemble, accordéon,
-  // parcours d'évaluation. Le ciel a son propre ordre visuel, plus bas.
-  // ---------------------------------------------------------------------------
+const CATEGORIES = [
   {
-    id: 'DIM1',
-    name: 'Première dimension',
-    definition: "Version longue, pour le référentiel et les documents.",
-    definition_ui: "Version courte et au TUTOIEMENT, pour l'interface : c'est ce que le membre lit.",
-    couleur: '#d97a4a',
+    id: 'COACH',
+    name: 'Moi en tant que coach',
+    definition: 'Ton cadre, ta posture et la manière dont tu entretiens ton niveau de pratique.',
+  },
+  {
+    id: 'CLIENTS',
+    name: 'Moi et mes clients',
+    definition: 'La relation, la communication et les transformations que tu rends possibles avec tes clients.',
+  },
+  {
+    id: 'ACTIVITE',
+    name: 'Moi et mon activité',
+    definition: 'La manière dont tu construis, vends et fais vivre une activité de coaching durable.',
+  },
+];
+
+const DIMENSIONS = [
+  {
+    id: 'FON',
+    category: 'COACH',
+    name: 'Fondations du coach',
+    definition: 'La dimension Fondations du coach réunit les repères et pratiques qui rendent le coaching sûr, éthique et durable. Elle encadre la relation et protège l’autonomie du client.',
+    definition_ui: 'Les repères qui rendent ta pratique sûre, éthique et durable.',
+    couleur: '#a86f5d',
+  },
+  {
+    id: 'ALL',
+    category: 'CLIENTS',
+    name: 'Alliance',
+    definition: 'La dimension Alliance réunit les capacités qui permettent de créer et d’entretenir une relation de travail solide, sûre et vraie avec le client.',
+    definition_ui: 'Ta capacité à créer et entretenir une relation de travail solide, sûre et vraie.',
+    couleur: '#8fae9d',
+  },
+  {
+    id: 'COM',
+    category: 'CLIENTS',
+    name: 'Communication',
+    definition: 'La dimension Communication réunit les techniques d’écoute, de questionnement, de silence, de non-verbal et de langage que le coach met au service du client.',
+    definition_ui: 'Les techniques d’écoute, de questionnement et de langage que tu mets au service du client.',
+    couleur: '#7ca0bc',
+  },
+  {
+    id: 'TRA',
+    category: 'CLIENTS',
+    name: 'Transformation du client',
+    definition: 'La dimension Transformation du client réunit les capacités qui permettent de passer de l’enjeu exprimé à une compréhension plus profonde, puis à une nouvelle perspective que le client peut s’approprier et expérimenter.',
+    definition_ui: 'Ta capacité à faire émerger puis ancrer une nouvelle perspective chez ton client.',
+    couleur: '#9b86b3',
+  },
+  {
+    id: 'ACT',
+    category: 'ACTIVITE',
+    name: 'Développement de l’activité',
+    definition: 'La dimension Développement de l’activité réunit les capacités qui permettent au coach de rendre son activité compréhensible, désirable et viable, depuis l’expression de son identité jusqu’au pilotage d’une activité professionnelle.',
+    definition_ui: 'Les capacités qui rendent ton activité compréhensible, désirable et viable.',
+    couleur: '#bd7f5f',
+  },
+  {
+    id: 'ENT',
+    category: 'ACTIVITE',
+    name: 'Intervenir en entreprise',
+    definition: 'La dimension Intervenir en entreprise réunit les capacités qui permettent au coach d’inscrire, cadrer et conduire un accompagnement dans le système d’une entreprise.',
+    definition_ui: 'Ta capacité à cadrer et conduire un accompagnement dans le système d’une entreprise.',
+    couleur: '#718ba6',
+  },
+  {
+    id: 'ETR',
+    category: 'COACH',
+    name: 'Être du coach',
+    definition: 'La dimension Être du coach réunit les qualités personnelles, les postures et l’état d’esprit que le coach cultive et mobilise consciemment au service du client, ainsi que les pratiques qui assurent son développement continu.',
+    definition_ui: 'Les postures, qualités et pratiques que tu cultives au service de tes clients.',
+    couleur: '#b07d97',
   },
 ];
 
@@ -105,9 +155,8 @@ const DIMENSIONS = [
 
 // --- L'échelle d'auto-évaluation --------------------------------------------------
 //
-// Les trois énoncés d'une compétence SONT l'échelle : le membre lit trois phrases en
-// escalier et coche la plus haute qui est vraie pour lui. Le niveau 0 n'y figure pas :
-// c'est l'absence d'énoncé coché, pas un palier nommé.
+// Le club de coachs évalue un énoncé unique avec les trois paliers du socle. Le niveau
+// 0 n'y figure pas : c'est l'absence d'évaluation, pas un palier nommé.
 const ECHELLE = {
   1: 'Je découvre',
   2: "J'expérimente",
@@ -125,15 +174,16 @@ const ECHELLE = {
 // Le vert et l'orange sont sémantiques : ils ne concurrencent ni les teintes de
 // dimension ni le doré de la sélection.
 const DIFFICULTES = [
-  { nom: 'Fondamental', couleur: '#7c9c6e' },
-  { nom: 'Avancé', couleur: '#d08b3f' },
+  { nom: 'Socle fondamental', couleur: '#7c9c6e' },
+  { nom: 'TTC', couleur: '#d08b3f' },
+  { nom: 'A-player', couleur: '#a6789a' },
 ];
 
 // --- Règles de progression --------------------------------------------------------
 //
 // NIVEAU_ACQUIS : le palier à partir duquel une compétence compte pour ouvrir la
-// thématique suivante. « J'expérimente », pas « J'incarne » : ouvrir doit rester
-// atteignable.
+// thématique suivante. Pour le club de coachs, seule une compétence incarnée est
+// considérée comme acquise.
 //
 // MAX_CIBLES_MAINTENANT : plafond des compétences travaillées « ce mois ». Contrainte
 // pédagogique, appliquée par le SERVEUR autant que par l'interface.
@@ -144,43 +194,12 @@ const DIFFICULTES = [
 // mécaniquement plus lente à ouvrir.
 const NIVEAU_MIN = 0;
 const NIVEAU_MAX = 3;
-const NIVEAU_ACQUIS = 2;
+const NIVEAU_ACQUIS = 3;
 const MAX_CIBLES_MAINTENANT = 3;
 
 function seuilDOuverture(nombreDeCompetences) {
   return Math.max(1, Math.floor(nombreDeCompetences / 2));
 }
-
-// --- Le ciel (page d'accueil desktop) ---------------------------------------------
-//
-// `ordre` est l'ordre VISUEL des blocs, délibérément distinct de l'ordre canonique.
-// « Moi » est le centre du modèle : les deux autres dimensions sont nommées par rapport
-// à lui. Une disposition radiale dit cette structure, une disposition linéaire
-// suggérerait un ordre de lecture qui n'existe pas.
-//
-// `centre` est le bloc sur lequel le ciel s'ouvre, centré, avec une amorce de chaque
-// côté.
-//
-// `largeursFil` règle la largeur du fil décoratif de part et d'autre du bloc centré.
-// Le fil ne porte aucun sens : sa largeur sert à ÉGALISER ce que montre chaque amorce.
-// À place égale les voisines ne montrent pas la même chose — le bord clairsemé de l'une
-// laisse voir moins de thématiques que le bord dense de l'autre. Ces valeurs sont donc
-// MESURÉES sur le rendu réel, et à remesurer si la police de la constellation ou les
-// positions changent.
-//
-// Une instance qui n'aurait pas trois dimensions laisse `ordre` et `centre` à null :
-// le ciel retombe alors sur l'ordre canonique et centre le premier bloc.
-const CIEL = {
-  // À renseigner une fois les dimensions définies, et seulement si l'une d'elles est
-  // le centre du modèle. Laissé à null, le ciel suit l'ordre canonique et centre la
-  // première dimension : c'est un défaut correct, pas un réglage manquant.
-  ordre: null,
-  centre: null,
-  // Largeurs du fil décoratif de part et d'autre du bloc centré. À MESURER sur le
-  // rendu réel : elles servent à égaliser le nombre de thématiques visibles de chaque
-  // côté, ce qui dépend de la densité des bords de chaque constellation.
-  largeursFil: {},
-};
 
 // --- Journal de démarrage ---------------------------------------------------------
 //
@@ -200,6 +219,7 @@ module.exports = {
   CLUBS_CONNUS,
   verifierClub,
   VERSION_REFERENTIEL,
+  CATEGORIES,
   DIMENSIONS,
   ECHELLE,
   DIFFICULTES,
@@ -208,5 +228,4 @@ module.exports = {
   NIVEAU_ACQUIS,
   MAX_CIBLES_MAINTENANT,
   seuilDOuverture,
-  CIEL,
 };

@@ -4,7 +4,10 @@ const { getReferentielV2 } = require('../../referentiel-v2.js');
 const { lireDernierSnapshotV2, composerEtat, estUuidV4 } = require('../../snapshot-v2.js');
 const { lireNotes } = require('../../notes-v3.js');
 
-const HEADERS = { 'Content-Type': 'application/json; charset=utf-8' };
+const HEADERS = {
+  'Content-Type': 'application/json; charset=utf-8',
+  'Cache-Control': 'no-store',
+};
 
 function reponse(statusCode, payload) {
   return { statusCode, headers: HEADERS, body: JSON.stringify(payload) };

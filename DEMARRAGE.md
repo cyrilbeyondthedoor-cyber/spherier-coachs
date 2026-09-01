@@ -58,8 +58,8 @@ cassée. Dites-le explicitement dans le titre.
 ### `club.config.js` — le seul fichier à relire pour comprendre l'instance
 
 Tout ce qui distingue un club d'un autre y est : identifiant du club, version du
-référentiel, dimensions et leurs teintes, échelle, difficultés, niveau d'acquisition,
-plafond des cibles, formule d'ouverture, ordre visuel du ciel.
+référentiel, catégories, dimensions et leurs teintes, échelle, difficultés, niveau
+d'acquisition, plafond des cibles et formule d'ouverture.
 
 Le reste du code ne connaît aucune dimension et aucun libellé : il les lit là, et le
 navigateur les reçoit dans la réponse de `/api/referential`. **Ajouter une dimension ou
@@ -74,10 +74,8 @@ Trois choses à savoir en le remplissant :
 - Les **préfixes des codes de compétences ne portent aucune logique**. Une compétence
   est rattachée à sa dimension par sa thématique, jamais par son code. Vous êtes libres
   de vos conventions de codes.
-- `CIEL.largeursFil` contient des valeurs **mesurées sur le rendu réel**, pas choisies.
-  Elles servent à égaliser le nombre de thématiques visibles de chaque côté du bloc
-  central, ce qui dépend de la densité des bords de vos constellations. À remesurer si
-  vous changez la police ou les positions. Laissées vides, le ciel reste correct.
+- Les catégories structurent l'accueil. Chaque dimension pointe vers une catégorie par
+  son identifiant `category`. Les constellations restent au niveau des dimensions.
 
 ### Le garde-fou `CLUB`
 
@@ -108,8 +106,10 @@ rapide après un déploiement.
 | `public/spherier-v2.html` | Tout le renderer, en un fichier, sans étape de build |
 | `supabase/schema.sql` | Le schéma appliqué sur votre projet |
 | `creer-bases-notion.js` | Création des quatre bases Notion (§4) |
+| `importer-referentiel-v5.js` | Import initial du classeur V5, avec simulation et garde-fou de relance |
+| `verifier-referentiel-notion.js` | Contrôle ponctuel de l'import initial V5 |
 
-Le renderer est un seul fichier servi tel quel — **pas d'étape de build, pas de
+Le renderer est un seul fichier servi tel quel. **Aucune étape de build, aucun
 `npm run build`**. Vous le modifiez, vous poussez, c'est en ligne.
 
 ---
@@ -165,6 +165,19 @@ Notion immédiatement :
 
 ```bash
 curl -X POST http://localhost:8888/api/refresh -H "x-refresh-token: $REFRESH_TOKEN"
+```
+
+Deux recettes sont disponibles :
+
+```bash
+npm test
+```
+
+La première utilise un jeu de données local et couvre desktop, mobile et sauvegarde.
+La seconde lit le vrai référentiel Notion configuré dans `.env` :
+
+```bash
+npm run test:notion
 ```
 
 ---
