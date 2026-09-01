@@ -1,0 +1,17 @@
+# Secrets — ne doivent JAMAIS partir sur GitHub
+.env
+.env.local
+
+# Dépendances (réinstallables via package-lock.json)
+node_modules/
+
+# Artefacts Netlify / Deno
+.netlify/
+deno.lock
+
+# Réglages locaux macOS et outillage
+.DS_Store
+.claude/
+
+# Captures de vérification, régénérables
+screenshot-*.png

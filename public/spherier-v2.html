@@ -1,0 +1,3241 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Le Sphérier — Les Sommets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter+Tight:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --night: #0a0e1a;
+    --night-deep: #050811;
+    --night-soft: #131826;
+    --paper: #f0ebe0;
+    --paper-dim: #c9c2b3;
+    --stone: #6b6557;
+    --gold: #c9a661;
+    --gold-bright: #e8c987;
+    --line-faint: rgba(240, 235, 224, 0.08);
+    --line: rgba(240, 235, 224, 0.18);
+
+    /* Teintes de club, RÉÉCRITES au chargement d'après /api/referential : une teinte
+       de dimension et une couleur de difficulté sont des réglages de club, elles
+       vivent dans club.config.js. Les valeurs ci-dessous ne servent qu'avant la
+       réponse du serveur, le temps que la page ne soit pas encore peinte.
+       Le doré reste réservé à la sélection « maintenant ».
+       `--d-accent` est la teinte de la première dimension, utilisée par le logo. */
+    --d-accent: #d97a4a;
+    --diff-1: #7c9c6e;
+    --diff-2: #d08b3f;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter Tight', sans-serif;
+    background: var(--night-deep);
+    color: var(--paper);
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  .cosmos {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(217, 122, 74, 0.08) 0%, transparent 40%),
+      radial-gradient(ellipse at 70% 80%, rgba(90, 138, 168, 0.08) 0%, transparent 40%),
+      radial-gradient(ellipse at 50% 50%, var(--night-soft) 0%, var(--night-deep) 80%);
+  }
+  .stars { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+  .star {
+    position: absolute;
+    background: var(--paper);
+    border-radius: 50%;
+    animation: twinkle 4s ease-in-out infinite;
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.2; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.2); }
+  }
+  .mountains {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 22vh; z-index: 1; pointer-events: none;
+    background: linear-gradient(to top, var(--night-deep) 0%, transparent 100%);
+  }
+  .mountains svg { position: absolute; bottom: 0; width: 100%; height: 100%; }
+
+  .app {
+    position: relative;
+    z-index: 3;
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 26px 0 20px;
+    border-bottom: 1px solid var(--line-faint);
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand-mark {
+    width: 30px; height: 30px;
+    border: 1px solid var(--gold);
+    transform: rotate(45deg);
+    position: relative;
+    flex-shrink: 0;
+  }
+  .brand-mark::before {
+    content: '';
+    position: absolute;
+    inset: 5px;
+    border: 1px solid var(--d-accent);
+  }
+  .brand-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 17px;
+    font-style: italic;
+    letter-spacing: 0.12em;
+    line-height: 1.1;
+  }
+  .brand-text small {
+    display: block;
+    font-size: 9px;
+    color: var(--stone);
+    margin-top: 4px;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    font-style: normal;
+  }
+  .header-etat {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--paper-dim);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .header-etat .puce {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 6px var(--gold-bright);
+    flex-shrink: 0;
+  }
+
+  /* TITRE */
+  .titre { text-align: center; padding: 40px 0 34px; }
+  .titre h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400;
+    font-style: italic;
+    font-size: clamp(24px, 4vw, 32px);
+    letter-spacing: 0.04em;
+  }
+  .titre h1::before, .titre h1::after {
+    content: '✧';
+    margin: 0 18px;
+    color: var(--gold);
+    font-size: 0.55em;
+    vertical-align: middle;
+  }
+  .titre p {
+    font-size: 13.5px;
+    color: var(--paper-dim);
+    max-width: 520px;
+    margin: 14px auto 0;
+    line-height: 1.65;
+  }
+
+  /* ÉTAT DE CHARGEMENT / MESSAGE */
+  .message {
+    text-align: center;
+    padding: 50px 20px;
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--paper-dim);
+  }
+  .message[hidden] { display: none; }
+  .message .mark { display: block; font-size: 34px; color: var(--gold); opacity: 0.5; margin-bottom: 16px; }
+  .message.erreur .mark { color: #c4523e; }
+  .message small {
+    display: block;
+    margin-top: 12px;
+    font-family: 'Inter Tight', sans-serif;
+    font-style: normal;
+    font-size: 12.5px;
+    color: var(--stone);
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+  }
+  @keyframes respire { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.9; } }
+  .chargement .mark { animation: respire 1.8s ease-in-out infinite; }
+
+  /* DIMENSIONS */
+  .dimensions { display: flex; flex-direction: column; gap: 12px; }
+  .dimensions[hidden] { display: none; }
+
+  .dimension {
+    border: 1px solid var(--line-faint);
+    border-radius: 14px;
+    background: rgba(240, 235, 224, 0.022);
+    overflow: hidden;
+    transition: border-color 0.3s ease, background 0.3s ease;
+  }
+  .dimension:hover { border-color: var(--line); }
+  .dimension.ouverte {
+    border-color: var(--teinte);
+    background: rgba(240, 235, 224, 0.04);
+  }
+
+  .dimension-entete {
+    display: grid;
+    grid-template-columns: 34px 1fr auto;
+    align-items: center;
+    gap: 18px;
+    width: 100%;
+    padding: 20px 22px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+  }
+  .dimension-astre {
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .dimension-astre svg { display: block; overflow: hidden; }
+
+  .dimension-nom {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 500;
+    font-size: 21px;
+    letter-spacing: 0.02em;
+    color: var(--paper);
+  }
+  .dimension-compte {
+    display: block;
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 10.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--stone);
+    margin-top: 5px;
+  }
+  .dimension-chevron {
+    font-size: 12px;
+    color: var(--stone);
+    transition: transform 0.3s ease, color 0.3s ease;
+  }
+  .dimension.ouverte .dimension-chevron { transform: rotate(180deg); color: var(--teinte); }
+  .dimension-entete:hover .dimension-nom { color: var(--paper); }
+
+  /* Entrée visible carte repliée, réservée au mobile.
+     Sur mobile, cet accordéon EST l'accueil : l'entrée doit se voir sans déplier, sinon
+     le premier écran d'un membre au premier jour ne montre que trois titres. Sur
+     desktop l'accordéon est un lieu de second rang — on y arrive depuis le ciel, la
+     dimension déjà dépliée — et une entrée sous chaque carte fermée n'y serait
+     que du bruit. */
+  .dimension-amorce { display: none; }
+  @media (max-width: 640px) {
+    .dimension:not(.ouverte) .dimension-amorce { display: block; padding: 0 16px 16px; }
+  }
+
+  .dimension-corps {
+    display: none;
+    padding: 0 22px 22px;
+    border-top: 1px solid var(--line-faint);
+  }
+  .dimension.ouverte .dimension-corps {
+    display: block;
+    animation: deplie 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  @keyframes deplie {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .dimension-definition {
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--paper-dim);
+    padding-top: 18px;
+    max-width: 620px;
+  }
+
+  /* CONSTELLATION */
+  /* Défilement horizontal quand la constellation ne peut pas tenir en largeur sans
+     rendre les libellés illisibles — c'est le cas sur mobile. Sur desktop la largeur
+     minimale reste inférieure au conteneur, donc aucune barre n'apparaît. */
+  .constellation-zone {
+    margin-top: 18px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(240,235,224,0.18) transparent;
+  }
+  .constellation-zone::-webkit-scrollbar { height: 5px; }
+  .constellation-zone::-webkit-scrollbar-thumb { background: rgba(240,235,224,0.18); border-radius: 3px; }
+  .constellation {
+    display: block;
+    width: 100%;
+    height: auto;
+    /* La hauteur suit le viewBox, lui-même ajusté au contenu réellement dessiné :
+       chaque dimension occupe exactement son emprise, sans vide ni écrasement. */
+    max-height: min(82vh, 860px);
+  }
+
+  .filiation {
+    stroke: var(--paper);
+    stroke-opacity: 0.20;
+    stroke-width: 1.2;
+  }
+  .filiation-verrouillee { stroke-opacity: 0.09; stroke-dasharray: 3 6; }
+
+  .theme-halo { pointer-events: none; }
+  .theme-noyau { stroke-width: 1.6; }
+  .theme-nom {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 500;
+    /* 15 unités et non 13.5 : les positions resserrées ont laissé de la marge entre
+       libellés voisins (137 unités au plus juste, sur « Moi et les autres »), qu'on
+       dépense en lisibilité. Ne concerne que la constellation. */
+    font-size: 15px;
+    text-anchor: middle;
+    fill: var(--paper);
+  }
+  .theme-verrouille .theme-nom { fill: var(--stone); }
+  .theme-verrouille .theme-noyau { stroke-dasharray: 3 3; }
+  .theme-cadenas { font-size: 10px; text-anchor: middle; fill: var(--stone); }
+
+  .etoile { pointer-events: none; }
+
+  /* LÉGENDE DE LECTURE */
+  .constellation-legende {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 22px;
+    justify-content: center;
+    margin-top: 6px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line-faint);
+    font-size: 11.5px;
+    color: var(--stone);
+  }
+  .constellation-legende span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .constellation-legende svg { display: block; overflow: hidden; flex-shrink: 0; }
+
+
+  /* PANNEAU DE COMPÉTENCE
+     Feuille montante sur mobile, dialogue centré sur desktop : c'est depuis leur
+     téléphone que les membres consulteront, la forme par défaut est donc la leur. */
+  .voile {
+    position: fixed; inset: 0; z-index: 40;
+    background: rgba(3, 5, 11, 0.72);
+    backdrop-filter: blur(3px);
+    display: flex; align-items: flex-end; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.28s ease;
+  }
+  .voile.visible { opacity: 1; pointer-events: auto; }
+  /* Un display explicite l'emporte sur l'attribut hidden : sans cette règle le panneau
+     resterait dans l'arbre d'accessibilité et focalisable une fois fermé. */
+  .voile[hidden] { display: none; }
+
+  .panneau {
+    width: 100%;
+    max-width: 620px;
+    max-height: 88vh;
+    display: flex; flex-direction: column;
+    background: #0d1320;
+    border: 1px solid var(--line);
+    border-bottom: none;
+    border-radius: 20px 20px 0 0;
+    transform: translateY(16px);
+    transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .voile.visible .panneau { transform: translateY(0); }
+  .panneau-poignee {
+    width: 40px; height: 4px; border-radius: 2px;
+    background: var(--line);
+    margin: 10px auto 0;
+    flex-shrink: 0;
+  }
+
+  .panneau-tete { padding: 18px 26px 16px; border-bottom: 1px solid var(--line-faint); flex-shrink: 0; }
+  .panneau-fil {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--stone); margin-bottom: 10px;
+  }
+  .panneau-fil b { color: var(--teinte-p); font-weight: 500; }
+  .panneau-titre {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 500; font-size: 24px; line-height: 1.2;
+    text-wrap: balance;
+  }
+  .panneau-def { font-size: 13.5px; line-height: 1.65; color: var(--paper-dim); margin-top: 8px; }
+
+  .panneau-fermer {
+    position: absolute; top: 14px; right: 18px;
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 1px solid var(--line-faint); background: rgba(240,235,224,0.04);
+    color: var(--paper-dim); font-size: 15px; line-height: 1; cursor: pointer;
+    transition: all 0.25s ease;
+  }
+  .panneau-fermer:hover { border-color: var(--line); color: var(--paper); }
+
+  .panneau-corps { overflow-y: auto; padding: 20px 26px 30px; -webkit-overflow-scrolling: touch; }
+  .panneau-section + .panneau-section { margin-top: 26px; }
+  .panneau-label {
+    font-size: 10px; letter-spacing: 0.26em; text-transform: uppercase;
+    color: var(--stone); margin-bottom: 14px;
+  }
+
+  /* L'ESCALIER — pièce maîtresse.
+     Chaque marche porte l'étoile de son cran : la progression des trois phrases se lit
+     en même temps que la montée en luminosité, dans le même langage que la carte. */
+  .escalier { display: flex; flex-direction: column; gap: 8px; }
+  .marche {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--line-faint);
+    border-radius: 12px;
+    background: rgba(240, 235, 224, 0.018);
+    position: relative;
+  }
+  /* Retrait croissant : la marche la plus exigeante est aussi la plus avancée. */
+  .marche-2 { margin-left: 14px; }
+  .marche-3 { margin-left: 28px; }
+  .marche-atteinte { background: rgba(240, 235, 224, 0.045); }
+  .marche-actuelle {
+    border-color: var(--teinte-p);
+    background: color-mix(in srgb, var(--teinte-p) 10%, transparent);
+  }
+  .marche-astre { display: flex; align-items: flex-start; justify-content: center; padding-top: 1px; }
+  .marche-astre svg { display: block; overflow: visible; }
+  .marche-palier {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic; font-size: 14px;
+    color: var(--paper-dim);
+    display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap;
+  }
+  .marche-actuelle .marche-palier { color: var(--paper); }
+  .marche-vous {
+    font-family: 'Inter Tight', sans-serif; font-style: normal;
+    font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--teinte-p);
+    border: 1px solid color-mix(in srgb, var(--teinte-p) 45%, transparent);
+    border-radius: 999px; padding: 2px 8px;
+  }
+  .marche-enonce { font-size: 13.5px; line-height: 1.6; color: var(--paper-dim); margin-top: 6px; }
+  .marche-actuelle .marche-enonce { color: var(--paper); }
+
+  .escalier-note {
+    margin-top: 12px; font-size: 12.5px; line-height: 1.6; color: var(--stone);
+    font-family: 'Cormorant Garamond', serif; font-style: italic;
+  }
+
+  /* RESSOURCES */
+  .ressources { display: flex; flex-direction: column; gap: 8px; }
+  .ressource {
+    display: block; padding: 13px 15px;
+    background: rgba(240, 235, 224, 0.03);
+    border: 1px solid var(--line-faint);
+    border-radius: 11px;
+    text-decoration: none; color: var(--paper);
+    transition: border-color 0.25s ease;
+  }
+  .ressource:hover { border-color: var(--teinte-p); }
+  .ressource-titre { font-size: 14px; font-weight: 500; }
+  .ressource-meta {
+    font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--stone); margin-top: 4px;
+  }
+  .ressources-groupe + .ressources-groupe { margin-top: 18px; }
+  .ressources-sous-label {
+    font-size: 11.5px; color: var(--stone); margin-bottom: 10px;
+    font-family: 'Cormorant Garamond', serif; font-style: italic;
+  }
+
+  /* L'étoile était inerte au clic depuis l'étape 2, où elle n'était que décorative. */
+  .etoile { cursor: pointer; pointer-events: auto; }
+  .etoile:focus-visible { outline: none; }
+  .etoile:focus-visible .etoile-corps { stroke: var(--gold-bright, #e8c987); stroke-width: 2; }
+  .etoile:hover .etoile-corps { stroke: rgba(240,235,224,0.55); stroke-width: 1.5; }
+
+  @media (min-width: 641px) {
+    .voile { align-items: center; padding: 30px; }
+    .panneau { border-radius: 18px; border-bottom: 1px solid var(--line); max-height: 84vh; }
+    .panneau-poignee { display: none; }
+    .panneau-tete { padding-top: 24px; }
+  }
+
+
+  /* ACTIONS DU PANNEAU */
+  .marche { text-align: left; width: 100%; font: inherit; color: inherit; cursor: pointer;
+    transition: border-color .2s ease, background .2s ease; }
+  .marche:hover { border-color: var(--line); }
+  .marche:focus-visible { outline: 2px solid var(--teinte-p); outline-offset: 2px; }
+  .marche-actuelle:hover { border-color: var(--teinte-p); }
+
+  .cibles { display: flex; gap: 10px; flex-wrap: wrap; }
+  .cible-btn {
+    flex: 1 1 180px;
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+    padding: 13px 16px; border-radius: 11px; cursor: pointer;
+    font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 14.5px;
+    border: 1px solid var(--line-faint);
+    background: rgba(240,235,224,.03); color: var(--paper-dim);
+    transition: all .25s ease;
+  }
+  .cible-btn:hover:not(:disabled) { border-color: var(--line); color: var(--paper); }
+  .cible-btn:disabled { opacity: .45; cursor: not-allowed; }
+  .cible-btn .pastille { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid currentColor; flex-shrink: 0; }
+  .cible-maintenant.active {
+    border-color: var(--gold); background: rgba(201,166,97,.14); color: var(--gold-bright);
+  }
+  .cible-maintenant.active .pastille { background: var(--gold); border-color: var(--gold); }
+  .cible-plus-tard.active {
+    border-color: var(--paper-dim); background: rgba(240,235,224,.07); color: var(--paper);
+  }
+  .cible-plus-tard.active .pastille { border-style: dashed; }
+  .cible-raison { font-size: 12.5px; color: var(--stone); margin-top: 10px; line-height: 1.55;
+    font-family: 'Cormorant Garamond', serif; font-style: italic; }
+
+  /* REMPLACEMENT D'UNE CIBLE */
+  .remplacement { margin-top: 12px; padding: 15px 16px; border: 1px solid var(--gold);
+    border-radius: 12px; background: rgba(201,166,97,.07); }
+  .remplacement p { font-size: 13px; line-height: 1.6; color: var(--paper-dim); margin-bottom: 12px; }
+  .remplacement p b { color: var(--paper); font-weight: 500; }
+  .remplacement-liste { display: flex; flex-direction: column; gap: 7px; }
+  .remplacement-item {
+    display: block; width: 100%; text-align: left; cursor: pointer;
+    padding: 11px 14px; border-radius: 9px;
+    border: 1px solid var(--line-faint); background: rgba(240,235,224,.03);
+    color: var(--paper); font: inherit; font-size: 13.5px;
+    transition: all .2s ease;
+  }
+  .remplacement-item:hover { border-color: var(--gold); }
+  .remplacement-item span { display: block; font-size: 11px; color: var(--stone); margin-top: 3px; }
+  .remplacement-annuler { margin-top: 10px; background: none; border: none; cursor: pointer;
+    color: var(--stone); font: inherit; font-size: 12.5px; text-decoration: underline; padding: 0; }
+
+  /* BARRE DE SAUVEGARDE */
+  .barre-sauvegarde {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    padding: 13px 22px calc(13px + env(safe-area-inset-bottom, 0px));
+    background: rgba(10,14,26,.94); backdrop-filter: blur(10px);
+    border-top: 1px solid var(--line);
+    transform: translateY(110%); transition: transform .3s cubic-bezier(.2,.8,.2,1);
+  }
+  .barre-sauvegarde.visible { transform: translateY(0); }
+  .barre-texte { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 13.5px;
+    color: var(--paper-dim); min-width: 0; }
+  .barre-texte b { color: var(--paper); font-weight: 500; font-style: normal; }
+  .barre-actions { display: flex; gap: 9px; flex-shrink: 0; }
+  .btn-annuler, .btn-enregistrer {
+    padding: 9px 18px; border-radius: 999px; cursor: pointer;
+    font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 13.5px;
+    transition: all .25s ease;
+  }
+  .btn-annuler { border: 1px solid var(--line-faint); background: none; color: var(--paper-dim); }
+  .btn-annuler:hover { border-color: var(--line); color: var(--paper); }
+  .btn-enregistrer { border: 1px solid var(--gold); background: rgba(201,166,97,.16); color: var(--gold-bright); }
+  .btn-enregistrer:hover:not(:disabled) { background: var(--gold); color: #0a0e1a; }
+  .btn-enregistrer:disabled { opacity: .55; cursor: default; }
+
+  .bandeau {
+    position: fixed; left: 50%; transform: translateX(-50%) translateY(-12px);
+    top: 14px; z-index: 60; max-width: min(560px, calc(100vw - 28px));
+    padding: 12px 20px; border-radius: 12px;
+    background: #0d1320; border: 1px solid var(--line);
+    font-size: 13px; line-height: 1.55; color: var(--paper-dim);
+    opacity: 0; pointer-events: none; transition: opacity .3s ease, transform .3s ease;
+    box-shadow: 0 14px 40px rgba(0,0,0,.5);
+  }
+  .bandeau.visible { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+  .bandeau.succes { border-color: var(--gold); color: var(--gold-bright); }
+  .bandeau.echec { border-color: #c4523e; color: #e8a08f; }
+  .bandeau b { display: block; color: inherit; margin-bottom: 3px; font-weight: 500; }
+  .bandeau button { margin-top: 9px; background: none; border: 1px solid currentColor;
+    color: inherit; font: inherit; font-size: 12.5px; padding: 5px 13px; border-radius: 999px; cursor: pointer; }
+
+
+  /* THÉMATIQUE : cliquable, verrouillée comprise — c'est ce qui fait du verrou un
+     horizon plutôt qu'un mur. */
+  .theme { cursor: pointer; }
+  .theme:focus-visible { outline: none; }
+  .theme:focus-visible .theme-noyau { stroke: var(--gold-bright); stroke-width: 2.4; }
+  .theme:hover .theme-noyau { stroke-width: 2.4; }
+
+  /* CONDITION D'OUVERTURE */
+  .horizon {
+    display: flex; gap: 13px; align-items: flex-start;
+    padding: 15px 17px; margin-top: 4px;
+    border: 1px solid rgba(240,235,224,.16); border-radius: 12px;
+    background: rgba(240,235,224,.035);
+  }
+  .horizon-marque { flex-shrink: 0; margin-top: 1px; }
+  .horizon-texte { font-size: 13.5px; line-height: 1.65; color: var(--paper-dim); }
+  .horizon-texte b { display: block; color: var(--paper); font-weight: 500;
+    font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 15px; margin-bottom: 5px; }
+
+  /* LISTE DES COMPÉTENCES D'UNE THÉMATIQUE */
+  .liste-comp { display: flex; flex-direction: column; gap: 7px; }
+  .comp-item {
+    display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 13px;
+    width: 100%; text-align: left; cursor: pointer; font: inherit; color: inherit;
+    padding: 12px 15px; border-radius: 11px;
+    border: 1px solid var(--line-faint); background: rgba(240,235,224,.025);
+    transition: border-color .2s ease;
+  }
+  .comp-item:hover { border-color: var(--line); }
+  .comp-item:focus-visible { outline: 2px solid var(--teinte-p); outline-offset: 2px; }
+  .comp-astre { display: flex; align-items: center; justify-content: center; }
+  .comp-nom { font-size: 13.5px; line-height: 1.4; }
+  .comp-palier { font-family: 'Cormorant Garamond', serif; font-style: italic;
+    font-size: 12px; color: var(--stone); white-space: nowrap; }
+  .comp-marques { display: flex; gap: 5px; align-items: center; margin-top: 3px; }
+  .comp-marque { font-size: 9.5px; letter-spacing: .13em; text-transform: uppercase;
+    padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor; }
+  .comp-marque-maintenant { color: var(--gold); }
+  .comp-marque-plus-tard { color: var(--paper-dim); border-style: dashed; }
+
+  .panneau-retour {
+    background: none; border: none; cursor: pointer; padding: 0;
+    color: var(--teinte-p); font: inherit; font-size: 12.5px;
+    display: inline-flex; align-items: center; gap: 7px; margin-bottom: 11px;
+  }
+  .panneau-retour:hover { text-decoration: underline; }
+
+
+  .barre-libelle {
+    flex: 1 1 240px; min-width: 0;
+    padding: 9px 15px; border-radius: 999px;
+    border: 1px solid var(--line-faint); background: rgba(240,235,224,.04);
+    color: var(--paper); font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 13.5px;
+    outline: none; transition: border-color .25s ease;
+  }
+  .barre-libelle::placeholder { color: var(--stone); }
+  .barre-libelle:focus { border-color: var(--gold); }
+  .dernier-point {
+    text-align: center; margin-top: 10px;
+    font-family: 'Cormorant Garamond', serif; font-style: italic;
+    font-size: 12.5px; color: var(--stone);
+  }
+  .dernier-point[hidden] { display: none; }
+
+
+  /* ACCÈS AUX SÉLECTIONS */
+  .btn-mois {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 8px 16px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--line-faint); background: rgba(240,235,224,.04);
+    color: var(--paper-dim); font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 13px;
+    transition: all .25s ease;
+  }
+  .btn-mois:hover { border-color: var(--gold); color: var(--gold-bright); }
+  .btn-mois .compte { font-style: normal; font-family: 'Inter Tight', sans-serif;
+    font-size: 10.5px; letter-spacing: .08em; color: var(--gold);
+    border: 1px solid rgba(201,166,97,.45); border-radius: 999px; padding: 1px 8px; }
+  .btn-mois[hidden] { display: none; }
+
+  /* PANNEAU DES SÉLECTIONS */
+  .sel-groupe + .sel-groupe { margin-top: 22px; }
+  .sel-dim { font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--stone); margin: 16px 0 9px; display: flex; align-items: center; gap: 8px; }
+  .sel-dim i { width: 8px; height: 8px; border-radius: 50%; background: var(--h); flex-shrink: 0; }
+  .sel-item {
+    display: grid; grid-template-columns: 1fr auto; gap: 10px 12px; align-items: center;
+    padding: 12px 15px; border-radius: 11px; margin-bottom: 7px;
+    border: 1px solid var(--line-faint); background: rgba(240,235,224,.025);
+  }
+  .sel-item.cible { border-color: rgba(201,166,97,.4); background: rgba(201,166,97,.06); }
+  .sel-nom { background: none; border: none; padding: 0; cursor: pointer; text-align: left;
+    font: inherit; font-size: 13.5px; color: var(--paper); line-height: 1.4; }
+  .sel-nom:hover { text-decoration: underline; }
+  .sel-nom small { display: block; font-size: 11px; color: var(--stone); margin-top: 3px; }
+  .sel-etat { font-family: 'Cormorant Garamond', serif; font-style: italic;
+    font-size: 12px; color: var(--stone); white-space: nowrap; text-align: right; }
+  .sel-verrou { color: var(--stone); }
+  .sel-promouvoir {
+    grid-column: 1 / -1; justify-self: start;
+    background: none; border: 1px solid rgba(201,166,97,.4); border-radius: 999px;
+    color: var(--gold); font-family: 'Cormorant Garamond', serif; font-style: italic;
+    font-size: 12.5px; padding: 5px 13px; cursor: pointer; transition: all .2s ease;
+  }
+  .sel-promouvoir:hover { background: rgba(201,166,97,.16); color: var(--gold-bright); }
+  .sel-vide { font-family: 'Cormorant Garamond', serif; font-style: italic;
+    font-size: 13px; line-height: 1.65; color: var(--stone); }
+  .sel-rappel { font-size: 12.5px; color: var(--stone); margin-top: 14px;
+    padding-top: 13px; border-top: 1px solid var(--line-faint);
+    font-family: 'Cormorant Garamond', serif; font-style: italic; }
+
+
+  /* PASTILLE DE DIFFICULTÉ */
+  .pastille-diff {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+    padding: 3px 9px 3px 7px; border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--dc) 45%, transparent);
+    color: var(--dc); white-space: nowrap;
+  }
+  .pastille-diff i { width: 6px; height: 6px; border-radius: 50%; background: var(--dc); flex-shrink: 0; }
+  .panneau-diff { margin-top: 12px; }
+  .comp-item .pastille-diff { font-size: 9px; padding: 2px 7px 2px 6px; }
+
+
+  /* M'ÉVALUER — parcours compétence par compétence.
+     Personne ne se positionne sur 152 compétences en cliquant étoile par étoile. */
+  .situer { display: flex; flex-direction: column; min-height: 0; }
+  .situer-progres {
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 0 14px; font-size: 12px; color: var(--stone);
+  }
+  .situer-jauge { flex: 1; height: 3px; border-radius: 2px; background: var(--line-faint); overflow: hidden; }
+  .situer-jauge i { display: block; height: 100%; background: var(--teinte-p); transition: width .3s ease; }
+  .situer-compte { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .situer-fil { font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--stone); }
+  .situer-fil b { color: var(--teinte-p); font-weight: 500; }
+  .situer-nom {
+    font-family: 'Cormorant Garamond', serif; font-weight: 500;
+    font-size: 23px; line-height: 1.2; margin: 8px 0 6px; text-wrap: balance;
+  }
+  .situer-def { font-size: 13.5px; line-height: 1.65; color: var(--paper-dim); }
+
+  .situer-pied {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    padding-top: 16px; margin-top: 18px; border-top: 1px solid var(--line-faint);
+  }
+  .situer-btn {
+    padding: 10px 20px; border-radius: 999px; cursor: pointer;
+    font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 14px;
+    border: 1px solid var(--line-faint); background: rgba(240,235,224,.03); color: var(--paper-dim);
+    transition: all .25s ease;
+  }
+  .situer-btn:hover:not(:disabled) { border-color: var(--line); color: var(--paper); }
+  .situer-btn:disabled { opacity: .4; cursor: default; }
+  .situer-passer { margin-left: auto; }
+  .situer-astuce { width: 100%; font-size: 12px; color: var(--stone);
+    font-family: 'Cormorant Garamond', serif; font-style: italic; }
+
+  /* Fin de bloc : le moment où l'on propose d'enregistrer, pour pouvoir s'y reprendre. */
+  .situer-bilan { text-align: center; padding: 12px 0 4px; }
+  .situer-bilan .mark { display: block; font-size: 34px; color: var(--gold); opacity: .55; margin-bottom: 14px; }
+  .situer-bilan h3 { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 21px; margin-bottom: 10px; }
+  .situer-bilan p { font-size: 13.5px; line-height: 1.65; color: var(--paper-dim); max-width: 46ch; margin: 0 auto; }
+  .situer-bilan-chiffres { display: flex; justify-content: center; gap: 28px; margin: 20px 0 6px; }
+  .situer-bilan-chiffres div { text-align: center; }
+  .situer-bilan-chiffres dt { font-size: 9.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--stone); }
+  .situer-bilan-chiffres dd { font-family: 'Cormorant Garamond', serif; font-size: 26px; margin-top: 3px;
+    font-variant-numeric: tabular-nums; }
+
+  /* Bouton d'entrée depuis une dimension. */
+  .dimension-situer {
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 16px;
+    padding: 9px 18px; border-radius: 999px; cursor: pointer;
+    border: 1px solid color-mix(in srgb, var(--teinte) 45%, transparent);
+    background: color-mix(in srgb, var(--teinte) 10%, transparent);
+    color: var(--paper); font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 13.5px;
+    transition: all .25s ease;
+  }
+  .dimension-situer:hover { background: color-mix(in srgb, var(--teinte) 20%, transparent); }
+  .dimension-situer small { font-style: normal; font-family: 'Inter Tight', sans-serif;
+    font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--stone); }
+
+
+  /* NOTE PERSONNELLE
+     Repliée quand elle est vide pour ne pas concurrencer l'escalier, dépliée quand
+     elle existe : ce qui a été écrit doit se relire sans avoir à le chercher. */
+  .note-bloc { margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--line-faint); }
+  .note-entete {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    background: none; border: none; padding: 0; cursor: pointer;
+    color: var(--stone); font: inherit;
+    font-size: 10px; letter-spacing: .26em; text-transform: uppercase;
+  }
+  .note-entete:hover { color: var(--paper-dim); }
+  .note-entete .chev { margin-left: auto; font-size: 11px; transition: transform .25s ease; letter-spacing: 0; }
+  .note-bloc.ouverte .note-entete .chev { transform: rotate(180deg); }
+  .note-marque {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--teinte-p);
+    flex-shrink: 0; box-shadow: 0 0 7px var(--teinte-p);
+  }
+  .note-corps { display: none; margin-top: 14px; }
+  .note-bloc.ouverte .note-corps { display: block; }
+
+  .note-champ {
+    width: 100%; min-height: 108px; resize: vertical;
+    padding: 13px 15px; border-radius: 11px;
+    border: 1px solid var(--line-faint); background: rgba(240,235,224,.03);
+    color: var(--paper); font-family: 'Inter Tight', sans-serif; font-size: 13.5px; line-height: 1.6;
+    outline: none; transition: border-color .25s ease;
+  }
+  .note-champ::placeholder { color: var(--stone); }
+  .note-champ:focus { border-color: var(--teinte-p); }
+
+  .note-pied { display: flex; align-items: center; gap: 12px; margin-top: 9px; flex-wrap: wrap; }
+  .note-etat {
+    font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 12.5px;
+    color: var(--stone); display: inline-flex; align-items: center; gap: 7px;
+  }
+  .note-etat.encours { color: var(--paper-dim); }
+  .note-etat.enregistree { color: var(--diff-1); }
+  .note-etat.echec { color: #e8a08f; }
+  .note-etat i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  .note-btn {
+    margin-left: auto; padding: 7px 15px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--line-faint); background: rgba(240,235,224,.03); color: var(--paper-dim);
+    font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 13px;
+    transition: all .25s ease;
+  }
+  .note-btn:hover:not(:disabled) { border-color: var(--line); color: var(--paper); }
+  .note-btn:disabled { opacity: .4; cursor: default; }
+  .note-compteur { font-size: 11px; color: var(--stone); font-variant-numeric: tabular-nums; }
+
+  /* Signalement d'une compétence annotée, partout où elle apparaît en liste. */
+  .marque-note {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 9.5px; letter-spacing: .13em; text-transform: uppercase;
+    color: var(--paper-dim); border: 1px solid var(--line-faint);
+    border-radius: 999px; padding: 1px 8px 1px 6px;
+  }
+  .marque-note::before { content: '✎'; font-size: 10px; letter-spacing: 0; }
+
+
+  /* TABLEAU DE SYNTHÈSE
+     Replié par défaut : 152 lignes ouvertes d'un coup sont un mur. Chaque ligne repliée
+     porte sa répartition par niveau, pour que l'état se lise sans rien déplier — c'est
+     ce qui rend le balayage utile avant un coaching. */
+  .syn-filtres { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
+  .syn-filtre {
+    padding: 6px 13px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--line-faint); background: rgba(240,235,224,.03);
+    color: var(--paper-dim); font: inherit; font-size: 12px;
+    transition: all .2s ease;
+  }
+  .syn-filtre:hover { border-color: var(--line); color: var(--paper); }
+  .syn-filtre.actif { border-color: var(--gold); background: rgba(201,166,97,.14); color: var(--gold-bright); }
+  .syn-filtre .n { color: var(--stone); font-variant-numeric: tabular-nums; margin-left: 5px; }
+  .syn-filtre.actif .n { color: inherit; opacity: .75; }
+
+  .syn-action { margin-top: 12px; }
+  .syn-vide { font-family: 'Cormorant Garamond', serif; font-style: italic;
+    font-size: 13.5px; color: var(--stone); padding: 22px 2px; }
+
+  .syn-dim + .syn-dim { margin-top: 10px; }
+  .syn-ligne {
+    display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px 12px;
+    width: 100%; padding: 12px 14px; border-radius: 11px; cursor: pointer;
+    background: none; border: 1px solid var(--line-faint); color: inherit; font: inherit;
+    text-align: left; transition: border-color .2s ease;
+  }
+  .syn-ligne:hover { border-color: var(--line); }
+  .syn-dim > .syn-ligne { border-color: color-mix(in srgb, var(--h) 35%, transparent);
+    background: color-mix(in srgb, var(--h) 7%, transparent); }
+  .syn-nom { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 16px; }
+  .syn-dim > .syn-ligne .syn-nom { font-size: 18px; }
+  .syn-compte { font-size: 11.5px; color: var(--stone); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .syn-chev { font-size: 11px; color: var(--stone); transition: transform .25s ease; }
+  .syn-ouvert > .syn-ligne .syn-chev { transform: rotate(180deg); }
+
+  /* Répartition par niveau : quatre segments, du non évalué à J'incarne. */
+  .syn-repartition { grid-column: 1 / -1; display: flex; height: 4px; border-radius: 2px; overflow: hidden; background: var(--line-faint); }
+  .syn-repartition i { display: block; height: 100%; }
+  .syn-seg0 { background: rgba(240,235,224,.07); }
+  .syn-seg1 { background: color-mix(in srgb, var(--h) 40%, transparent); }
+  .syn-seg2 { background: color-mix(in srgb, var(--h) 70%, transparent); }
+  .syn-seg3 { background: var(--h); }
+
+  .syn-corps { display: none; padding: 8px 0 4px 14px; }
+  .syn-ouvert > .syn-corps { display: block; }
+  .syn-theme + .syn-theme { margin-top: 6px; }
+  .syn-verrou { font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--stone); border: 1px solid var(--line-faint); border-radius: 999px; padding: 1px 7px; }
+
+  .syn-comp {
+    display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center;
+    width: 100%; padding: 10px 13px; margin-bottom: 5px; border-radius: 9px;
+    background: rgba(240,235,224,.02); border: 1px solid transparent;
+    cursor: pointer; color: inherit; font: inherit; text-align: left;
+    transition: border-color .2s ease;
+  }
+  .syn-comp:hover { border-color: var(--line-faint); }
+  .syn-comp-nom { font-size: 13px; line-height: 1.4; }
+  .syn-comp-niveau {
+    font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 12px;
+    color: var(--stone); white-space: nowrap; text-align: right;
+  }
+  .syn-comp-niveau.situe { color: var(--paper-dim); }
+  .syn-comp-marques { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 5px; }
+
+
+  /* LE CIEL — page d'arrivée.
+     Les trois constellations d'un coup, reliées visuellement pour se lire comme une
+     seule carte. Le ciel et le détail sont des LIEUX où l'on navigue ; « Mon mois » et
+     « Vue d'ensemble » sont des fenêtres qu'on ouvre. La bascule ne passe donc pas par
+     un bouton d'en-tête. */
+  .ciel { position: relative; }
+  .ciel[hidden], .detail[hidden] { display: none; }
+
+  .ciel-piste {
+    /* La carte n'est pas du texte : elle déborde la colonne de lecture plutôt que
+       d'amputer la dimension la plus large. « Moi et les autres » mesure 973 px, contre
+       892 px de colonne ; la resserrer pour l'y faire entrer ramènerait son plus petit
+       écart entre libellés à 30 unités, là où « Moi », validé tel quel, en garde 53.
+       C'est donc le cadre qui s'élargit, pas la géométrie du référentiel.
+       Débordement symétrique et borné au viewport : la page ne défile jamais de côté. */
+    width: min(1240px, 100vw - 16px);
+    margin-left: calc(50% - min(620px, 50vw - 8px));
+    display: flex; align-items: stretch; gap: 0;
+    overflow-x: auto; overflow-y: hidden;
+    padding-bottom: 10px;
+    scrollbar-width: thin; scrollbar-color: rgba(240,235,224,.18) transparent;
+    scroll-snap-type: x proximity;
+  }
+  .ciel-piste::-webkit-scrollbar { height: 5px; }
+  .ciel-piste::-webkit-scrollbar-thumb { background: rgba(240,235,224,.18); border-radius: 3px; }
+
+  .ciel-bloc { flex: 0 0 auto; scroll-snap-align: center; padding: 0 8px; }
+  .ciel-tete { text-align: center; padding: 4px 0 14px; }
+  .ciel-nom {
+    display: inline-flex; align-items: center; gap: 11px;
+    background: none; border: none; cursor: pointer; padding: 0;
+    font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 24px;
+    color: var(--paper); transition: color .25s ease;
+  }
+  .ciel-nom:hover { color: var(--h); }
+  .ciel-nom i { width: 11px; height: 11px; border-radius: 50%; background: var(--h);
+    box-shadow: 0 0 14px var(--h); flex-shrink: 0; }
+  .ciel-compte {
+    display: block; margin-top: 5px;
+    font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--stone);
+  }
+  /* Visé sur la seule constellation : un `svg` non qualifié étirait aussi les petits
+     repères de 20 px qu'on dessine ailleurs dans la carte. */
+  .ciel-carte > svg.constellation { width: 100%; height: auto; display: block; }
+
+
+  /* Entrée de bloc : au premier jour, tout est éteint — c'est elle qui doit donner
+     envie de commencer plutôt que de laisser face à un vide. Elle est donc placée sous
+     le compteur, dans le premier écran : au pied du bloc, elle tombait à neuf cents
+     pixels de là, invisible précisément quand elle sert le plus. */
+  .ciel-cta {
+    margin-top: 12px;
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 10px 20px; border-radius: 999px; cursor: pointer;
+    border: 1px solid color-mix(in srgb, var(--h) 50%, transparent);
+    background: color-mix(in srgb, var(--h) 12%, transparent);
+    color: var(--paper); font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 14px;
+    transition: all .25s ease;
+  }
+  .ciel-cta:hover { background: color-mix(in srgb, var(--h) 24%, transparent); }
+  .ciel-cta.discret {
+    border-color: var(--line-faint); background: rgba(240,235,224,.03); color: var(--paper-dim);
+  }
+  .ciel-cta.discret:hover { border-color: var(--line); color: var(--paper); }
+
+  /* Fil entre les blocs : purement visuel, aucune sémantique d'ouverture. */
+  /* Le fil est purement décoratif : sa largeur ne porte aucun sens, on peut donc la
+     dépenser. Elle sert à égaliser ce que MONTRE chaque amorce latérale — voir
+     LARGEURS_FIL. */
+  .ciel-lien { flex: 0 0 auto; width: var(--fil, 96px); display: flex; align-items: center; }
+  .ciel-lien svg { width: 100%; height: 120px; overflow: visible; }
+  .ciel-lien path { fill: none; stroke: var(--paper); stroke-opacity: .13; stroke-width: 1.2; stroke-dasharray: 4 8; }
+
+  .ciel-guide {
+    text-align: center; margin-top: 6px;
+    font-family: 'Cormorant Garamond', serif; font-style: italic;
+    font-size: 12.5px; color: var(--stone);
+  }
+
+  /* Retour vers le ciel, dans le détail : une navigation de lieu, pas un bouton d'outil. */
+  .detail-retour {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: none; border: none; padding: 0; cursor: pointer;
+    color: var(--paper-dim); font-family: 'Cormorant Garamond', serif; font-style: italic;
+    font-size: 14px; margin-bottom: 20px;
+  }
+  .detail-retour:hover { color: var(--paper); }
+
+  @media (max-width: 640px) {
+    /* Le ciel n'existe pas sur mobile : il n'y a donc nulle part où revenir. L'accueil
+       y est l'accordéon replié, et c'est l'en-tête d'une dimension qui la referme. */
+    .detail-retour { display: none; }
+    .ciel { display: none; }
+  }
+
+  @media (max-width: 640px) {
+    .syn-ligne { grid-template-columns: 1fr auto; }
+    .syn-corps { padding-left: 8px; }
+    .syn-comp { grid-template-columns: 1fr; }
+    .syn-comp-niveau { text-align: left; }
+  }
+
+  @media (max-width: 640px) {
+    .barre-sauvegarde { flex-direction: column; align-items: stretch; gap: 10px; padding-top: 12px; }
+    .barre-actions { justify-content: stretch; }
+    .btn-annuler, .btn-enregistrer { flex: 1; }
+  }
+
+  @media (max-width: 640px) {
+    /* Sur mobile la largeur est déjà la contrainte : plafonner aussi la hauteur
+       rapetissait les deux plus grandes constellations sous le seuil de lisibilité.
+       La page défile, une carte haute n'est pas un problème. */
+    .constellation { max-height: none; }
+    .app { padding: 0 16px 60px; }
+    .dimension-entete { padding: 16px 16px; gap: 14px; grid-template-columns: 28px 1fr auto; }
+    .dimension-astre { width: 28px; height: 28px; }
+    .dimension-nom { font-size: 18px; }
+    .dimension-corps { padding: 0 16px 18px; }
+    .titre { padding: 30px 0 26px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cosmos"></div>
+<div class="stars" id="stars"></div>
+<div class="mountains">
+  <svg viewBox="0 0 1400 300" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,300 L0,220 L120,140 L240,200 L380,80 L520,160 L640,40 L780,120 L900,60 L1040,140 L1180,90 L1300,170 L1400,130 L1400,300 Z" fill="#050811" opacity="0.9"/>
+    <path d="M0,300 L0,260 L150,200 L290,250 L430,180 L580,230 L720,170 L860,220 L1000,180 L1140,240 L1280,200 L1400,250 L1400,300 Z" fill="#0a0e1a" opacity="0.95"/>
+  </svg>
+</div>
+
+<div class="app">
+  <header class="header">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-text">
+        Les Sommets
+        <small>Club de Dev Perso</small>
+      </div>
+    </div>
+    <div class="header-etat" id="header-etat" hidden>
+      <button type="button" class="btn-mois" id="btn-synthese">Vue d'ensemble</button>
+      <button type="button" class="btn-mois" id="btn-mois" hidden>
+        Mon mois <span class="compte" id="btn-mois-compte"></span>
+      </button>
+      <span class="puce"></span>
+      <span id="header-etat-texte"></span>
+    </div>
+  </header>
+
+  <div class="titre">
+    <h1>Ton Sphérier</h1>
+    <p id="titre-intro">Ouvre la dimension qui t'appelle pour découvrir ses thématiques et t'y évaluer.</p>
+    <p class="dernier-point" id="dernier-point" hidden></p>
+  </div>
+
+  <div class="message chargement" id="message">
+    <span class="mark">✧</span>
+    <span id="message-texte">Lecture de ton sphérier…</span>
+    <small id="message-detail"></small>
+  </div>
+
+  <div class="ciel" id="ciel" hidden>
+    <div class="ciel-piste" id="ciel-piste"></div>
+    <p class="ciel-guide" id="ciel-guide"></p>
+  </div>
+
+  <div class="detail" id="detail" hidden>
+    <button type="button" class="detail-retour" id="detail-retour">← Revenir au ciel</button>
+    <div class="dimensions" id="dimensions" hidden></div>
+  </div>
+</div>
+
+<div class="barre-sauvegarde" id="barre" aria-live="polite">
+  <p class="barre-texte" id="barre-texte"></p>
+  <input type="text" class="barre-libelle" id="barre-libelle" maxlength="80"
+         placeholder="Nommer ce point — ex. Octobre, ce qui se passe en moi"
+         aria-label="Nom de ce point d'étape">
+  <div class="barre-actions">
+    <button type="button" class="btn-annuler" id="btn-annuler">Annuler</button>
+    <button type="button" class="btn-enregistrer" id="btn-enregistrer">Enregistrer</button>
+  </div>
+</div>
+
+<div class="bandeau" id="bandeau" role="status" aria-live="polite"></div>
+
+<div class="voile" id="voile" hidden>
+  <div class="panneau" id="panneau" role="dialog" aria-modal="true" aria-labelledby="panneau-titre">
+    <div class="panneau-poignee"></div>
+    <button type="button" class="panneau-fermer" id="panneau-fermer" aria-label="Fermer">✕</button>
+    <div class="panneau-tete" id="panneau-tete"></div>
+    <div class="panneau-corps" id="panneau-corps"></div>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // IDENTITÉ DU CLIENT
+  // ============================================================
+  // L'UUID vient de l'URL (?c=…), jamais d'un défaut codé en dur : sans lui, on ne sait
+  // pas à qui appartient l'état et rien ne doit être chargé ni enregistré.
+  const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  function lireClientId() {
+    try {
+      const brut = new URLSearchParams(window.location.search).get('c');
+      if (!brut) return null;
+      const valeur = brut.trim();
+      return UUID_V4_RE.test(valeur) ? valeur.toLowerCase() : null;
+    } catch {
+      return null;
+    }
+  }
+
+  const CLIENT_ID = lireClientId();
+
+  // ============================================================
+  // ÉTAT
+  // ============================================================
+  // Le référentiel et l'état sont lus au chargement, jamais figés dans la page : une
+  // correction dans Notion se voit sans redéploiement.
+  const etat = {
+    referentiel: null,
+    computed: null,   // { levels, themes } calculés par le serveur
+    snapshot: null,
+    notes: {},        // { CODE: { texte, cree_le, maj_le } } — hors snapshots, modifiables
+
+    dimensionOuverte: null,
+    vue: 'ciel',      // 'ciel' (page d'arrivée) ou 'detail' (une dimension dépliée)
+  };
+
+  // Réglages de club. Vides au départ, remplis par `appliquerConfigClub()` d'après la
+  // réponse de /api/referential : aucune dimension, aucun libellé de difficulté et
+  // aucun plafond n'est écrit en dur ici. Une instance qui change de dimensions ne
+  // touche qu'à club.config.js.
+  const TEINTES = {};
+  const TEINTES_HEX = {};
+  const DIFFICULTES = {};
+  let MAX_MAINTENANT = 3;
+  let NIVEAU_ACQUIS = 2;
+  let ORDRE_CIEL = null;
+  let CIEL_CENTRE = null;
+  let LARGEURS_FIL = {};
+
+  function appliquerConfigClub(referentiel) {
+    const racine = document.documentElement;
+
+    // Teintes de dimension : une variable CSS par dimension, fabriquée d'après son id.
+    referentiel.dimensions.forEach((d, i) => {
+      const cle = `--d-${d.id.toLowerCase()}`;
+      racine.style.setProperty(cle, d.couleur);
+      TEINTES[d.id] = `var(${cle})`;
+      TEINTES_HEX[d.id] = d.couleur;
+      // Le logo emprunte la teinte de la première dimension.
+      if (i === 0) racine.style.setProperty('--d-accent', d.couleur);
+    });
+
+    // Difficultés : l'ordre du tableau donne le numéro de la variable CSS.
+    (referentiel.difficulties || []).forEach((d, i) => {
+      const cle = `--diff-${i + 1}`;
+      racine.style.setProperty(cle, d.couleur);
+      DIFFICULTES[d.nom] = { couleur: `var(${cle})`, hex: d.couleur };
+    });
+
+    // La phrase d'accueil annonce le nombre de dimensions : elle ne peut pas dire
+    // « Trois » en dur, une autre instance n'en aura pas trois.
+    const intro = document.getElementById('titre-intro');
+    const combien = referentiel.dimensions.length;
+    const enLettres = { 1: 'Une', 2: 'Deux', 3: 'Trois', 4: 'Quatre', 5: 'Cinq', 6: 'Six' }[combien] || String(combien);
+    if (intro) {
+      intro.textContent = combien === 1
+        ? "Une dimension à explorer. Ouvre-la pour découvrir ses thématiques et t'y évaluer."
+        : `${enLettres} dimensions à explorer. Ouvre celle qui t'appelle pour découvrir ses thématiques et t'y évaluer.`;
+    }
+
+    MAX_MAINTENANT = referentiel.limites?.maxCiblesMaintenant ?? MAX_MAINTENANT;
+    NIVEAU_ACQUIS = referentiel.limites?.niveauAcquis ?? NIVEAU_ACQUIS;
+
+    // Ciel : ordre visuel et bloc centré. Sans configuration, on retombe sur l'ordre
+    // canonique et le premier bloc — ce qui reste juste pour une instance qui n'aurait
+    // pas trois dimensions disposées autour d'un centre.
+    ORDRE_CIEL = referentiel.ciel?.ordre ?? null;
+    CIEL_CENTRE = referentiel.ciel?.centre ?? referentiel.dimensions[0]?.id ?? null;
+    LARGEURS_FIL = referentiel.ciel?.largeursFil ?? {};
+
+    // Les filtres de difficulté de la vue d'ensemble sont eux aussi engendrés.
+    (referentiel.difficulties || []).forEach((d) => {
+      FILTRES['diff:' + d.nom] = {
+        libelle: d.nom,
+        garde: (c) => c.difficulty === d.nom,
+      };
+    });
+  }
+
+  // ============================================================
+  // FOND ÉTOILÉ
+  // ============================================================
+  const starsContainer = document.getElementById('stars');
+  for (let i = 0; i < 90; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    const taille = Math.random() * 2 + 0.5;
+    star.style.width = taille + 'px';
+    star.style.height = taille + 'px';
+    star.style.left = Math.random() * 100 + '%';
+    star.style.top = Math.random() * 100 + '%';
+    star.style.opacity = 0.4;
+    star.style.animationDelay = Math.random() * 4 + 's';
+    starsContainer.appendChild(star);
+  }
+
+  // ============================================================
+  // MESSAGES
+  // ============================================================
+  const elMessage = document.getElementById('message');
+  const elMessageTexte = document.getElementById('message-texte');
+  const elMessageDetail = document.getElementById('message-detail');
+  const elDimensions = document.getElementById('dimensions');
+  const elHeaderEtat = document.getElementById('header-etat');
+  const elHeaderEtatTexte = document.getElementById('header-etat-texte');
+
+  function afficherMessage(texte, detail = '', variante = 'chargement') {
+    elMessageTexte.textContent = texte;
+    elMessageDetail.textContent = detail;
+    elMessage.className = 'message ' + variante;
+    elMessage.hidden = false;
+    elDimensions.hidden = true;
+  }
+
+  function masquerMessage() {
+    elMessage.hidden = true;
+    elDimensions.hidden = false;
+    // Le ciel est le point d'arrivée par défaut.
+    if (etat.vue !== 'detail') allerAuCiel();
+  }
+
+  function echapper(str) {
+    return String(str).replace(/[&<>"']/g, (c) => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
+  }
+
+  // ============================================================
+  // RENDU DES 5 DIMENSIONS
+  // ============================================================
+  // Ordre de parcours : celui des thématiques, puis l'`Ordre` des compétences à
+  // l'intérieur de chacune. Le membre avance dans la logique du référentiel, pas dans un
+  // ordre arbitraire. Le tri des compétences est déjà fait à la lecture du référentiel :
+  // il suffit ici de suivre l'ordre du tableau.
+  function codesDeDimension(dimension) {
+    const themes = etat.referentiel.themes
+      .filter((t) => t.dimension === dimension.name)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    return themes.flatMap((t) => etat.referentiel.competencies
+      .filter((c) => c.theme === t.id)
+      .map((c) => c.id));
+  }
+
+  function premiereNonSituee(codes) {
+    const i = codes.findIndex((c) => (brouillon.levels[c] ?? 0) === 0);
+    return i === -1 ? 0 : i;
+  }
+
+  // Une dimension porte DEUX entrées : celle de l'amorce, visible carte repliée sur
+  // mobile, et celle du corps. Elles disent la même chose et se mettent à jour
+  // ensemble — n'actualiser que la première trouvée en laisserait une périmée.
+  function majAvancements() {
+    etat.referentiel.dimensions.forEach((d) => {
+      const codes = codesDeDimension(d);
+      const situees = codes.filter((c) => (brouillon.levels[c] ?? 0) > 0).length;
+      // Même règle que dans le ciel : au premier jour, un « 0 / 51 » fait constat là
+      // où il faut une invitation. C'est aussi l'accueil du mobile, donc le premier
+      // écran d'un membre qui vient de payer — l'en-tête dit déjà le nombre total.
+      const libelle = situees === 0 ? 'Commencer par ici' : "M'évaluer sur cette dimension";
+      elDimensions.querySelectorAll(`[data-entree="${d.id}"]`)
+        .forEach((el) => { el.textContent = libelle; });
+      elDimensions.querySelectorAll(`[data-avancement="${d.id}"]`)
+        .forEach((el) => { el.textContent = situees === 0 ? '' : `${situees} / ${codes.length} évaluées`; });
+    });
+  }
+
+  function competencesDeDimension(dimension) {
+    const idsThemes = new Set(
+      etat.referentiel.themes.filter((t) => t.dimension === dimension.name).map((t) => t.id)
+    );
+    return etat.referentiel.competencies.filter((c) => idsThemes.has(c.theme));
+  }
+
+  function astreDimension(idDimension) {
+    const teinte = TEINTES_HEX[idDimension] || '#f0ebe0';
+    return `<svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
+      <circle cx="13" cy="13" r="10" fill="${teinte}" fill-opacity="0.10"/>
+      <circle cx="13" cy="13" r="6.5" fill="${teinte}" fill-opacity="0.22"/>
+      <circle cx="13" cy="13" r="3.4" fill="${teinte}"/>
+    </svg>`;
+  }
+
+  function rendreDimensions() {
+    // L'ordre d'affichage est celui du serveur : Intériorité, Alignement, Communication,
+    // Relations, Trajectoire.
+    elDimensions.innerHTML = etat.referentiel.dimensions.map((d) => {
+      const themes = etat.referentiel.themes.filter((t) => t.dimension === d.name);
+      const competences = competencesDeDimension(d);
+      return `
+        <section class="dimension" data-dimension="${echapper(d.id)}" style="--teinte: ${TEINTES[d.id] || 'var(--paper)'}">
+          <button type="button" class="dimension-entete" aria-expanded="false" data-toggle="${echapper(d.id)}">
+            <span class="dimension-astre">${astreDimension(d.id)}</span>
+            <span>
+              <span class="dimension-nom">${echapper(d.name)}</span>
+              <span class="dimension-compte">${themes.length} thématiques · ${competences.length} compétences</span>
+            </span>
+            <span class="dimension-chevron">▾</span>
+          </button>
+          <div class="dimension-amorce">
+            <button type="button" class="dimension-situer" data-situer="${echapper(d.id)}">
+              <span data-entree="${echapper(d.id)}">M'évaluer sur cette dimension</span>
+              <small data-avancement="${echapper(d.id)}"></small>
+            </button>
+          </div>
+          <div class="dimension-corps">
+            <p class="dimension-definition">${echapper(d.definition_ui || d.definition)}</p>
+            <button type="button" class="dimension-situer" data-situer="${echapper(d.id)}">
+              <span data-entree="${echapper(d.id)}">M'évaluer sur cette dimension</span>
+              <small data-avancement="${echapper(d.id)}"></small>
+            </button>
+            <div class="constellation-zone" data-constellation="${echapper(d.id)}"></div>
+          </div>
+        </section>
+      `;
+    }).join('');
+
+    elDimensions.querySelectorAll('[data-toggle]').forEach((btn) => {
+      btn.addEventListener('click', () => basculerDimension(btn.dataset.toggle));
+    });
+
+    elDimensions.querySelectorAll('[data-situer]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const d = etat.referentiel.dimensions.find((x) => x.id === btn.dataset.situer);
+        ouvrirMeSituer({
+          codes: codesDeDimension(d),
+          titre: d.name,
+          teinte: TEINTES_HEX[d.id],
+          // On reprend là où il reste à faire, pas au début : réouvrir le parcours ne
+          // doit pas imposer de repasser sur ce qui est déjà évalué.
+          depart: premiereNonSituee(codesDeDimension(d)),
+        });
+      });
+    });
+
+    majAvancements();
+  }
+
+  // Comportement toggle : ouvrir une dimension referme celle qui l'était, et recliquer
+  // sur la même la referme.
+  function basculerDimension(idDimension) {
+    const dejaOuverte = etat.dimensionOuverte === idDimension;
+    etat.dimensionOuverte = dejaOuverte ? null : idDimension;
+
+    elDimensions.querySelectorAll('.dimension').forEach((section) => {
+      const ouverte = section.dataset.dimension === etat.dimensionOuverte;
+      section.classList.toggle('ouverte', ouverte);
+      section.querySelector('.dimension-entete').setAttribute('aria-expanded', String(ouverte));
+    });
+
+    // Rendu à la première ouverture seulement : inutile de dessiner cinq constellations
+    // dont une seule sera regardée.
+    if (etat.dimensionOuverte) rendreConstellation(etat.dimensionOuverte);
+  }
+
+  // ============================================================
+  // CONSTELLATION
+  // ============================================================
+  // Géométrie. Les Position X/Y de Notion placent la THÉMATIQUE ; les compétences sont
+  // réparties par le renderer sur un anneau autour de ce point, sans donnée
+  // supplémentaire côté Notion.
+  const R_ANNEAU = 38;   // rayon sur lequel les étoiles se répartissent
+  const R_NOYAU = 17;    // rayon du noyau de la thématique
+  const TRIM = 50;       // les traits de filiation s'arrêtent avant l'anneau d'étoiles
+  const DECALAGE_NOM = 56;
+
+  // Luminosité d'une étoile selon le niveau : 4 crans, de l'étoile éteinte (0) à
+  // l'étoile pleine (3). Le niveau 0 n'est pas un palier nommé, c'est l'absence.
+  const CRANS = {
+    0: { r: 2.2, opacite: 0.20, halo: 0,    haloOpacite: 0 },
+    1: { r: 3.3, opacite: 0.50, halo: 8,    haloOpacite: 0.10 },
+    2: { r: 4.5, opacite: 0.78, halo: 11,   haloOpacite: 0.16 },
+    3: { r: 5.8, opacite: 1,    halo: 15,   haloOpacite: 0.24 },
+  };
+
+  // Répartition des 3 à 5 étoiles sur l'anneau. Le demi-pas de décalage évite qu'une
+  // étoile ne tombe pile sur la verticale ou l'horizontale, là où passent les traits.
+  function positionsEtoiles(cx, cy, n) {
+    const pas = 360 / n;
+    return Array.from({ length: n }, (_, i) => {
+      const angle = (-90 + pas / 2 + pas * i) * Math.PI / 180;
+      return { x: cx + Math.cos(angle) * R_ANNEAU, y: cy + Math.sin(angle) * R_ANNEAU };
+    });
+  }
+
+  // viewBox calculée sur les positions réelles : chaque dimension occupe son emprise
+  // propre. Une hauteur fixe laisserait un grand vide sous Intériorité et écraserait
+  // Trajectoire, dont les thématiques descendent bien plus bas.
+  function calculerViewBox(themes) {
+    const xs = themes.map((t) => t.x ?? 0);
+    const ys = themes.map((t) => t.y ?? 0);
+    const margeX = 78;   // place pour les noms de thématiques, centrés donc débordants
+    const margeHaut = 54;
+    const margeBas = 82; // anneau + nom
+    const minX = Math.min(...xs) - margeX;
+    const maxX = Math.max(...xs) + margeX;
+    const minY = Math.min(...ys) - margeHaut;
+    const maxY = Math.max(...ys) + margeBas;
+    return { minX, minY, largeur: maxX - minX, hauteur: maxY - minY };
+  }
+
+  function etoileSvg(x, y, niveau, teinte, verrouillee, competence) {
+    const c = CRANS[niveau] ?? CRANS[0];
+    const couleur = verrouillee ? '#8d8677' : teinte;
+    const halo = c.halo > 0
+      ? `<circle cx="${x}" cy="${y}" r="${c.halo}" fill="${couleur}" fill-opacity="${(c.haloOpacite * (verrouillee ? 0.45 : 1)).toFixed(3)}"/>`
+      : '';
+    // Cible de clic large et invisible : une étoile de niveau 0 ne fait que 2,2 unités
+    // de rayon, impossible à viser au doigt. Le repère visuel reste petit, la zone
+    // sensible non.
+    return `<g class="etoile" data-competence="${echapper(competence.id)}" role="button" tabindex="0"
+              aria-label="${echapper(competence.name)}">
+      ${halo}
+      <circle class="etoile-corps" cx="${x}" cy="${y}" r="${c.r}" fill="${couleur}" fill-opacity="${(c.opacite * (verrouillee ? 0.5 : 1)).toFixed(2)}"/>
+      <circle class="etoile-cible" cx="${x}" cy="${y}" r="16" fill="transparent"/>
+    </g>`;
+  }
+
+  function legendeConstellation(teinte) {
+    const cran = (n) => {
+      const c = CRANS[n];
+      return `<span><svg width="20" height="20" viewBox="0 0 20 20">
+        ${c.halo ? `<circle cx="10" cy="10" r="${Math.min(c.halo, 9)}" fill="${teinte}" fill-opacity="${c.haloOpacite}"/>` : ''}
+        <circle cx="10" cy="10" r="${c.r}" fill="${teinte}" fill-opacity="${c.opacite}"/>
+      </svg>${n === 0 ? 'Non évalué' : echapper(etat.referentiel.scale[n])}</span>`;
+    };
+    return `<div class="constellation-legende">
+      ${[0, 1, 2, 3].map(cran).join('')}
+      <span><svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="#8d8677" stroke-width="1.4" stroke-dasharray="3 3"/></svg>Thématique à débloquer</span>
+    </div>`;
+  }
+
+  // `conteneur` est paramétrable : la même constellation est dessinée dans le détail
+  // d'une dimension et dans son bloc du ciel, sans dupliquer la géométrie.
+  // `avecLegende` : la clé de lecture accompagne la constellation là où l'on lit les
+  // niveaux précisément, dans le détail d'une dimension. Le ciel n'en veut pas — elle y
+  // serait répétée trois fois pour une vue qui ne sert qu'à choisir où aller.
+  function rendreConstellation(idDimension, conteneur = null, { avecLegende = true } = {}) {
+    const dimension = etat.referentiel.dimensions.find((d) => d.id === idDimension);
+    conteneur = conteneur || elDimensions.querySelector(`[data-constellation="${idDimension}"]`);
+    if (!dimension || !conteneur || conteneur.dataset.rendu === 'oui') return;
+
+    const teinte = TEINTES_HEX[idDimension] || '#f0ebe0';
+    const themes = etat.referentiel.themes.filter((t) => t.dimension === dimension.name);
+    const parId = new Map(themes.map((t) => [t.id, t]));
+    const vb = calculerViewBox(themes);
+
+    // Traits de filiation, dessinés avant les thématiques pour passer dessous.
+    const traits = themes.flatMap((source) => source.feeds.map((cibleId) => {
+      const cible = parId.get(cibleId);
+      if (!cible) return '';
+      const dx = cible.x - source.x;
+      const dy = cible.y - source.y;
+      const d = Math.hypot(dx, dy) || 1;
+      const ux = dx / d;
+      const uy = dy / d;
+      // Trait raccourci aux deux bouts : il ne doit jamais passer sur les étoiles.
+      const x1 = source.x + ux * TRIM;
+      const y1 = source.y + uy * TRIM;
+      const x2 = cible.x - ux * TRIM;
+      const y2 = cible.y - uy * TRIM;
+      // Un chemin n'est plein que s'il est entièrement praticable : partir d'une
+      // thématique verrouillée doit se voir autant qu'aboutir sur une. Sans cela, un
+      // trait plein sortait d'un nœud éteint — cas réel sur Alignement, où Cohérence
+      // de vie s'ouvre par Valeurs pendant que Stress et régulation reste fermée.
+      const sourceFermee = etat.computed.themes[source.id]?.status !== 'open';
+      const cibleFermee = etat.computed.themes[cibleId]?.status !== 'open';
+      const verrouillee = sourceFermee || cibleFermee;
+      return `<line class="filiation${verrouillee ? ' filiation-verrouillee' : ''}" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`;
+    })).join('');
+
+    const groupes = themes.map((theme) => {
+      const ouverte = etat.computed.themes[theme.id]?.status === 'open';
+      const competences = etat.referentiel.competencies.filter((c) => c.theme === theme.id);
+      const points = positionsEtoiles(theme.x, theme.y, competences.length);
+      const etoiles = competences.map((c, i) => etoileSvg(
+        points[i].x, points[i].y, etat.computed.levels[c.id] ?? 0, teinte, !ouverte, c
+      )).join('');
+
+      const couleurNoyau = ouverte ? teinte : '#8d8677';
+      return `<g class="theme ${ouverte ? 'theme-ouvert' : 'theme-verrouille'}" data-theme="${echapper(theme.id)}" data-code="${echapper(theme.code)}"
+                 role="button" tabindex="0" aria-label="${echapper(theme.name)}${ouverte ? '' : ' — à débloquer'}">
+        <circle class="theme-cible" cx="${theme.x}" cy="${theme.y}" r="${R_NOYAU + 12}" fill="transparent"/>
+        <circle class="theme-halo" cx="${theme.x}" cy="${theme.y}" r="${R_NOYAU + 9}" fill="${couleurNoyau}" fill-opacity="${ouverte ? 0.10 : 0.04}"/>
+        <circle class="theme-noyau" cx="${theme.x}" cy="${theme.y}" r="${R_NOYAU}" fill="var(--night-deep)" stroke="${couleurNoyau}" stroke-opacity="${ouverte ? 0.85 : 0.4}"/>
+        ${ouverte ? '' : `<text class="theme-cadenas" x="${theme.x}" y="${theme.y + 4}">✦</text>`}
+        ${etoiles}
+        <text class="theme-nom" x="${theme.x}" y="${theme.y + DECALAGE_NOM}">${echapper(theme.name)}</text>
+      </g>`;
+    }).join('');
+
+    conteneur.innerHTML = `
+      <svg class="constellation" viewBox="${vb.minX} ${vb.minY} ${vb.largeur} ${vb.hauteur}"
+           preserveAspectRatio="xMidYMid meet" role="img"
+           aria-label="Constellation de la dimension ${echapper(dimension.name)}">
+        <g class="filiations">${traits}</g>
+        <g class="themes">${groupes}</g>
+      </svg>
+      ${avecLegende ? legendeConstellation(teinte) : ''}
+    `;
+    ajusterCadrage(conteneur.querySelector('svg'));
+    centrerSurLesRacines(conteneur, themes);
+
+    conteneur.querySelectorAll('.theme[data-theme]').forEach((g) => {
+      const ouvrir = () => ouvrirTheme(g.dataset.theme, idDimension);
+      g.addEventListener('click', ouvrir);
+      g.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ouvrir(); }
+      });
+    });
+
+    conteneur.querySelectorAll('.etoile[data-competence]').forEach((g) => {
+      const ouvrir = () => ouvrirCompetence(g.dataset.competence, idDimension);
+      g.addEventListener('click', (e) => { e.stopPropagation(); ouvrir(); });
+      g.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ouvrir(); }
+      });
+    });
+
+    conteneur.dataset.rendu = 'oui';
+  }
+
+  // Quand la carte déborde en largeur, elle s'ouvrait sur son bord gauche — donc sur
+  // une feuille arbitraire. On la positionne d'emblée sur ses racines : c'est de là que
+  // part la lecture, et c'est ce que le membre doit voir en premier.
+  function centrerSurLesRacines(conteneur, themes) {
+    if (conteneur.scrollWidth <= conteneur.clientWidth + 1) return;
+    const cibles = themes.filter((t) => !themes.some((o) => o.feeds.includes(t.id)));
+    if (cibles.length === 0) return;
+    const svg = conteneur.querySelector('svg');
+    const vb = svg.viewBox.baseVal;
+    const echelle = svg.getBoundingClientRect().width / vb.width;
+    const centre = cibles.reduce((somme, t) => somme + t.x, 0) / cibles.length;
+    const x = (centre - vb.x) * echelle;
+    conteneur.scrollLeft = Math.max(0, x - conteneur.clientWidth / 2);
+  }
+
+  // Échelle en dessous de laquelle les libellés deviennent illisibles. À 0.85, un
+  // libellé de 15 unités s'affiche autour de 12.8 px.
+  const ECHELLE_MINI = 0.85;
+
+  // Et une échelle AU-DESSUS de laquelle on cesse d'agrandir.
+  //
+  // Une constellation remplit la largeur de son conteneur : plus elle est compacte dans
+  // le référentiel, plus elle est donc grossie à l'écran. Après le resserrement des
+  // positions dans Notion, « Moi » passait à 22 px de libellé et la vue du détail
+  // gagnait 38 % de hauteur — le resserrement produisait l'effet inverse de celui
+  // cherché. À 1.15, un libellé de 15 unités s'affiche autour de 17 px, ce qui remet
+  // les trois dimensions dans un même ordre de grandeur.
+  const ECHELLE_MAXI = 1.15;
+
+  // Deux réglages faits APRÈS le rendu, parce qu'ils dépendent de la largeur réelle
+  // des textes, que seul le navigateur connaît.
+  function ajusterCadrage(svg) {
+    if (!svg) return;
+    // Un SVG dans un conteneur masqué mesure zéro : le recadrer produirait une carte
+    // minuscule, silencieusement. Mieux vaut ne rien toucher et laisser la viewBox
+    // estimée, qui reste juste.
+    if (svg.getBoundingClientRect().width === 0) return;
+
+    // 1. La viewBox estimée avant rendu réservait une marge fixe pour les noms de
+    //    thématiques. Un nom long y débordait presque (7 unités de reste sur
+    //    Trajectoire). On la recale sur le contenu réellement dessiné : plus aucun
+    //    risque de coupe, et pas un pixel de vide inutile.
+    const bb = svg.getBBox();
+    const marge = 12;
+    const largeur = bb.width + marge * 2;
+    const hauteur = bb.height + marge * 2;
+    svg.setAttribute('viewBox', `${bb.x - marge} ${bb.y - marge} ${largeur} ${hauteur}`);
+
+    // 2. Sous une certaine largeur d'affichage, la carte devient illisible. On impose
+    //    donc une largeur minimale et on laisse le conteneur défiler : mieux vaut une
+    //    carte que l'on fait glisser qu'une carte que l'on ne peut pas lire.
+    svg.style.minWidth = Math.round(largeur * ECHELLE_MINI) + 'px';
+
+    // 3. Et une largeur maximale, pour ne pas gonfler une constellation compacte
+    //    jusqu'à remplir un conteneur large. Elle reste alors centrée dans sa boîte.
+    svg.style.maxWidth = Math.round(largeur * ECHELLE_MAXI) + 'px';
+    svg.style.marginInline = 'auto';
+  }
+
+  // ============================================================
+  // ÉTAT MODIFIABLE ET BROUILLON
+  // ============================================================
+
+  // Travail en cours. `reference` est l'état tel que le serveur l'a renvoyé : il sert à
+  // savoir ce qui a changé, et à revenir en arrière.
+  let reference = { levels: {}, current: [], later: [] };
+  let brouillon = { levels: {}, current: [], later: [] };
+
+  const cleBrouillon = () => `spherier-v2-brouillon-${CLIENT_ID}`;
+
+  // Le brouillon est écrit à chaque modification. La sauvegarde est explicite — un
+  // snapshot doit rester « un moment où je me suis évalué », pas une ligne par clic —
+  // mais rien ne doit être perdu si la page se ferme ou si le réseau lâche.
+  function enregistrerBrouillon() {
+    try {
+      if (!estModifie()) localStorage.removeItem(cleBrouillon());
+      else localStorage.setItem(cleBrouillon(), JSON.stringify({ ...brouillon, le: Date.now() }));
+    } catch { /* stockage indisponible : on continue sans filet, sans casser */ }
+  }
+
+  function lireBrouillon() {
+    try {
+      const brut = localStorage.getItem(cleBrouillon());
+      return brut ? JSON.parse(brut) : null;
+    } catch { return null; }
+  }
+
+  const memeListe = (a, b) => a.length === b.length && [...a].sort().join() === [...b].sort().join();
+
+  function estModifie() {
+    const codes = new Set([...Object.keys(reference.levels), ...Object.keys(brouillon.levels)]);
+    for (const c of codes) if ((reference.levels[c] ?? 0) !== (brouillon.levels[c] ?? 0)) return true;
+    return !memeListe(reference.current, brouillon.current) || !memeListe(reference.later, brouillon.later);
+  }
+
+  function changements() {
+    const niveaux = [];
+    new Set([...Object.keys(reference.levels), ...Object.keys(brouillon.levels)]).forEach((c) => {
+      const av = reference.levels[c] ?? 0, ap = brouillon.levels[c] ?? 0;
+      if (av !== ap) niveaux.push({ code: c, avant: av, apres: ap });
+    });
+    return {
+      niveaux,
+      cibles: !memeListe(reference.current, brouillon.current),
+      plusTard: !memeListe(reference.later, brouillon.later),
+    };
+  }
+
+  // ============================================================
+  // OUVERTURE — APERÇU LOCAL
+  // ============================================================
+  // Le serveur reste la seule autorité : il revalide à l'enregistrement et renvoie
+  // l'ouverture qu'il a calculée, qui écrase celle-ci. Ce calcul local n'existe que
+  // pour le retour immédiat, parce que le contrat évalue l'ouverture sur les niveaux
+  // SOUMIS : monter deux compétences d'Émotions doit déverrouiller Besoins à l'écran
+  // sans attendre la sauvegarde.
+  function calculerOuvertureLocale(levels) {
+    const parTheme = new Map();
+    etat.referentiel.competencies.forEach((c) => {
+      if (!c.theme) return;
+      if (!parTheme.has(c.theme)) parTheme.set(c.theme, []);
+      parTheme.get(c.theme).push(c.id);
+    });
+    const sources = new Map(etat.referentiel.themes.map((t) => [t.id, []]));
+    etat.referentiel.themes.forEach((s) => s.feeds.forEach((c) => {
+      if (sources.has(c)) sources.get(c).push(s.id);
+    }));
+    const nomDe = new Map(etat.referentiel.themes.map((t) => [t.id, t.name]));
+
+    const avance = (id) => {
+      const codes = parTheme.get(id) ?? [];
+      const atteintes = codes.filter((c) => (levels[c] ?? 0) >= NIVEAU_ACQUIS).length;
+      return { atteintes, seuil: Math.max(1, Math.floor(codes.length / 2)) };
+    };
+
+    const res = {};
+    etat.referentiel.themes.forEach((t) => {
+      const src = sources.get(t.id) ?? [];
+      if (src.length === 0) { res[t.id] = { status: 'open', unlock_hint: '' }; return; }
+      const details = src.map((id) => ({ nom: nomDe.get(id), ...avance(id) }));
+      const ouverte = details.some((d) => d.atteintes >= d.seuil);
+      res[t.id] = {
+        status: ouverte ? 'open' : 'locked',
+        unlock_hint: ouverte ? '' : indiceLocal(details),
+      };
+    });
+    return res;
+  }
+
+  // Même formulation que le serveur, mot pour mot : l'aperçu local ne doit pas dire
+  // autre chose que ce que dira la réponse après enregistrement.
+  function indiceLocal(details) {
+    const palier = etat.referentiel.scale[NIVEAU_ACQUIS];
+    const reste = (d) => Math.max(0, d.seuil - d.atteintes);
+    const compte = (n) => `${n} compétence${n > 1 ? 's' : ''}`;
+    if (details.length === 1) {
+      const d = details[0];
+      return `Encore ${compte(reste(d))} dans « ${d.nom} » au palier « ${palier} », et cette thématique s'ouvre.`;
+    }
+    const nombre = details.length === 2 ? 'Deux' : 'Plusieurs';
+    const chemins = details.map((d, i) => (i === 0 ? compte(reste(d)) : String(reste(d))) + ` dans « ${d.nom} »`).join(', ou ');
+    return `${nombre} chemins mènent ici, un seul suffit : au palier « ${palier} », ${chemins}.`;
+  }
+
+  const estOuverte = (themeId) => etat.computed.themes[themeId]?.status === 'open';
+
+  // ============================================================
+  // MODIFICATIONS
+  // ============================================================
+  function appliquerChangement(majEtat) {
+    const avant = JSON.stringify(Object.entries(etat.computed.themes).map(([k, v]) => k + v.status));
+    majEtat();
+    etat.computed.levels = { ...etat.computed.levels, ...brouillon.levels };
+    etat.computed.themes = calculerOuvertureLocale(brouillon.levels);
+    const apres = JSON.stringify(Object.entries(etat.computed.themes).map(([k, v]) => k + v.status));
+
+    enregistrerBrouillon();
+    majBarre();
+    majBoutonMois();
+    majAvancements();
+    // Une ouverture qui bascule change les traits, les teintes et les cadenas : on
+    // redessine la constellation concernée. Sinon un simple rafraîchissement d'étoiles
+    // suffit, et l'animation reste imperceptible.
+    if (avant !== apres) redessinerConstellations();
+    else rafraichirEtoiles();
+    if (etat.vue === 'ciel') rendreCiel();
+  }
+
+  function definirNiveau(code, niveau) {
+    appliquerChangement(() => {
+      // Recliquer sur la marche courante redescend à 0 : se corriger ou se réévaluer à
+      // la baisse doit être aussi simple que monter.
+      const actuel = brouillon.levels[code] ?? 0;
+      brouillon.levels[code] = (actuel === niveau) ? 0 : niveau;
+    });
+  }
+
+  // « Maintenant » et « plus tard » s'excluent : une compétence que l'on travaille
+  // n'est plus en attente, et la promotion est donc un déplacement, pas une copie.
+  function basculerPlusTard(code) {
+    appliquerChangement(() => {
+      if (brouillon.later.includes(code)) {
+        brouillon.later = brouillon.later.filter((c) => c !== code);
+      } else {
+        brouillon.later = [...brouillon.later, code];
+        brouillon.current = brouillon.current.filter((c) => c !== code);
+      }
+    });
+  }
+
+  function basculerMaintenant(code) {
+    appliquerChangement(() => {
+      if (brouillon.current.includes(code)) {
+        brouillon.current = brouillon.current.filter((c) => c !== code);
+      } else {
+        brouillon.current = [...brouillon.current, code];
+        brouillon.later = brouillon.later.filter((c) => c !== code);
+      }
+    });
+  }
+
+  function remplacerMaintenant(sortant, entrant) {
+    appliquerChangement(() => {
+      brouillon.current = [...new Set(
+        brouillon.current.filter((c) => c !== sortant).concat(entrant)
+      )];
+      brouillon.later = brouillon.later.filter((c) => c !== entrant);
+    });
+  }
+
+  // Une cible « maintenant » dont la thématique s'est refermée doit partir avec elle,
+  // sinon le serveur refuserait l'enregistrement entier en 400.
+  function elaguerCiblesFermees() {
+    const avant = brouillon.current.length;
+    brouillon.current = brouillon.current.filter((code) => {
+      const c = etat.referentiel.competencies.find((x) => x.id === code);
+      return c && estOuverte(c.theme);
+    });
+    return avant - brouillon.current.length;
+  }
+
+  // ============================================================
+  // PANNEAU DE COMPÉTENCE
+  // ============================================================
+  const elVoile = document.getElementById('voile');
+  const elPanneau = document.getElementById('panneau');
+  const elPanneauTete = document.getElementById('panneau-tete');
+  const elPanneauCorps = document.getElementById('panneau-corps');
+  let dernierFocus = null;
+
+  function astreCran(niveau, teinte) {
+    const c = CRANS[niveau];
+    return `<svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
+      ${c.halo ? `<circle cx="13" cy="13" r="${Math.min(c.halo, 12)}" fill="${teinte}" fill-opacity="${c.haloOpacite}"/>` : ''}
+      <circle cx="13" cy="13" r="${c.r}" fill="${teinte}" fill-opacity="${c.opacite}"/>
+    </svg>`;
+  }
+
+  function pastilleDifficulte(competence, classe = '') {
+    const d = DIFFICULTES[competence.difficulty];
+    if (!d) return '';
+    return `<span class="pastille-diff ${classe}" style="--dc: ${d.couleur}"><i></i>${echapper(competence.difficulty)}</span>`;
+  }
+
+  // ============================================================
+  // NOTE PERSONNELLE
+  // ============================================================
+  // Une note ne passe PAS par la barre d'enregistrement du sphérier : quelques phrases
+  // écrites sur une conversation difficile ne doivent pas dépendre d'un geste que le
+  // membre pourrait oublier. Elle part donc seule — à la sortie du champ, et après une
+  // pause de frappe — avec un brouillon local en dernier recours.
+  const NOTE_DELAI_MS = 1500;
+  const NOTE_MAX = 4000;
+
+  let noteMinuteur = null;
+  let noteEnVol = null;
+
+  const cleNote = (code) => `spherier-v2-note-${CLIENT_ID}-${code}`;
+
+  function texteNote(code) {
+    return (etat.notes && etat.notes[code] ? etat.notes[code].texte : '') || '';
+  }
+
+  const aUneNote = (code) => texteNote(code).trim() !== '';
+
+  function marqueNote(code) {
+    return aUneNote(code) ? '<span class="marque-note">Note</span>' : '';
+  }
+
+  function blocNote(competence) {
+    const texte = texteNote(competence.id);
+    const brouillonLocal = lireBrouillonNote(competence.id);
+    const valeur = brouillonLocal !== null ? brouillonLocal : texte;
+    const ouvert = valeur.trim() !== '';
+
+    return `<section class="note-bloc${ouvert ? ' ouverte' : ''}" id="note-bloc">
+      <button type="button" class="note-entete" id="note-entete" aria-expanded="${ouvert}">
+        ${ouvert ? '<span class="note-marque"></span>' : ''}
+        <span>Ma note</span>
+        <span class="chev">▾</span>
+      </button>
+      <div class="note-corps">
+        <textarea class="note-champ" id="note-champ" maxlength="${NOTE_MAX}"
+          placeholder="Ce que tu veux garder de cette compétence : une situation, une intention, ce que tu as compris."
+          aria-label="Note personnelle">${echapper(valeur)}</textarea>
+        <div class="note-pied">
+          <span class="note-etat" id="note-etat"></span>
+          <span class="note-compteur" id="note-compteur"></span>
+          <button type="button" class="note-btn" id="note-btn" disabled>Enregistrer</button>
+        </div>
+      </div>
+    </section>`;
+  }
+
+  function lireBrouillonNote(code) {
+    try {
+      const v = localStorage.getItem(cleNote(code));
+      return v === null ? null : v;
+    } catch { return null; }
+  }
+
+  function ecrireBrouillonNote(code, texte) {
+    try {
+      if (texte === texteNote(code)) localStorage.removeItem(cleNote(code));
+      else localStorage.setItem(cleNote(code), texte);
+    } catch { /* stockage indisponible : on continue sans filet */ }
+  }
+
+  function etatNote(message, variante) {
+    const el = document.getElementById('note-etat');
+    if (!el) return;
+    el.className = 'note-etat ' + (variante || '');
+    el.innerHTML = message ? `<i></i>${echapper(message)}` : '';
+  }
+
+  function brancherNote(competence) {
+    const bloc = document.getElementById('note-bloc');
+    const champ = document.getElementById('note-champ');
+    const bouton = document.getElementById('note-btn');
+    const compteur = document.getElementById('note-compteur');
+    if (!bloc || !champ) return;
+
+    document.getElementById('note-entete').addEventListener('click', () => {
+      const ouverte = bloc.classList.toggle('ouverte');
+      document.getElementById('note-entete').setAttribute('aria-expanded', String(ouverte));
+      if (ouverte) champ.focus();
+    });
+
+    const majCompteur = () => {
+      const n = champ.value.length;
+      compteur.textContent = n > NOTE_MAX - 400 ? `${n} / ${NOTE_MAX}` : '';
+    };
+
+    const modifiee = () => champ.value.trim() !== texteNote(competence.id).trim();
+
+    const majBouton = () => {
+      bouton.disabled = !modifiee();
+      if (modifiee()) etatNote('Pas encore enregistrée', '');
+    };
+
+    const enregistrerLaNote = async () => {
+      if (!modifiee()) return;
+      clearTimeout(noteMinuteur);
+      const texte = champ.value;
+      etatNote('Enregistrement…', 'encours');
+      bouton.disabled = true;
+      noteEnVol = competence.id;
+      try {
+        const reponse = await fetch('/api/note', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uuid: CLIENT_ID, code: competence.id, texte }),
+        });
+        if (!reponse.ok) {
+          const d = await reponse.json().catch(() => ({}));
+          throw new Error(d.erreur || `Le serveur a répondu ${reponse.status}`);
+        }
+        const { note } = await reponse.json();
+        if (!etat.notes) etat.notes = {};
+        if (note.supprimee) delete etat.notes[competence.id];
+        else etat.notes[competence.id] = { texte: note.texte, cree_le: note.cree_le, maj_le: note.maj_le };
+
+        try { localStorage.removeItem(cleNote(competence.id)); } catch {}
+        etatNote('Enregistrée', 'enregistree');
+        bouton.disabled = true;
+        // Le signalement « Note » doit apparaître aussitôt là où la compétence est listée.
+        if (themeAffiche) { /* la liste sera régénérée au retour */ }
+      } catch (err) {
+        // Rien n'est perdu : le texte reste à l'écran et sur l'appareil.
+        etatNote(`Non enregistrée — ${err.message}`, 'echec');
+        bouton.disabled = false;
+      } finally {
+        noteEnVol = null;
+      }
+    };
+
+    champ.addEventListener('input', () => {
+      ecrireBrouillonNote(competence.id, champ.value);
+      majCompteur();
+      majBouton();
+      clearTimeout(noteMinuteur);
+      noteMinuteur = setTimeout(enregistrerLaNote, NOTE_DELAI_MS);
+    });
+    // Sortir du champ enregistre sans attendre la pause : c'est le geste qui signale
+    // que l'on a fini d'écrire.
+    champ.addEventListener('blur', enregistrerLaNote);
+    bouton.addEventListener('click', enregistrerLaNote);
+
+    majCompteur();
+    if (modifiee()) {
+      etatNote('Retrouvée sur cet appareil, pas encore enregistrée', '');
+      bouton.disabled = false;
+    } else if (texteNote(competence.id)) {
+      const d = etat.notes[competence.id].maj_le;
+      etatNote(`Enregistrée le ${new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`, '');
+    }
+  }
+
+  function carteRessource(r) {
+    const meta = (r.type || []).join(' · ');
+    const lien = r.url && /^https?:\/\//i.test(r.url) ? r.url : null;
+    const contenu = `<span class="ressource-titre">${echapper(r.name || 'Sans titre')}</span>
+      ${meta ? `<span class="ressource-meta">${echapper(meta)}</span>` : ''}`;
+    return lien
+      ? `<a class="ressource" href="${echapper(lien)}" target="_blank" rel="noopener">${contenu}</a>`
+      : `<div class="ressource">${contenu}</div>`;
+  }
+
+  // Ressources en deux groupes. Une ressource propre à la compétence ne doit jamais
+  // réapparaître parmi celles de la thématique — c'est le cas d'INT-01, dont l'unique
+  // ressource est aussi celle d'Émotions.
+  function sectionRessources(competence) {
+    const parId = new Map(etat.referentiel.resources.map((r) => [r.id, r]));
+    const propres = (competence.resources || []).map((id) => parId.get(id)).filter(Boolean);
+    const idsPropres = new Set(propres.map((r) => r.id));
+    const duTheme = etat.referentiel.resources.filter(
+      (r) => r.themes?.includes(competence.theme) && !idsPropres.has(r.id)
+    );
+
+    // La majorité des compétences n'a rien : la section disparaît entièrement plutôt
+    // que d'afficher un bloc vide ou un « aucune ressource » qui sonnerait comme un
+    // manque.
+    if (propres.length === 0 && duTheme.length === 0) return '';
+
+    const groupe = (titre, liste) => liste.length === 0 ? '' : `
+      <div class="ressources-groupe">
+        ${titre ? `<p class="ressources-sous-label">${titre}</p>` : ''}
+        <div class="ressources">${liste.map(carteRessource).join('')}</div>
+      </div>`;
+
+    return `<section class="panneau-section">
+      <p class="panneau-label">Ressources</p>
+      ${groupe(propres.length && duTheme.length ? 'Pour cette compétence' : '', propres)}
+      ${groupe(propres.length ? 'Autres ressources de la thématique' : 'Ressources de la thématique', duTheme)}
+    </section>`;
+  }
+
+  function escalier(competence, niveau, teinte) {
+    const marches = [1, 2, 3].map((n) => {
+      const classes = ['marche', 'marche-' + n];
+      if (n === niveau) classes.push('marche-actuelle');
+      else if (n < niveau) classes.push('marche-atteinte');
+      return `<button type="button" class="${classes.join(' ')}" data-niveau="${n}"
+                aria-pressed="${n === niveau}">
+        <div class="marche-astre">${astreCran(n, teinte)}</div>
+        <div>
+          <p class="marche-palier">${echapper(etat.referentiel.scale[n])}
+            ${n === niveau ? '<span class="marche-vous">Ton niveau</span>' : ''}</p>
+          <p class="marche-enonce">${echapper(competence.statements[n] || '')}</p>
+        </div>
+      </button>`;
+    }).join('');
+
+    const note = niveau === 0
+      ? "Coche la marche la plus haute qui est vraie pour toi."
+      : (niveau < 3
+        ? `La marche suivante : ${echapper(etat.referentiel.scale[niveau + 1])}. Reclique sur ta marche pour revenir en arrière.`
+        : 'Tu es à la marche la plus haute. Reclique dessus pour revenir en arrière.');
+
+    return `<section class="panneau-section">
+      <p class="panneau-label">Où tu en es</p>
+      <div class="escalier">${marches}</div>
+      <p class="escalier-note">${note}</p>
+    </section>`;
+  }
+
+  // Sélections. « Maintenant » est plafonné et réservé aux thématiques ouvertes ;
+  // « plus tard » est libre et disponible partout, y compris en thématique fermée.
+  function sectionSelections(competence) {
+    const ouverte = estOuverte(competence.theme);
+    const estMaintenant = brouillon.current.includes(competence.id);
+    const estPlusTard = brouillon.later.includes(competence.id);
+    const plein = brouillon.current.length >= MAX_MAINTENANT && !estMaintenant;
+
+    let raison = '';
+    if (!ouverte) raison = "Cette thématique n'est pas encore ouverte : tu peux la garder pour plus tard, et la travailler dès qu'elle se débloque.";
+    else if (plein) raison = `Tu travailles déjà ${MAX_MAINTENANT} compétences ce mois. En choisir une autre te proposera laquelle remplacer.`;
+
+    return `<section class="panneau-section">
+      <p class="panneau-label">Ton intention</p>
+      <div class="cibles">
+        <button type="button" class="cible-btn cible-maintenant${estMaintenant ? ' active' : ''}"
+          id="btn-maintenant" ${ouverte ? '' : 'disabled'} aria-pressed="${estMaintenant}">
+          <span class="pastille"></span>${estMaintenant ? 'Je la travaille ce mois' : 'La travailler ce mois'}
+        </button>
+        <button type="button" class="cible-btn cible-plus-tard${estPlusTard ? ' active' : ''}"
+          id="btn-plus-tard" aria-pressed="${estPlusTard}">
+          <span class="pastille"></span>${estPlusTard ? 'Gardée pour plus tard' : 'Garder pour plus tard'}
+        </button>
+      </div>
+      ${raison ? `<p class="cible-raison">${raison}</p>` : ''}
+      <div id="zone-remplacement"></div>
+    </section>`;
+  }
+
+  // Quatrième cible : plutôt qu'un refus sec qui obligerait à retrouver les trois
+  // autres dans la carte pour en retirer une, on propose l'échange sur place.
+  function proposerRemplacement(competence, apres) {
+    const zone = document.getElementById('zone-remplacement');
+    const actuelles = brouillon.current
+      .map((code) => etat.referentiel.competencies.find((c) => c.id === code))
+      .filter(Boolean);
+
+    zone.innerHTML = `<div class="remplacement">
+      <p>Tu travailles déjà trois compétences ce mois. Laquelle <b>${echapper(competence.name)}</b> remplace-t-elle ?</p>
+      <div class="remplacement-liste">
+        ${actuelles.map((c) => {
+          const t = etat.referentiel.themes.find((x) => x.id === c.theme);
+          return `<button type="button" class="remplacement-item" data-sortant="${echapper(c.id)}">
+            ${echapper(c.name)}<span>${echapper(t ? t.name : '')}</span></button>`;
+        }).join('')}
+      </div>
+      <button type="button" class="remplacement-annuler" id="remplacement-annuler">Aucune, annuler</button>
+    </div>`;
+
+    zone.querySelectorAll('[data-sortant]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        remplacerMaintenant(btn.dataset.sortant, competence.id);
+        if (apres) apres(); else rafraichirPanneau(competence.id);
+      });
+    });
+    document.getElementById('remplacement-annuler').addEventListener('click', () => { zone.innerHTML = ''; });
+  }
+
+  let competenceAffichee = null;
+  let themeAffiche = null;
+
+  // ============================================================
+  // PANNEAU DE THÉMATIQUE
+  // ============================================================
+  // Une thématique verrouillée est entièrement consultable : définition, compétences,
+  // énoncés, ressources, auto-évaluation et « plus tard ». Seule l'action « maintenant »
+  // est bloquée. C'est ce qui en fait un horizon et non un mur.
+  function ouvrirTheme(themeId, idDimension) {
+    const theme = etat.referentiel.themes.find((t) => t.id === themeId);
+    if (!theme) return;
+    const dimension = etat.referentiel.dimensions.find((d) => d.id === idDimension);
+    const teinte = TEINTES_HEX[idDimension] || '#f0ebe0';
+    const ouverte = estOuverte(themeId);
+    const infos = etat.computed.themes[themeId] || {};
+
+    themeAffiche = { id: themeId, dimension: idDimension };
+    competenceAffichee = null;
+
+    const competences = etat.referentiel.competencies.filter((c) => c.theme === themeId);
+    const items = competences.map((c) => {
+      const niveau = brouillon.levels[c.id] ?? 0;
+      const marques = [
+        brouillon.current.includes(c.id) ? '<span class="comp-marque comp-marque-maintenant">Ce mois</span>' : '',
+        brouillon.later.includes(c.id) ? '<span class="comp-marque comp-marque-plus-tard">Plus tard</span>' : '',
+      ].filter(Boolean).join('');
+      return `<button type="button" class="comp-item" data-competence="${echapper(c.id)}">
+        <span class="comp-astre">${astreCran(Math.max(niveau, 1), ouverte ? teinte : '#8d8677')
+          .replace('fill-opacity="' + CRANS[Math.max(niveau, 1)].opacite + '"', `fill-opacity="${niveau === 0 ? 0.22 : CRANS[niveau].opacite}"`)}</span>
+        <span>
+          <span class="comp-nom">${echapper(c.name)}</span>
+          <span class="comp-marques">${pastilleDifficulte(c)}${marqueNote(c.id)}${marques}</span>
+        </span>
+        <span class="comp-palier">${niveau === 0 ? 'À évaluer' : echapper(etat.referentiel.scale[niveau])}</span>
+      </button>`;
+    }).join('');
+
+    elPanneau.style.setProperty('--teinte-p', teinte);
+    elPanneauTete.innerHTML = `
+      <p class="panneau-fil">${echapper(dimension ? dimension.name : '')} <span>›</span> <b>Thématique</b></p>
+      <h2 class="panneau-titre" id="panneau-titre">${echapper(theme.name)}</h2>
+      ${theme.definition ? `<p class="panneau-def">${echapper(theme.definition)}</p>` : ''}
+    `;
+
+    const horizon = ouverte ? '' : `
+      <section class="panneau-section">
+        <div class="horizon">
+          <span class="horizon-marque">${astreCran(2, '#8d8677')}</span>
+          <p class="horizon-texte">
+            <b>Pas encore ouverte</b>
+            ${echapper(infos.unlock_hint || '')}
+            <br><br>Tu peux déjà tout lire ici, t'y évaluer, et garder une compétence pour plus tard.
+          </p>
+        </div>
+      </section>`;
+
+    elPanneauCorps.innerHTML = horizon + `
+      <section class="panneau-section">
+        <p class="panneau-label">${competences.length} compétence${competences.length > 1 ? 's' : ''}</p>
+        <div class="liste-comp">${items}</div>
+      </section>`;
+    elPanneauCorps.scrollTop = 0;
+
+    elPanneauCorps.querySelectorAll('.comp-item[data-competence]').forEach((btn) => {
+      btn.addEventListener('click', () => ouvrirCompetence(btn.dataset.competence, idDimension));
+    });
+
+    afficherPanneau();
+    document.body.dataset.panneau = 'theme:' + theme.code;
+  }
+
+  // Le masquage est différé le temps de l'animation de fermeture. Rouvrir pendant ce
+  // délai — enchaîner deux étoiles, par exemple — laissait le minuteur masquer le
+  // panneau fraîchement ouvert : il apparaissait puis disparaissait aussitôt.
+  let minuteurFermeture = null;
+
+  // ============================================================
+  // PANNEAU « MON MOIS » — les sélections rassemblées
+  // ============================================================
+  // Une wishlist éparpillée sur cinq dimensions est inutilisable : le membre coche et
+  // ne retrouve jamais. Ce panneau est un RACCOURCI vers la carte, pas une seconde
+  // interface : chaque entrée y ramène.
+  const elBtnMois = document.getElementById('btn-mois');
+  const elBtnMoisCompte = document.getElementById('btn-mois-compte');
+
+  function majBoutonMois() {
+    const n = brouillon.current.length + brouillon.later.length;
+    elBtnMois.hidden = n === 0;
+    elBtnMoisCompte.textContent = brouillon.current.length + '/' + MAX_MAINTENANT;
+  }
+
+  function dimensionDe(competence) {
+    const t = etat.referentiel.themes.find((x) => x.id === competence.theme);
+    return etat.referentiel.dimensions.find((d) => d.name === t?.dimension);
+  }
+
+  function ligneSelection(code, options = {}) {
+    const c = etat.referentiel.competencies.find((x) => x.id === code);
+    if (!c) return '';
+    const t = etat.referentiel.themes.find((x) => x.id === c.theme);
+    const niveau = brouillon.levels[code] ?? 0;
+    const ouverte = estOuverte(c.theme);
+    const etatTexte = options.cible
+      ? (niveau === 0 ? 'À évaluer' : echapper(etat.referentiel.scale[niveau]))
+      : (ouverte
+          ? `<span>Accessible</span>`
+          : `<span class="sel-verrou">Thématique à débloquer</span>`);
+
+    // La promotion n'a de sens que si la thématique est ouverte : c'est la seule
+    // contrainte du serveur sur « maintenant ».
+    const promouvoir = (!options.cible && ouverte)
+      ? `<button type="button" class="sel-promouvoir" data-promouvoir="${echapper(code)}">La travailler ce mois</button>`
+      : '';
+
+    return `<div class="sel-item${options.cible ? ' cible' : ''}">
+      <button type="button" class="sel-nom" data-aller="${echapper(code)}">
+        ${echapper(c.name)}<small>${echapper(t ? t.name : '')}${aUneNote(code) ? ' · note' : ''}</small>
+      </button>
+      <span class="sel-etat">${etatTexte}</span>
+      ${promouvoir}
+    </div>`;
+  }
+
+  function ouvrirMois() {
+    competenceAffichee = null;
+    themeAffiche = null;
+    elPanneau.style.setProperty('--teinte-p', '#c9a661');
+
+    elPanneauTete.innerHTML = `
+      <p class="panneau-fil"><b>Tes choix</b></p>
+      <h2 class="panneau-titre" id="panneau-titre">Mon mois</h2>
+      <p class="panneau-def">Ce que tu travailles maintenant, et ce que tu gardes pour la suite.</p>`;
+
+    const cibles = brouillon.current.length
+      ? brouillon.current.map((c) => ligneSelection(c, { cible: true })).join('')
+      : `<p class="sel-vide">Aucune compétence choisie pour ce mois. Trois au maximum : c'est peu, et c'est voulu — mieux vaut trois compétences travaillées qu'une liste d'intentions.</p>`;
+
+    // « Plus tard » groupé par dimension : c'est ce qui transforme un fourre-tout en
+    // file d'attente lisible.
+    const parDim = new Map();
+    brouillon.later.forEach((code) => {
+      const c = etat.referentiel.competencies.find((x) => x.id === code);
+      if (!c) return;
+      const d = dimensionDe(c);
+      const cle = d ? d.id : '?';
+      if (!parDim.has(cle)) parDim.set(cle, { dimension: d, codes: [] });
+      parDim.get(cle).codes.push(code);
+    });
+    const ordre = etat.referentiel.dimensions.map((d) => d.id);
+    const groupes = [...parDim.entries()]
+      .sort((a, b) => ordre.indexOf(a[0]) - ordre.indexOf(b[0]))
+      .map(([id, g]) => `
+        <p class="sel-dim" style="--h: ${TEINTES_HEX[id] || '#f0ebe0'}"><i></i>${echapper(g.dimension ? g.dimension.name : '')}</p>
+        ${g.codes.map((c) => ligneSelection(c)).join('')}`).join('');
+
+    const plusTard = brouillon.later.length
+      ? groupes
+      : `<p class="sel-vide">Rien en attente. Sur n'importe quelle compétence, « Garder pour plus tard » la range ici — y compris dans une thématique encore fermée.</p>`;
+
+    elPanneauCorps.innerHTML = `
+      <section class="panneau-section sel-groupe">
+        <p class="panneau-label">Ce mois — ${brouillon.current.length}/${MAX_MAINTENANT}</p>
+        ${cibles}
+      </section>
+      <section class="panneau-section sel-groupe">
+        <p class="panneau-label">Pour plus tard${brouillon.later.length ? ' — ' + brouillon.later.length : ''}</p>
+        ${plusTard}
+      </section>
+      <div id="zone-remplacement"></div>
+      <p class="sel-rappel">Touche une compétence pour la retrouver dans sa constellation.</p>`;
+    elPanneauCorps.scrollTop = 0;
+
+    elPanneauCorps.querySelectorAll('[data-aller]').forEach((btn) => {
+      btn.addEventListener('click', () => allerVersCompetence(btn.dataset.aller));
+    });
+    elPanneauCorps.querySelectorAll('[data-promouvoir]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const code = btn.dataset.promouvoir;
+        const competence = etat.referentiel.competencies.find((c) => c.id === code);
+        if (brouillon.current.length >= MAX_MAINTENANT) {
+          proposerRemplacement(competence, () => ouvrirMois());
+          document.getElementById('zone-remplacement').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          return;
+        }
+        basculerMaintenant(code);
+        ouvrirMois();
+      });
+    });
+
+    afficherPanneau();
+    document.body.dataset.panneau = 'mois';
+  }
+
+  // Rejoindre une compétence dans la carte : déplie sa dimension, dessine sa
+  // constellation au besoin, puis ouvre son panneau.
+  function allerVersCompetence(code) {
+    const competence = etat.referentiel.competencies.find((c) => c.id === code);
+    if (!competence) return;
+    const d = dimensionDe(competence);
+    if (!d) return;
+    if (etat.dimensionOuverte !== d.id) basculerDimension(d.id);
+    const zone = elDimensions.querySelector(`[data-dimension="${d.id}"]`);
+    if (zone) zone.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    ouvrirCompetence(code, d.id);
+  }
+
+  elBtnMois.addEventListener('click', ouvrirMois);
+
+  // ============================================================
+  // M'ÉVALUER — défilement compétence par compétence
+  // ============================================================
+  // Prend une LISTE DE CODES en paramètre, jamais une dimension : le même écran sert
+  // au positionnement initial d'une dimension entière et aux 7 compétences du thème du
+  // mois en séance. L'appelant décide ce qu'il y met.
+  //
+  // L'enregistrement est proposé à la fin de chaque bloc, pour qu'un membre puisse s'y
+  // reprendre en plusieurs fois sans rien perdre.
+  const TAILLE_BLOC = 8;
+
+  let situer = null;
+
+  function ouvrirMeSituer({ codes, titre, teinte = '#c9a661', depart = 0 }) {
+    const liste = codes.filter((c) => etat.referentiel.competencies.some((x) => x.id === c));
+    if (liste.length === 0) return;
+
+    situer = {
+      codes: liste,
+      titre,
+      teinte,
+      index: depart,
+      // Position de départ du bloc courant : sert à ne proposer l'enregistrement
+      // qu'au bout d'une portion, et à afficher un bilan de ce qui vient d'être fait.
+      debutBloc: depart,
+      situeesAuDebut: liste.filter((c) => (brouillon.levels[c] ?? 0) > 0).length,
+    };
+    competenceAffichee = null;
+    themeAffiche = null;
+    elPanneau.style.setProperty('--teinte-p', teinte);
+    rendreMeSituer();
+    afficherPanneau();
+    document.body.dataset.panneau = 'situer';
+  }
+
+  function finDeBloc(i) {
+    return i > situer.debutBloc && (i - situer.debutBloc) % TAILLE_BLOC === 0;
+  }
+
+  function rendreMeSituer() {
+    if (!situer) return;
+
+    // Fin de parcours ou fin de bloc : on s'arrête pour proposer d'enregistrer.
+    if (situer.index >= situer.codes.length || finDeBloc(situer.index)) {
+      rendreBilanMeSituer();
+      return;
+    }
+
+    const code = situer.codes[situer.index];
+    const c = etat.referentiel.competencies.find((x) => x.id === code);
+    const theme = etat.referentiel.themes.find((t) => t.id === c.theme);
+    const niveau = brouillon.levels[code] ?? 0;
+    const situees = situer.codes.filter((x) => (brouillon.levels[x] ?? 0) > 0).length;
+
+    elPanneauTete.innerHTML = `
+      <p class="panneau-fil">M'évaluer <span>›</span> <b>${echapper(situer.titre)}</b></p>
+      <div class="situer-progres">
+        <span class="situer-jauge"><i style="width:${Math.round((situer.index / situer.codes.length) * 100)}%"></i></span>
+        <span class="situer-compte">${situer.index + 1} / ${situer.codes.length}</span>
+      </div>`;
+
+    elPanneauCorps.innerHTML = `
+      <div class="situer">
+        <p class="situer-fil">${echapper(theme ? theme.name : '')}</p>
+        <h2 class="situer-nom" id="panneau-titre">${echapper(c.name)}</h2>
+        ${pastilleDifficulte(c)}
+        ${c.definition ? `<p class="situer-def">${echapper(c.definition)}</p>` : ''}
+        <div style="margin-top:18px">${escalier(c, niveau, situer.teinte)}</div>
+        <div class="situer-pied">
+          <button type="button" class="situer-btn" id="situer-precedent" ${situer.index === 0 ? 'disabled' : ''}>← Précédente</button>
+          <button type="button" class="situer-btn situer-passer" id="situer-passer">
+            ${niveau > 0 ? 'Suivante →' : 'Passer →'}
+          </button>
+          <p class="situer-astuce">${niveau > 0
+            ? `Déjà évalué à « ${echapper(etat.referentiel.scale[niveau])} ». Reclique sur ta marche pour l'effacer.`
+            : 'Coche une marche, ou passe : tu pourras y revenir.'}</p>
+        </div>
+      </div>`;
+    elPanneauCorps.scrollTop = 0;
+
+    // Cocher une marche fait avancer tout seul : c'est ce qui rend le parcours fluide.
+    elPanneauCorps.querySelectorAll('.marche[data-niveau]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const n = Number(btn.dataset.niveau);
+        const avant = brouillon.levels[code] ?? 0;
+        definirNiveau(code, n);
+        // Décocher (recliquer sur sa propre marche) ne doit pas faire avancer :
+        // le membre corrige, il ne valide pas.
+        if (avant === n) rendreMeSituer();
+        else avancerMeSituer();
+      });
+    });
+    document.getElementById('situer-passer').addEventListener('click', avancerMeSituer);
+    document.getElementById('situer-precedent').addEventListener('click', () => {
+      situer.index = Math.max(0, situer.index - 1);
+      rendreMeSituer();
+    });
+  }
+
+  function avancerMeSituer() {
+    situer.index += 1;
+    rendreMeSituer();
+  }
+
+  function rendreBilanMeSituer() {
+    const termine = situer.index >= situer.codes.length;
+    const situees = situer.codes.filter((x) => (brouillon.levels[x] ?? 0) > 0).length;
+    const nouvelles = Math.max(0, situees - situer.situeesAuDebut);
+    const restantes = situer.codes.length - situer.index;
+
+    elPanneauTete.innerHTML = `
+      <p class="panneau-fil">M'évaluer <span>›</span> <b>${echapper(situer.titre)}</b></p>
+      <div class="situer-progres">
+        <span class="situer-jauge"><i style="width:${Math.round((situer.index / situer.codes.length) * 100)}%"></i></span>
+        <span class="situer-compte">${situer.index} / ${situer.codes.length}</span>
+      </div>`;
+
+    elPanneauCorps.innerHTML = `
+      <div class="situer-bilan">
+        <span class="mark">✧</span>
+        <h3>${termine ? 'Tu as parcouru toute la liste.' : 'Une pause ?'}</h3>
+        <p>${termine
+          ? "Rien n'est encore enregistré. Tu peux le faire maintenant, ou continuer à explorer la carte."
+          : `Il te reste ${restantes} compétence${restantes > 1 ? 's' : ''}. Enregistre ce que tu viens de faire, tu reprendras où tu en es.`}</p>
+        <dl class="situer-bilan-chiffres">
+          <div><dt>Évaluées à l'instant</dt><dd>${nouvelles}</dd></div>
+          <div><dt>Évaluées en tout</dt><dd>${situees}<span style="color:var(--stone);font-size:15px"> / ${situer.codes.length}</span></dd></div>
+        </dl>
+        <div class="situer-pied" style="justify-content:center">
+          ${termine ? '' : '<button type="button" class="situer-btn" id="situer-continuer">Continuer →</button>'}
+          <button type="button" class="situer-btn" id="situer-enregistrer"
+            style="border-color:var(--gold);background:rgba(201,166,97,.16);color:var(--gold-bright)">Enregistrer</button>
+          <button type="button" class="situer-btn" id="situer-fermer">Revenir à la carte</button>
+        </div>
+      </div>`;
+    elPanneauCorps.scrollTop = 0;
+
+    const continuer = document.getElementById('situer-continuer');
+    if (continuer) continuer.addEventListener('click', () => {
+      situer.debutBloc = situer.index;
+      situer.situeesAuDebut = situer.codes.filter((x) => (brouillon.levels[x] ?? 0) > 0).length;
+      rendreMeSituer();
+    });
+    document.getElementById('situer-enregistrer').addEventListener('click', async () => {
+      await enregistrer();
+      situer.situeesAuDebut = situer.codes.filter((x) => (brouillon.levels[x] ?? 0) > 0).length;
+      rendreBilanMeSituer();
+    });
+    document.getElementById('situer-fermer').addEventListener('click', fermerPanneau);
+  }
+
+  // ============================================================
+  // TABLEAU DE SYNTHÈSE
+  // ============================================================
+  // Raccourci vers la carte, comme « Mon mois » : rien ne s'y modifie. Le clic sur une
+  // ligne ouvre le panneau de compétence — une seule porte pour écrire.
+  const FILTRES = {
+    tout:      { libelle: 'Tout',            garde: () => true },
+    cibles:    { libelle: 'Mes cibles',      garde: (c) => brouillon.current.includes(c.id) || brouillon.later.includes(c.id) },
+    nonSituees:{ libelle: 'Non évaluées',     garde: (c) => (brouillon.levels[c.id] ?? 0) === 0 },
+    ouvertes:  { libelle: 'Thém. ouvertes',  garde: (c) => estOuverte(c.theme) },
+    // Les filtres de difficulté sont ajoutés par appliquerConfigClub() : leurs libellés
+    // sont des réglages de club, pas des constantes d'interface.
+  };
+
+  let synFiltres = new Set(['tout']);
+  let synDeplies = new Set();
+
+  // Les filtres se cumulent, sauf « Tout » qui les remplace tous. Croiser « Fondamental »
+  // et « Non évaluées » est justement le cas qui donne son sens à la pastille.
+  function synGarde(c) {
+    if (synFiltres.has('tout')) return true;
+    return [...synFiltres].every((f) => FILTRES[f].garde(c));
+  }
+
+  function repartition(codes, teinte) {
+    const n = codes.length || 1;
+    const compte = [0, 0, 0, 0];
+    codes.forEach((code) => { compte[brouillon.levels[code] ?? 0] += 1; });
+    return `<span class="syn-repartition" style="--h:${teinte}" aria-hidden="true">
+      ${compte.map((v, i) => v ? `<i class="syn-seg${i}" style="width:${(v / n) * 100}%"></i>` : '').join('')}
+    </span>`;
+  }
+
+  function ligneCompetence(c) {
+    const niveau = brouillon.levels[c.id] ?? 0;
+    const marques = [
+      pastilleDifficulte(c),
+      marqueNote(c.id),
+      brouillon.current.includes(c.id) ? '<span class="comp-marque comp-marque-maintenant">Ce mois</span>' : '',
+      brouillon.later.includes(c.id) ? '<span class="comp-marque comp-marque-plus-tard">Plus tard</span>' : '',
+    ].filter(Boolean).join('');
+    return `<button type="button" class="syn-comp" data-aller="${echapper(c.id)}">
+      <span class="syn-comp-nom">${echapper(c.name)}</span>
+      <span class="syn-comp-niveau${niveau ? ' situe' : ''}">${niveau ? echapper(etat.referentiel.scale[niveau]) : 'À évaluer'}</span>
+      ${marques ? `<span class="syn-comp-marques">${marques}</span>` : ''}
+    </button>`;
+  }
+
+  // Ordre de lecture du référentiel : dimension canonique, puis thématique, puis rang
+  // de la compétence dans sa thématique. C'est l'ordre dans lequel tout ce qui
+  // s'adresse au membre présente les compétences.
+  function ordreDeLecture(competences) {
+    const rangDimension = new Map(etat.referentiel.dimensions.map((d, i) => [d.name, i]));
+    const rangTheme = new Map();
+    etat.referentiel.themes
+      .slice()
+      .sort((a, b) => (rangDimension.get(a.dimension) ?? 99) - (rangDimension.get(b.dimension) ?? 99)
+        || (a.order ?? 0) - (b.order ?? 0))
+      .forEach((t, i) => rangTheme.set(t.id, i));
+
+    // `Ordre` vide = à la fin de sa thématique, jamais en tête : c'est le cas normal
+    // d'une compétence qu'on vient d'ajouter dans Notion. Même règle que côté serveur.
+    const rangComp = (c) => c.order ?? Number.MAX_SAFE_INTEGER;
+    return competences.slice().sort((a, b) =>
+      (rangTheme.get(a.theme) ?? 9999) - (rangTheme.get(b.theme) ?? 9999)
+      || rangComp(a) - rangComp(b)
+      || a.id.localeCompare(b.id));
+  }
+
+  function ouvrirSynthese() {
+    competenceAffichee = null;
+    themeAffiche = null;
+    situer = null;
+    elPanneau.style.setProperty('--teinte-p', '#c9a661');
+
+    const retenues = etat.referentiel.competencies.filter(synGarde);
+    // Le parcours doit suivre l'ordre du TABLEAU, pas celui de la liste plate renvoyée
+    // par Notion — qui trie par code et donne donc AUT avant MOI. Un membre qui lit ses
+    // trous de haut en bas puis clique « M'évaluer sur ces N compétences » attend de
+    // les retrouver dans le même ordre : dimensions en ordre canonique, puis
+    // thématiques dans l'ordre du référentiel.
+    const codesRetenus = ordreDeLecture(retenues).map((c) => c.id);
+
+    const chips = Object.entries(FILTRES).map(([cle, f]) => {
+      const n = etat.referentiel.competencies.filter(f.garde).length;
+      return `<button type="button" class="syn-filtre${synFiltres.has(cle) ? ' actif' : ''}" data-filtre="${cle}">
+        ${echapper(f.libelle)}<span class="n">${n}</span></button>`;
+    }).join('');
+
+    elPanneauTete.innerHTML = `
+      <p class="panneau-fil"><b>Vue d'ensemble</b></p>
+      <h2 class="panneau-titre" id="panneau-titre">Où j'en suis</h2>
+      <div class="syn-filtres">${chips}</div>`;
+
+    // Le rattrapage naturel : une fois les trous visibles, on va les combler.
+    const actionSituer = (synFiltres.has('nonSituees') && codesRetenus.length > 0)
+      ? `<div class="syn-action"><button type="button" class="dimension-situer" id="syn-situer" style="--teinte:#c9a661">
+           M'évaluer sur ces ${codesRetenus.length} compétences
+         </button></div>`
+      : '';
+
+    const corps = etat.referentiel.dimensions.map((d) => {
+      const teinte = TEINTES_HEX[d.id];
+      const themes = etat.referentiel.themes
+        .filter((t) => t.dimension === d.name)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+      const blocsThemes = themes.map((t) => {
+        const comps = retenues.filter((c) => c.theme === t.id);
+        if (comps.length === 0) return '';
+        const codes = comps.map((c) => c.id);
+        const situees = codes.filter((x) => (brouillon.levels[x] ?? 0) > 0).length;
+        const ouverteT = estOuverte(t.id);
+        const cle = 'T:' + t.id;
+        return `<div class="syn-theme${synDeplies.has(cle) ? ' syn-ouvert' : ''}" data-cle="${cle}">
+          <button type="button" class="syn-ligne" data-plier="${cle}">
+            <span class="syn-nom">${echapper(t.name)}</span>
+            <span class="syn-compte">${situees}/${codes.length} évaluées${ouverteT ? '' : ' · '}</span>
+            ${ouverteT ? '' : '<span class="syn-verrou">à débloquer</span>'}
+            <span class="syn-chev">▾</span>
+            ${repartition(codes, teinte)}
+          </button>
+          <div class="syn-corps">${comps.map(ligneCompetence).join('')}</div>
+        </div>`;
+      }).join('');
+
+      if (!blocsThemes) return '';
+      const codesDim = retenues.filter((c) => themes.some((t) => t.id === c.theme)).map((c) => c.id);
+      const situeesDim = codesDim.filter((x) => (brouillon.levels[x] ?? 0) > 0).length;
+      const cleD = 'D:' + d.id;
+      return `<section class="syn-dim${synDeplies.has(cleD) ? ' syn-ouvert' : ''}" data-cle="${cleD}" style="--h:${teinte}">
+        <button type="button" class="syn-ligne" data-plier="${cleD}">
+          <span class="syn-nom">${echapper(d.name)}</span>
+          <span class="syn-compte">${situeesDim}/${codesDim.length} évaluées</span>
+          <span class="syn-chev">▾</span>
+          ${repartition(codesDim, teinte)}
+        </button>
+        <div class="syn-corps">${blocsThemes}</div>
+      </section>`;
+    }).join('');
+
+    elPanneauCorps.innerHTML = actionSituer
+      + (corps || `<p class="syn-vide">Aucune compétence ne correspond à ce croisement de filtres.</p>`);
+    elPanneauCorps.scrollTop = 0;
+
+    elPanneauCorps.querySelectorAll('[data-plier]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const cle = btn.dataset.plier;
+        if (synDeplies.has(cle)) synDeplies.delete(cle); else synDeplies.add(cle);
+        ouvrirSynthese();
+      });
+    });
+    elPanneauCorps.querySelectorAll('[data-aller]').forEach((btn) => {
+      btn.addEventListener('click', () => allerVersCompetence(btn.dataset.aller));
+    });
+    const btnSituer = document.getElementById('syn-situer');
+    if (btnSituer) btnSituer.addEventListener('click', () => ouvrirMeSituer({
+      codes: codesRetenus, titre: 'Mes compétences non évaluées', teinte: '#c9a661',
+    }));
+
+    elPanneauTete.querySelectorAll('[data-filtre]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const cle = btn.dataset.filtre;
+        if (cle === 'tout') synFiltres = new Set(['tout']);
+        else {
+          synFiltres.delete('tout');
+          if (synFiltres.has(cle)) synFiltres.delete(cle); else synFiltres.add(cle);
+          if (synFiltres.size === 0) synFiltres = new Set(['tout']);
+        }
+        // Un filtre actif sans rien de déplié n'apprend rien : on ouvre les dimensions
+        // qui ont des résultats, sans forcer l'ouverture des thématiques.
+        if (!synFiltres.has('tout')) {
+          etat.referentiel.dimensions.forEach((d) => synDeplies.add('D:' + d.id));
+        }
+        ouvrirSynthese();
+      });
+    });
+
+    afficherPanneau();
+    document.body.dataset.panneau = 'synthese';
+  }
+
+  document.getElementById('btn-synthese').addEventListener('click', ouvrirSynthese);
+
+  function afficherPanneau() {
+    clearTimeout(minuteurFermeture);
+    minuteurFermeture = null;
+    const etaitFerme = elVoile.hidden || !elVoile.classList.contains('visible');
+    if (etaitFerme) {
+      if (elVoile.hidden) dernierFocus = document.activeElement;
+      elVoile.hidden = false;
+      requestAnimationFrame(() => elVoile.classList.add('visible'));
+      document.body.style.overflow = 'hidden';
+      document.getElementById('panneau-fermer').focus();
+    }
+  }
+
+
+  function brancherPanneau(competence) {
+    elPanneauCorps.querySelectorAll('.marche[data-niveau]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        definirNiveau(competence.id, Number(btn.dataset.niveau));
+        rafraichirPanneau(competence.id);
+      });
+    });
+
+    const btnMaintenant = document.getElementById('btn-maintenant');
+    if (btnMaintenant) btnMaintenant.addEventListener('click', () => {
+      const dejaCible = brouillon.current.includes(competence.id);
+      if (!dejaCible && brouillon.current.length >= MAX_MAINTENANT) {
+        proposerRemplacement(competence);
+        return;
+      }
+      basculerMaintenant(competence.id);
+      rafraichirPanneau(competence.id);
+    });
+
+    const btnPlusTard = document.getElementById('btn-plus-tard');
+    if (btnPlusTard) btnPlusTard.addEventListener('click', () => {
+      basculerPlusTard(competence.id);
+      rafraichirPanneau(competence.id);
+    });
+  }
+
+  // Redessine le panneau sur place, en gardant la position de lecture : le membre ne
+  // doit pas être renvoyé en haut à chaque clic sur une marche.
+  function rafraichirPanneau(code) {
+    if (competenceAffichee && competenceAffichee.code === code) {
+      const origine = themeAffiche;
+      ouvrirCompetence(code, competenceAffichee.dimension, true);
+      themeAffiche = origine;
+    }
+  }
+
+  function ouvrirCompetence(code, idDimension, conserverDefilement = false) {
+    const competence = etat.referentiel.competencies.find((c) => c.id === code);
+    if (!competence) return;
+    competenceAffichee = { code, dimension: idDimension };
+    const theme = etat.referentiel.themes.find((t) => t.id === competence.theme);
+    const dimension = etat.referentiel.dimensions.find((d) => d.id === idDimension);
+    const teinte = TEINTES_HEX[idDimension] || '#f0ebe0';
+    const niveau = brouillon.levels[code] ?? 0;
+
+    elPanneau.style.setProperty('--teinte-p', teinte);
+    const retour = themeAffiche && themeAffiche.id === competence.theme;
+    elPanneauTete.innerHTML = `
+      ${retour ? `<button type="button" class="panneau-retour" id="panneau-retour">← ${echapper(theme ? theme.name : '')}</button>` : ''}
+      <p class="panneau-fil">${echapper(dimension ? dimension.name : '')} <span>›</span> <b>${echapper(theme ? theme.name : '')}</b></p>
+      <h2 class="panneau-titre" id="panneau-titre">${echapper(competence.name)}</h2>
+      ${competence.definition ? `<p class="panneau-def">${echapper(competence.definition)}</p>` : ''}
+      ${pastilleDifficulte(competence, 'panneau-diff')}
+    `;
+    elPanneauCorps.innerHTML = escalier(competence, niveau, teinte)
+      + sectionSelections(competence)
+      + sectionRessources(competence)
+      + blocNote(competence);
+    brancherPanneau(competence);
+    brancherNote(competence);
+    if (!conserverDefilement) elPanneauCorps.scrollTop = 0;
+
+    const btnRetour = document.getElementById('panneau-retour');
+    if (btnRetour) btnRetour.addEventListener('click', () => ouvrirTheme(themeAffiche.id, themeAffiche.dimension));
+
+    afficherPanneau();
+    document.body.dataset.panneau = code;
+  }
+
+  function fermerPanneau() {
+    competenceAffichee = null;
+    themeAffiche = null;
+    situer = null;
+    elVoile.classList.remove('visible');
+    document.body.style.overflow = '';
+    delete document.body.dataset.panneau;
+    minuteurFermeture = setTimeout(() => { elVoile.hidden = true; minuteurFermeture = null; }, 280);
+    if (dernierFocus && dernierFocus.focus) dernierFocus.focus();
+  }
+
+  document.getElementById('panneau-fermer').addEventListener('click', fermerPanneau);
+  elVoile.addEventListener('click', (e) => { if (e.target === elVoile) fermerPanneau(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !elVoile.hidden) fermerPanneau();
+  });
+
+  // ============================================================
+  // RAFRAÎCHISSEMENT DE LA CARTE
+  // ============================================================
+  // Retour immédiat : l'étoile change au clic, pas au retour du serveur.
+  function rafraichirEtoiles() {
+    document.querySelectorAll('.etoile[data-competence]').forEach((g) => {
+      const code = g.dataset.competence;
+      const competence = etat.referentiel.competencies.find((c) => c.id === code);
+      if (!competence) return;
+      const zone = g.closest('[data-constellation]');
+      const teinte = TEINTES_HEX[zone?.dataset.constellation] || '#f0ebe0';
+      const verrouillee = !estOuverte(competence.theme);
+      const c = CRANS[brouillon.levels[code] ?? 0] ?? CRANS[0];
+      const couleur = verrouillee ? '#8d8677' : teinte;
+
+      const corps = g.querySelector('.etoile-corps');
+      corps.setAttribute('r', c.r);
+      corps.setAttribute('fill', couleur);
+      corps.setAttribute('fill-opacity', (c.opacite * (verrouillee ? 0.5 : 1)).toFixed(2));
+
+      let halo = g.querySelector('.etoile-halo');
+      if (c.halo > 0) {
+        if (!halo) {
+          halo = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          halo.setAttribute('class', 'etoile-halo');
+          halo.setAttribute('cx', corps.getAttribute('cx'));
+          halo.setAttribute('cy', corps.getAttribute('cy'));
+          g.insertBefore(halo, g.firstChild);
+        }
+        halo.setAttribute('r', c.halo);
+        halo.setAttribute('fill', couleur);
+        halo.setAttribute('fill-opacity', (c.haloOpacite * (verrouillee ? 0.45 : 1)).toFixed(3));
+      } else if (halo) {
+        halo.remove();
+      }
+    });
+  }
+
+  function redessinerConstellations() {
+    elDimensions.querySelectorAll('[data-constellation][data-rendu="oui"]').forEach((zone) => {
+      zone.dataset.rendu = '';
+      zone.innerHTML = '';
+      rendreConstellation(zone.dataset.constellation);
+    });
+    const ouvertes = Object.values(etat.computed.themes).filter((t) => t.status === 'open').length;
+    elHeaderEtatTexte.textContent = `${ouvertes} thématique${ouvertes > 1 ? 's' : ''} à explorer`;
+  }
+
+  // ============================================================
+  // ENREGISTREMENT
+  // ============================================================
+  const elBarre = document.getElementById('barre');
+  const elBarreTexte = document.getElementById('barre-texte');
+  const elBtnEnregistrer = document.getElementById('btn-enregistrer');
+  const elBandeau = document.getElementById('bandeau');
+  const elLibelle = document.getElementById('barre-libelle');
+  const elDernierPoint = document.getElementById('dernier-point');
+
+  // Les snapshots créés avant l'ajout de ce champ n'ont pas de libellé. Plutôt que de
+  // les afficher « sans nom », on les nomme par leur date : l'historique reste lisible.
+  function libelleSnapshot(snapshot) {
+    if (!snapshot) return null;
+    if (snapshot.libelle) return snapshot.libelle;
+    const d = new Date(snapshot.cree_le);
+    return 'Point du ' + d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  function majDernierPoint() {
+    const nom = libelleSnapshot(etat.snapshot);
+    if (!nom) { elDernierPoint.hidden = true; return; }
+    elDernierPoint.textContent = `Dernier point enregistré : ${nom}`;
+    elDernierPoint.hidden = false;
+  }
+
+  function majBarre() {
+    if (!estModifie()) { elBarre.classList.remove('visible'); return; }
+    const c = changements();
+    const bouts = [];
+    if (c.niveaux.length) bouts.push(`<b>${c.niveaux.length}</b> positionnement${c.niveaux.length > 1 ? 's' : ''}`);
+    if (c.cibles) bouts.push('tes cibles du mois');
+    if (c.plusTard) bouts.push('ta liste « plus tard »');
+    elBarreTexte.innerHTML = `Modifié : ${bouts.join(', ')}. Rien n'est encore enregistré.`;
+    elBarre.classList.add('visible');
+  }
+
+  let minuteurBandeau = null;
+  function bandeau(titre, texte, variante, action) {
+    elBandeau.innerHTML = `<b>${echapper(titre)}</b>${echapper(texte)}`
+      + (action ? `<br><button type="button" id="bandeau-action">${echapper(action.libelle)}</button>` : '');
+    elBandeau.className = 'bandeau visible ' + variante;
+    if (action) document.getElementById('bandeau-action').addEventListener('click', () => {
+      elBandeau.classList.remove('visible'); action.faire();
+    });
+    clearTimeout(minuteurBandeau);
+    // Un échec reste affiché : le membre doit pouvoir le lire et réessayer.
+    if (variante !== 'echec') minuteurBandeau = setTimeout(() => elBandeau.classList.remove('visible'), 4200);
+  }
+
+  async function enregistrer() {
+    const retires = elaguerCiblesFermees();
+    elBtnEnregistrer.disabled = true;
+    elBtnEnregistrer.textContent = 'Enregistrement…';
+
+    try {
+      const reponse = await fetch('/api/snapshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uuid: CLIENT_ID,
+          // Reprise de la version que le serveur vient de servir, jamais une constante
+          // écrite en dur : elle avait déjà divergé au passage du référentiel en v3.
+          referential_version: etat.referentiel.version,
+          label: elLibelle.value.trim() || null,
+          levels: brouillon.levels,
+          selections: { current: brouillon.current, later: brouillon.later },
+        }),
+      });
+      if (!reponse.ok) {
+        const d = await reponse.json().catch(() => ({}));
+        throw new Error(d.erreur || `Le serveur a répondu ${reponse.status}`);
+      }
+      const data = await reponse.json();
+
+      // Le serveur est l'autorité : son état calculé remplace l'aperçu local.
+      etat.snapshot = data.snapshot;
+      etat.computed = data.computed;
+      const sel = data.snapshot.blob.selections;
+      reference = { levels: { ...data.snapshot.blob.levels }, current: [...sel.current], later: [...sel.later] };
+      brouillon = { levels: { ...reference.levels }, current: [...reference.current], later: [...reference.later] };
+
+      try { localStorage.removeItem(cleBrouillon()); } catch {}
+      elLibelle.value = '';
+      majDernierPoint();
+      majBarre();
+      majBoutonMois();
+      redessinerConstellations();
+      if (competenceAffichee) rafraichirPanneau(competenceAffichee.code);
+
+      bandeau('Ton sphérier est enregistré.',
+        retires > 0
+          ? `${retires} cible${retires > 1 ? 's ont' : ' a'} été retirée${retires > 1 ? 's' : ''} : sa thématique s'est refermée.`
+          : 'Tu peux fermer cette page.',
+        'succes');
+    } catch (err) {
+      // Rien n'est perdu : le brouillon local tient, l'écran garde les modifications.
+      bandeau("L'enregistrement n'a pas abouti.",
+        `${err.message}. Tes modifications sont conservées sur cet appareil : réessaie quand la connexion revient.`,
+        'echec', { libelle: 'Réessayer', faire: enregistrer });
+    } finally {
+      elBtnEnregistrer.disabled = false;
+      elBtnEnregistrer.textContent = 'Enregistrer';
+    }
+  }
+
+  elBtnEnregistrer.addEventListener('click', enregistrer);
+  document.getElementById('btn-annuler').addEventListener('click', () => {
+    brouillon = { levels: { ...reference.levels }, current: [...reference.current], later: [...reference.later] };
+    etat.computed.levels = { ...reference.levels };
+    etat.computed.themes = calculerOuvertureLocale(brouillon.levels);
+    try { localStorage.removeItem(cleBrouillon()); } catch {}
+    majBarre();
+    redessinerConstellations();
+    if (competenceAffichee) rafraichirPanneau(competenceAffichee.code);
+  });
+
+  // Dernier filet : prévenir avant de quitter avec des modifications non enregistrées.
+  window.addEventListener('beforeunload', (e) => {
+    if (estModifie()) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  // ============================================================
+  // LE CIEL — page d'arrivée
+  // ============================================================
+  const elCiel = document.getElementById('ciel');
+  const elCielPiste = document.getElementById('ciel-piste');
+  const elCielGuide = document.getElementById('ciel-guide');
+  const elDetail = document.getElementById('detail');
+
+  function situeesDe(dimension) {
+    const codes = codesDeDimension(dimension);
+    return { codes, situees: codes.filter((c) => (brouillon.levels[c] ?? 0) > 0).length };
+  }
+
+  // Largeur du fil décoratif, de part et d'autre de « Moi ».
+  //
+  // « Moi » est centré, donc chaque côté dispose de la même place ; mais à place égale
+  // les deux voisines ne montrent PAS la même chose. Le bord droit de « Moi et les
+  // autres » est clairsemé là où le bord gauche de « Moi et le monde » est dense : à
+  // 295 px chacune, on lisait 3 thématiques à gauche contre 7 à droite, ce qui donnait
+  // l'impression fausse d'un sphérier déséquilibré.
+  //
+  // Le fil ne portant aucun sens, sa largeur est le seul réglage libre. On la dépense
+  // pour égaliser ce que révèle chaque amorce : 5 thématiques entières de chaque côté.
+  // Mesuré sur le rendu — il faut 328 px de AUT et 292 px de MON pour en montrer cinq,
+  // et chaque côté dispose de 388 px sur une piste de 1240. À refaire si la police de
+  // la constellation ou les positions changent : ces largeurs en dépendent.
+  // Fil décoratif entre deux blocs. Il ne dit rien de l'ouverture : la filiation reste
+  // interne à chaque dimension. Il est là pour que le ciel se lise comme une carte
+  // unique plutôt que comme trois pages côte à côte.
+  //
+  // `voisine` est la dimension située du côté extérieur du fil, c'est-à-dire celle dont
+  // ce fil règle l'amorce.
+  function filEntreBlocs(voisine) {
+    const largeur = LARGEURS_FIL[voisine];
+    return `<div class="ciel-lien" aria-hidden="true"${largeur ? ` style="--fil:${largeur}px"` : ''}>
+      <svg viewBox="0 0 100 120" preserveAspectRatio="none">
+        <path d="M0,60 C34,26 66,94 100,60"/>
+      </svg>
+    </div>`;
+  }
+
+  // Ordre VISUEL du ciel, délibérément distinct de l'ordre canonique du référentiel.
+  //
+  // « Moi » est le centre du modèle : les deux autres dimensions sont nommées par
+  // rapport à lui. Une disposition radiale dit cette structure ; une disposition
+  // linéaire suggérerait un ordre de lecture qui n'existe pas.
+  //
+  // Cet ordre ne vaut QUE pour le ciel. L'API, la vue d'ensemble, le parcours
+  // « M'évaluer » et la navigation par dimension gardent l'ordre canonique
+  // Moi · Moi et les autres · Moi et le monde, qui reste porté par
+  // `etat.referentiel.dimensions` et n'est modifié nulle part.
+  function dimensionsDuCiel() {
+    // Sans ordre visuel configuré, le ciel suit l'ordre canonique.
+    if (!ORDRE_CIEL) return etat.referentiel.dimensions.slice();
+    const parId = new Map(etat.referentiel.dimensions.map((d) => [d.id, d]));
+    // Une dimension qui ne serait pas dans l'ordre du ciel reste affichée, à la suite :
+    // le ciel ne doit jamais escamoter une dimension que le référentiel déclare.
+    return [
+      ...ORDRE_CIEL.map((id) => parId.get(id)).filter(Boolean),
+      ...etat.referentiel.dimensions.filter((d) => !ORDRE_CIEL.includes(d.id)),
+    ];
+  }
+
+  function rendreCiel() {
+    // Sur mobile le ciel n'est jamais affiché : trois constellations dessinées pour
+    // rien coûteraient un temps de rendu sensible sur téléphone. Il sera dessiné si
+    // l'écran s'élargit — voir l'écoute de `requeteMobile`.
+    if (surMobile()) return;
+
+    const ordreVisuel = dimensionsDuCiel();
+    const blocs = ordreVisuel.map((d) => {
+      const { codes, situees } = situeesDe(d);
+      const teinte = TEINTES_HEX[d.id];
+      const vierge = situees === 0;
+      return `<section class="ciel-bloc" data-bloc="${echapper(d.id)}" style="--h:${teinte}">
+        <div class="ciel-tete">
+          <button type="button" class="ciel-nom" data-ouvrir="${echapper(d.id)}">
+            <i></i>${echapper(d.name)}
+          </button>
+          <span class="ciel-compte">${vierge ? `${codes.length} compétences` : `${situees} / ${codes.length} évaluées`}</span>
+          <button type="button" class="ciel-cta${vierge ? '' : ' discret'}" data-situer-ciel="${echapper(d.id)}">
+            ${vierge ? 'Commencer par ici' : "Continuer à m'évaluer"}
+          </button>
+        </div>
+        <div class="ciel-carte" data-ciel-carte="${echapper(d.id)}"></div>
+      </section>`;
+    });
+
+    // Chaque fil est réglé par la dimension qu'il borde du côté extérieur : c'est
+    // l'amorce de celle-là qu'il découvre ou qu'il masque.
+    elCielPiste.innerHTML = blocs.reduce((html, bloc, i) => {
+      if (i === 0) return bloc;
+      const a = ordreVisuel[i - 1];
+      const b = ordreVisuel[i];
+      const exterieure = (a.id === CIEL_CENTRE) ? b.id : a.id;
+      return html + filEntreBlocs(exterieure) + bloc;
+    }, '');
+
+    ordreVisuel.forEach((d) => {
+      const carte = elCielPiste.querySelector(`[data-ciel-carte="${d.id}"]`);
+      rendreConstellation(d.id, carte, { avecLegende: false });
+      // Le bloc doit prendre la largeur de SA constellation. Un SVG en width:100% dans
+      // un parent de largeur automatique est circulaire : on fixe donc la largeur du
+      // conteneur d'après la géométrie calculée, pour que chaque dimension occupe son
+      // emprise propre et garde ses libellés lisibles.
+      const svg = carte.querySelector('svg');
+      if (svg) {
+        carte.style.width = svg.style.minWidth || `${Math.round(svg.viewBox.baseVal.width * ECHELLE_MINI)}px`;
+        svg.style.minWidth = '';
+      }
+    });
+
+    // Depuis le ciel, une thématique mène au détail de sa dimension plutôt que
+    // d'ouvrir un panneau : on plonge, on ne consulte pas de biais.
+    elCielPiste.querySelectorAll('.theme[data-theme]').forEach((g) => {
+      const bloc = g.closest('[data-bloc]');
+      const nouveau = g.cloneNode(true);
+      g.replaceWith(nouveau);
+      nouveau.addEventListener('click', () => ouvrirDetail(bloc.dataset.bloc, nouveau.dataset.theme));
+    });
+    elCielPiste.querySelectorAll('.etoile[data-competence]').forEach((g) => {
+      const bloc = g.closest('[data-bloc]');
+      const nouveau = g.cloneNode(true);
+      g.replaceWith(nouveau);
+      nouveau.addEventListener('click', (e) => {
+        e.stopPropagation();
+        ouvrirDetail(bloc.dataset.bloc);
+        ouvrirCompetence(nouveau.dataset.competence, bloc.dataset.bloc);
+      });
+    });
+
+    elCielPiste.querySelectorAll('[data-ouvrir]').forEach((btn) => {
+      btn.addEventListener('click', () => ouvrirDetail(btn.dataset.ouvrir));
+    });
+    elCielPiste.querySelectorAll('[data-situer-ciel]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const d = etat.referentiel.dimensions.find((x) => x.id === btn.dataset.situerCiel);
+        const codes = codesDeDimension(d);
+        ouvrirMeSituer({
+          codes, titre: d.name, teinte: TEINTES_HEX[d.id], depart: premiereNonSituee(codes),
+        });
+      });
+    });
+
+    const total = etat.referentiel.competencies.length;
+    const situeesTotal = etat.referentiel.competencies.filter((c) => (brouillon.levels[c.id] ?? 0) > 0).length;
+    elCielGuide.textContent = situeesTotal === 0
+      ? 'Rien n’est encore allumé. Choisis une dimension et pose un premier repère : chaque étoile s’éclaire à mesure que tu t’évalues.'
+      : `${situeesTotal} étoiles allumées sur ${total}. Touche une thématique pour entrer dedans.`;
+
+    centrerCielSurMoi();
+  }
+
+  // Point d'ancrage horizontal d'un bloc dans la piste : le milieu de ses thématiques
+  // RACINES, et non le milieu géométrique de sa boîte. Sur desktop les deux coïncident
+  // presque. Sur mobile, où un bloc est plus large que la piste, c'est la différence
+  // entre s'ouvrir sur les thématiques par lesquelles on peut commencer et s'ouvrir sur
+  // une zone verrouillée. Même raisonnement que pour l'ouverture d'une constellation.
+  function ancreHorizontale(bloc, idDimension) {
+    const centreBoite = bloc.offsetLeft + bloc.offsetWidth / 2;
+    const dimension = etat.referentiel.dimensions.find((d) => d.id === idDimension);
+    const svg = bloc.querySelector('svg.constellation');
+    if (!dimension || !svg) return centreBoite;
+
+    const themes = etat.referentiel.themes.filter((t) => t.dimension === dimension.name);
+    const racines = themes.filter((t) => !themes.some((o) => o.feeds.includes(t.id)));
+    if (racines.length === 0) return centreBoite;
+
+    const vb = svg.viewBox.baseVal;
+    const rSvg = svg.getBoundingClientRect();
+    if (rSvg.width === 0) return centreBoite;
+    const echelle = rSvg.width / vb.width;
+    const centre = racines.reduce((somme, t) => somme + t.x, 0) / racines.length;
+    // Coordonnée dans le repère défilant de la piste, indépendante de l'offsetParent.
+    return (rSvg.left - elCielPiste.getBoundingClientRect().left)
+      + elCielPiste.scrollLeft + (centre - vb.x) * echelle;
+  }
+
+  // Le ciel s'ouvre centré sur « Moi », qui est le centre du modèle : les deux autres
+  // dimensions sont nommées par rapport à lui. Le défilement part donc du milieu, avec
+  // une amorce de chaque côté, et non d'un bord.
+  function centrerCielSurMoi() {
+    if (!CIEL_CENTRE) return;
+    const bloc = elCielPiste.querySelector(`[data-bloc="${CIEL_CENTRE}"]`);
+    if (!bloc) return;
+    const x = ancreHorizontale(bloc, CIEL_CENTRE);
+    elCielPiste.scrollLeft = Math.max(0, Math.min(x - elCielPiste.clientWidth / 2,
+      elCielPiste.scrollWidth - elCielPiste.clientWidth));
+  }
+
+
+  // ============================================================
+  // NAVIGATION ENTRE LES DEUX LIEUX
+  // ============================================================
+  // Le ciel est une vue DESKTOP, et seulement celle-là.
+  //
+  // Sur téléphone la piste fait moins de 400 px là où le seul bloc « Moi » en réclame
+  // 464 pour garder ses libellés lisibles : aucune amorce latérale n'y tient, ni trois
+  // ni deux, et la disposition radiale ne dit donc rien qu'on puisse voir. L'accueil
+  // mobile est la navigation par dimension, accordéon entièrement replié : les trois
+  // portes l'une sous l'autre, chacune avec son nom, son compte et son entrée.
+  //
+  // Les deux accueils restent la même VUE (`etat.vue === 'ciel'`) : c'est le lieu où
+  // l'on revient, quel que soit l'écran qui le dessine.
+  const requeteMobile = window.matchMedia('(max-width: 640px)');
+  const surMobile = () => requeteMobile.matches;
+
+  function allerAuCiel() {
+    etat.vue = 'ciel';
+    document.body.dataset.vue = 'ciel';
+
+    if (surMobile()) {
+      elCiel.hidden = true;
+      elDetail.hidden = false;
+      // Replier ce qui était ouvert : l'accueil, c'est le choix encore entier.
+      if (etat.dimensionOuverte) basculerDimension(etat.dimensionOuverte);
+      window.scrollTo({ top: 0, behavior: 'auto' });
+      return;
+    }
+
+    elDetail.hidden = true;
+    elCiel.hidden = false;
+    requestAnimationFrame(centrerCielSurMoi);
+  }
+
+  // Passer d'un format à l'autre — rotation, fenêtre redimensionnée — doit redessiner
+  // l'accueil dans sa forme, sans sortir le membre de là où il était.
+  requeteMobile.addEventListener('change', () => {
+    if (etat.vue !== 'ciel' || !etat.referentiel) return;
+    if (!surMobile()) rendreCiel();
+    allerAuCiel();
+  });
+
+  function ouvrirDetail(idDimension, idTheme = null) {
+    etat.vue = 'detail';
+    elCiel.hidden = true;
+    elDetail.hidden = false;
+    document.body.dataset.vue = 'detail';
+    if (etat.dimensionOuverte !== idDimension) basculerDimension(idDimension);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    if (idTheme) {
+      // Laisse la constellation se dessiner avant d'ouvrir le panneau de la thématique.
+      requestAnimationFrame(() => ouvrirTheme(idTheme, idDimension));
+    }
+  }
+
+  document.getElementById('detail-retour').addEventListener('click', allerAuCiel);
+
+  // ============================================================
+  // CHARGEMENT
+  // ============================================================
+  async function lireJson(url) {
+    const reponse = await fetch(url);
+    if (!reponse.ok) {
+      const detail = await reponse.json().catch(() => ({}));
+      throw new Error(detail.erreur || `Le serveur a répondu ${reponse.status}`);
+    }
+    return reponse.json();
+  }
+
+  async function demarrer() {
+    if (!CLIENT_ID) {
+      afficherMessage(
+        'Lien invalide ou incomplet',
+        "Ce lien ne permet pas de te reconnaître. Ouvre ton sphérier depuis ton espace pour retrouver ta progression.",
+        'erreur'
+      );
+      document.body.dataset.lienValide = 'non';
+      return;
+    }
+    document.body.dataset.lienValide = 'oui';
+
+    try {
+      // Les deux appels partent ensemble : le second réutilise le cache serveur du
+      // référentiel, il ne paie donc pas une seconde lecture de Notion.
+      const [referentiel, etatClient] = await Promise.all([
+        lireJson('/api/referential'),
+        lireJson(`/api/state?uuid=${encodeURIComponent(CLIENT_ID)}`),
+      ]);
+
+      etat.referentiel = referentiel;
+      // AVANT tout rendu : teintes, difficultés, plafonds et ordre du ciel viennent du
+      // serveur. Rien ne doit être dessiné tant que la page ignore de quel club il s'agit.
+      appliquerConfigClub(referentiel);
+      etat.computed = etatClient.computed;
+      etat.snapshot = etatClient.snapshot;
+      etat.notes = etatClient.notes || {};
+
+      const sel = etatClient.snapshot?.blob?.selections ?? { current: [], later: [] };
+      // Normalisation à la lecture : un snapshot écrit avant que l'exclusion mutuelle
+      // n'existe peut contenir une compétence dans les deux listes. On l'affiche
+      // proprement sans attendre le prochain enregistrement.
+      const cur = [...new Set(sel.current || [])];
+      reference = {
+        levels: { ...etat.computed.levels },
+        current: cur,
+        later: [...new Set(sel.later || [])].filter((c) => !cur.includes(c)),
+      };
+      brouillon = { levels: { ...reference.levels }, current: [...reference.current], later: [...reference.later] };
+
+      // Reprise d'un travail interrompu : page fermée, onglet perdu, réseau tombé.
+      const repris = lireBrouillon();
+      if (repris && repris.levels) {
+        brouillon = {
+          levels: { ...repris.levels },
+          current: [...(repris.current || [])],
+          later: [...(repris.later || [])],
+        };
+        if (estModifie()) {
+          etat.computed.levels = { ...etat.computed.levels, ...brouillon.levels };
+          etat.computed.themes = calculerOuvertureLocale(brouillon.levels);
+          bandeau('Tes modifications ont été retrouvées.',
+            "Elles n'avaient pas été enregistrées : elles t'attendaient sur cet appareil.", 'succes');
+        } else {
+          try { localStorage.removeItem(cleBrouillon()); } catch {}
+        }
+      }
+
+      rendreDimensions();
+      // Afficher AVANT de dessiner : getBBox() renvoie zéro dans un élément masqué, et
+      // le cadrage se calculerait alors sur une boîte vide.
+      masquerMessage();
+      rendreCiel();
+      majDernierPoint();
+      majBarre();
+      majBoutonMois();
+
+      const ouvertes = Object.values(etat.computed.themes).filter((t) => t.status === 'open').length;
+      // Formulation tournée vers ce qui est accessible : un ratio « 6 sur 40 » se lit
+      // comme 34 portes fermées, alors que c'est une invitation.
+      elHeaderEtatTexte.textContent = `${ouvertes} thématique${ouvertes > 1 ? 's' : ''} à explorer`;
+      elHeaderEtat.hidden = false;
+
+      document.body.dataset.pret = 'oui';
+      document.body.dataset.snapshotCharge = etat.snapshot ? 'oui' : 'non';
+    } catch (err) {
+      afficherMessage(
+        'Ton sphérier est momentanément indisponible',
+        err.message,
+        'erreur'
+      );
+      document.body.dataset.pret = 'erreur';
+    }
+  }
+
+  demarrer();
+</script>
+
+</body>
+</html>

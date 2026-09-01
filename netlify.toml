@@ -1,0 +1,43 @@
+# Seul le contenu de public/ est servi au navigateur. Le code des fonctions reste hors
+# du site public : elles sont exécutées côté serveur, elles n'ont jamais à être
+# téléchargeables. C'est ce qui garde les secrets hors de portée du navigateur.
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+[dev]
+  framework = "#static"
+  publish = "public"
+
+# Chemins courts côté navigateur, indépendants de l'emplacement des fonctions.
+[[redirects]]
+  from = "/api/referential"
+  to = "/.netlify/functions/referential"
+  status = 200
+
+[[redirects]]
+  from = "/api/refresh"
+  to = "/.netlify/functions/refresh"
+  status = 200
+
+[[redirects]]
+  from = "/api/note"
+  to = "/.netlify/functions/note"
+  status = 200
+
+[[redirects]]
+  from = "/api/state"
+  to = "/.netlify/functions/state"
+  status = 200
+
+[[redirects]]
+  from = "/api/snapshot"
+  to = "/.netlify/functions/snapshot"
+  status = 200
+
+# La racine sert le sphérier sans redirection visible : https://<site>/?c=<uuid>
+# fonctionne donc aussi bien que /spherier-v2.html?c=<uuid>.
+[[redirects]]
+  from = "/"
+  to = "/spherier-v2.html"
+  status = 200
