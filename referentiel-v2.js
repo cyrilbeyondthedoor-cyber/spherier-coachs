@@ -162,7 +162,7 @@ async function lireReferentielDepuisNotion() {
         definition: texte(p, 'Description'),
         statement: texte(p, 'Énoncé N1') || texte(p, 'Description'),
         markers: texte(p, 'Marqueurs'),
-        // Socle fondamental / TTC / A-player, pour la pastille de difficulté.
+        // Socle fondamental / Professionnel établi / A-player, pour la pastille.
         difficulty: selection(p, 'Difficulté') || null,
         // Rang d'affichage DANS la thématique. Les codes restent des identifiants
         // permanents : on insère une compétence en lui donnant un rang intermédiaire,

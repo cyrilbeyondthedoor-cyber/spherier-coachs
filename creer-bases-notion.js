@@ -84,7 +84,7 @@ const COMPETENCES = (idThemes) => ({
     select: {
       options: [
         { name: 'Socle fondamental', color: 'green' },
-        { name: 'TTC', color: 'orange' },
+        { name: 'Professionnel établi', color: 'orange' },
         { name: 'A-player', color: 'purple' },
       ],
     },

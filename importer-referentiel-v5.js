@@ -14,7 +14,7 @@ const MAPPING_OUTPUT = process.env.MAPPING_OUTPUT
   || path.join(__dirname, '.local', 'referentiel-mapping.json');
 
 const PREFIXES = new Map(DIMENSIONS.map((dimension) => [dimension.name, dimension.id]));
-const DIFFICULTES = new Set(['Socle fondamental', 'TTC', 'A-player']);
+const DIFFICULTES = new Set(['Socle fondamental', 'Professionnel établi', 'A-player']);
 
 const attendre = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const sansNumero = (valeur) => String(valeur || '').trim().replace(/^\d+\s*-\s*/, '');
@@ -47,6 +47,11 @@ function normaliserRevue(valeur) {
   if (revue === 'ok') return 'OK';
   if (revue.includes('marqueur')) return 'Marqueurs à revoir';
   return 'À revoir';
+}
+
+function normaliserDifficulte(valeur) {
+  const difficulte = String(valeur || '').trim();
+  return difficulte === 'TTC' ? 'Professionnel établi' : difficulte;
 }
 
 function positions(nombre) {
@@ -93,7 +98,7 @@ async function lireClasseur() {
       dimension,
       theme,
       enonce,
-      difficulte: texteCellule(ligne.getCell(5)),
+      difficulte: normaliserDifficulte(texteCellule(ligne.getCell(5))),
       marqueurs: texteCellule(ligne.getCell(6)),
       revue: normaliserRevue(texteCellule(ligne.getCell(7))),
       idSource: texteCellule(ligne.getCell(12)),

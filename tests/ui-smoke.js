@@ -104,6 +104,29 @@ async function principal() {
     await page.goto(url);
     await page.locator('#ciel:not([hidden])').waitFor();
 
+    await page.getByRole('heading', { name: 'Le sphérier de compétences de coach' }).waitFor();
+    await page.getByRole('heading', { name: 'Comment utiliser le sphérier ?' }).waitFor();
+    await page.getByText('marque une pause toutes les 30 compétences.').waitFor();
+    const sphereAnimee = page.locator('.ciel-categorie').first();
+    await sphereAnimee.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      element.dispatchEvent(new PointerEvent('pointermove', {
+        bubbles: true,
+        pointerType: 'mouse',
+        clientX: rect.left + rect.width * .78,
+        clientY: rect.top + rect.height * .22,
+      }));
+    });
+    await page.waitForTimeout(50);
+    assert.match(await sphereAnimee.evaluate((element) => element.style.transform), /rotateX\(.+deg\) rotateY\(.+deg\)/);
+    await sphereAnimee.dispatchEvent('pointerleave');
+    await page.waitForTimeout(50);
+    await page.getByRole('button', { name: 'Commencer mon audit initial' }).click();
+    const compteurAudit = page.locator('.situer-compte');
+    await compteurAudit.waitFor();
+    assert.equal((await compteurAudit.textContent()).trim(), `1 / ${competencies.length}`);
+    await page.locator('#panneau-fermer').click();
+
     assert.equal(await page.locator('.ciel-categorie').count(), 3);
     assert.deepEqual(await page.locator('.ciel-categorie-titre').allTextContents(), [
       'Moi en tant que coach',
@@ -111,6 +134,19 @@ async function principal() {
       'Moi et mon activité',
     ]);
     assert.equal(await page.locator('.ciel-dimension').count(), 7);
+    assert.ok((await page.locator('.ciel-dimension-compte').allTextContents()).every((texte) => texte.includes('% maîtrisées')));
+    const cercles = await page.locator('.ciel-categorie').evaluateAll((elements) => elements.map((element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        width: rect.width,
+        height: rect.height,
+        overflowX: element.scrollWidth - element.clientWidth,
+        overflowY: element.scrollHeight - element.clientHeight,
+      };
+    }));
+    assert.ok(cercles.every((cercle) => Math.abs(cercle.width - cercle.height) <= 1));
+    assert.ok(cercles.every((cercle) => cercle.overflowX === 0 && cercle.overflowY === 0));
+    assert.equal(await page.locator('.ciel-guide').count(), 0);
     if (process.env.SCREENSHOT_DIR) {
       fs.mkdirSync(process.env.SCREENSHOT_DIR, { recursive: true });
       await page.screenshot({ path: path.join(process.env.SCREENSHOT_DIR, 'accueil-desktop.png'), fullPage: true });
@@ -118,6 +154,7 @@ async function principal() {
 
     await page.locator('[data-ouvrir="FON"]').click();
     await page.locator('[data-dimension="FON"].ouverte').waitFor();
+    assert.equal(await page.locator('#presentation').isVisible(), false);
     await page.locator('[data-competence="FON-01-01"]').click();
     await page.getByText('Un exemple observable pour FON.').waitFor();
     assert.equal(await page.locator('.marche[data-niveau]').count(), 3);
@@ -131,10 +168,14 @@ async function principal() {
     await page.locator('#btn-synthese').click();
     assert.equal(await page.locator('.syn-maitrise-item').count(), 3);
     await page.locator('.syn-maitrise-nom', { hasText: 'Socle fondamental' }).waitFor();
+    await page.locator('.syn-maitrise-nom', { hasText: 'Professionnel établi' }).waitFor();
+    assert.equal(await page.locator('[data-filtre="ouvertes"]').count(), 0);
+    assert.ok(await page.locator('.syn-compte', { hasText: '100 % maîtrisées' }).count() >= 2);
 
     const mobile = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
     await mobile.goto(url);
     await mobile.locator('#detail:not([hidden])').waitFor();
+    await mobile.getByRole('heading', { name: 'À quoi sert le sphérier ?' }).waitFor();
     assert.equal(await mobile.locator('.categorie-dimensions').count(), 3);
     assert.equal(await mobile.locator('.dimension').count(), 7);
     assert.equal(await mobile.locator('#ciel').isVisible(), false);

@@ -9,6 +9,7 @@
     "test": "npm run test:ui",
     "test:ui": "node tests/ui-smoke.js",
     "test:notion": "node tests/ui-notion-smoke.js",
+    "preview:notion": "node preview-notion.js",
     "export:snapshots": "node export-snapshots.js"
   },
   "keywords": [],

@@ -38,8 +38,29 @@ async function principal() {
     await page.goto(url);
     await page.locator('#ciel:not([hidden])').waitFor();
 
+    await page.getByRole('heading', { name: 'Comment utiliser le sphérier ?' }).waitFor();
+    await page.getByText('marque une pause toutes les 30 compétences.').waitFor();
+    await page.getByRole('button', { name: 'Commencer mon audit initial' }).click();
+    const compteurAudit = page.locator('.situer-compte');
+    await compteurAudit.waitFor();
+    assert.equal((await compteurAudit.textContent()).trim(), `1 / ${referentiel.competencies.length}`);
+    await page.locator('#panneau-fermer').click();
+
     assert.equal(await page.locator('.ciel-categorie').count(), 3);
     assert.equal(await page.locator('.ciel-dimension').count(), 7);
+    assert.ok((await page.locator('.ciel-dimension-compte').allTextContents()).every((texte) => texte.includes('% maîtrisées')));
+    const cercles = await page.locator('.ciel-categorie').evaluateAll((elements) => elements.map((element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        width: rect.width,
+        height: rect.height,
+        overflowX: element.scrollWidth - element.clientWidth,
+        overflowY: element.scrollHeight - element.clientHeight,
+      };
+    }));
+    assert.ok(cercles.every((cercle) => Math.abs(cercle.width - cercle.height) <= 1));
+    assert.ok(cercles.every((cercle) => cercle.overflowX === 0 && cercle.overflowY === 0));
+    assert.equal(await page.locator('.ciel-guide').count(), 0);
 
     for (const dimension of referentiel.dimensions) {
       await page.locator(`[data-ouvrir="${dimension.id}"]`).click();
@@ -54,7 +75,7 @@ async function principal() {
     }
 
     assert.deepEqual(erreurs, []);
-    console.log('Renderer vérifié avec le vrai référentiel : 3 catégories · 7 dimensions · 33 thématiques · 193 compétences');
+    console.log(`Renderer vérifié avec le vrai référentiel : 3 catégories · 7 dimensions · 33 thématiques · ${referentiel.competencies.length} compétences actives`);
   } finally {
     await navigateur.close();
     serveur.closeAllConnections();

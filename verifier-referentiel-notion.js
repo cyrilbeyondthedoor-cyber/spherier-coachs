@@ -35,7 +35,7 @@ async function principal() {
   ]);
 
   assert.equal(themes.length, 33, 'Nombre de thématiques');
-  assert.equal(competences.length, 193, 'Nombre de compétences');
+  assert.equal(competences.length, 193, 'Nombre de pages de compétences');
   assert.equal(ressources.length, 0, 'La base Ressources doit être vide au premier import');
   verifierCodes(themes, 'Thématiques');
   verifierCodes(competences, 'Compétences');
@@ -43,31 +43,35 @@ async function principal() {
   assert.ok(themes.every((page) => page.properties.Actif?.checkbox === true), 'Thématique inactive');
   assert.ok(themes.every((page) => page.properties['Position X']?.number !== null), 'Position X absente');
   assert.ok(themes.every((page) => page.properties['Position Y']?.number !== null), 'Position Y absente');
-  assert.ok(competences.every((page) => page.properties.Actif?.checkbox === true), 'Compétence inactive');
-  assert.ok(competences.every((page) => texte(page, 'Énoncé N1')), 'Énoncé N1 absent');
-  assert.ok(competences.every((page) => !texte(page, 'Énoncé N2') && !texte(page, 'Énoncé N3')), 'N2 ou N3 doit rester vide');
-  assert.ok(competences.every((page) => page.properties['📚 Thèmes']?.relation?.length === 1), 'Relation de thème invalide');
+  const competencesActives = competences.filter((page) => page.properties.Actif?.checkbox === true);
+  const competencesInactives = competences.filter((page) => page.properties.Actif?.checkbox !== true);
+  assert.equal(competencesActives.length, 192, 'Nombre de compétences actives');
+  assert.equal(competencesInactives.length, 1, 'Nombre de compétences inactives');
+  assert.equal(texte(competencesInactives[0], 'ID source'), 'NEW-ACT-05-01', 'Compétence retirée inattendue');
+  assert.ok(competencesActives.every((page) => texte(page, 'Énoncé N1')), 'Énoncé N1 absent');
+  assert.ok(competencesActives.every((page) => !texte(page, 'Énoncé N2') && !texte(page, 'Énoncé N3')), 'N2 ou N3 doit rester vide');
+  assert.ok(competencesActives.every((page) => page.properties['📚 Thèmes']?.relation?.length === 1), 'Relation de thème invalide');
+  assert.ok(competencesActives.every((page) => texte(page, 'Marqueurs').split('\n').every((ligne) => ligne.startsWith('• '))), 'Format des marqueurs non uniforme');
 
-  const sansMarqueurs = competences.filter((page) => !texte(page, 'Marqueurs')).length;
-  const aRevoir = competences.filter((page) => page.properties.Revue?.select?.name !== 'OK').length;
-  const difficultes = competences.reduce((compte, page) => {
+  const sansMarqueurs = competencesActives.filter((page) => !texte(page, 'Marqueurs')).length;
+  const aRevoir = competencesActives.filter((page) => page.properties.Revue?.select?.name !== 'OK').length;
+  const difficultes = competencesActives.reduce((compte, page) => {
     const nom = page.properties.Difficulté?.select?.name || 'Non renseigné';
     compte[nom] = (compte[nom] || 0) + 1;
     return compte;
   }, {});
 
-  assert.equal(sansMarqueurs, 5, 'Nombre de marqueurs vides');
-  assert.equal(aRevoir, 56, 'Nombre de lignes à revoir');
+  assert.equal(sansMarqueurs, 0, 'Nombre de marqueurs vides');
+  assert.equal(aRevoir, 0, 'Nombre de lignes à revoir');
   assert.deepEqual(difficultes, {
-    'Socle fondamental': 57,
-    TTC: 54,
+    'Socle fondamental': 58,
+    'Professionnel établi': 53,
     'A-player': 81,
-    'Non renseigné': 1,
   });
 
-  console.log('Notion vérifié : 33 thématiques · 193 compétences · 0 ressource');
-  console.log('57 Socle fondamental · 54 TTC · 81 A-player · 1 non renseignée');
-  console.log('5 marqueurs vides · 56 lignes à revoir · codes et relations uniques');
+  console.log('Notion vérifié : 33 thématiques · 192 compétences actives · 1 inactive · 0 ressource');
+  console.log('58 Socle fondamental · 53 Professionnel établi · 81 A-player');
+  console.log('0 marqueur vide · 0 ligne à revoir · codes et relations uniques');
 }
 
 principal().catch((erreur) => {

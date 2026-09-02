@@ -175,7 +175,7 @@ const ECHELLE = {
 // dimension ni le doré de la sélection.
 const DIFFICULTES = [
   { nom: 'Socle fondamental', couleur: '#7c9c6e' },
-  { nom: 'TTC', couleur: '#d08b3f' },
+  { nom: 'Professionnel établi', couleur: '#d08b3f' },
   { nom: 'A-player', couleur: '#a6789a' },
 ];
 
