@@ -180,6 +180,19 @@ La seconde lit le vrai référentiel Notion configuré dans `.env` :
 npm run test:notion
 ```
 
+Le parcours lead magnet ajoute les variables suivantes :
+
+```text
+DB_PROSPECTS=
+PUBLIC_SITE_URL=https://spherier-coachs.netlify.app
+N8N_SPHERIER_WEBHOOK_URL=
+N8N_SPHERIER_WEBHOOK_SECRET=
+BOOKING_URL=
+```
+
+`/api/access` crée ou retrouve le prospect par email et appelle n8n pour l'envoi Brevo.
+`/api/prospect-event` suit le démarrage, la progression, les priorités et le clic agenda.
+
 ---
 
 ## 6. Deux disciplines qui nous ont coûté cher

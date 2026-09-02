@@ -71,6 +71,9 @@ async function principal() {
         if (!prospects.has(email)) prospects.set(email, { prenom, email, uuid: randomUUID() });
         return json(reponse, { accepte: true }, 202);
       }
+      if (url.pathname === '/api/prospect-event' && requete.method === 'POST') {
+        return json(reponse, {}, 204);
+      }
       if (url.pathname === '/api/snapshot' && requete.method === 'POST') {
         const corps = await lireCorps(requete);
         levels = { ...levels, ...(corps.levels || {}) };

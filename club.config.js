@@ -196,6 +196,7 @@ const NIVEAU_MIN = 0;
 const NIVEAU_MAX = 3;
 const NIVEAU_ACQUIS = 3;
 const MAX_CIBLES_MAINTENANT = 3;
+const BOOKING_URL = process.env.BOOKING_URL || '';
 
 function seuilDOuverture(nombreDeCompetences) {
   return Math.max(1, Math.floor(nombreDeCompetences / 2));
@@ -227,5 +228,6 @@ module.exports = {
   NIVEAU_MAX,
   NIVEAU_ACQUIS,
   MAX_CIBLES_MAINTENANT,
+  BOOKING_URL,
   seuilDOuverture,
 };

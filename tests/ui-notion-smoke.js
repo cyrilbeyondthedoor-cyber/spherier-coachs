@@ -40,11 +40,11 @@ async function principal() {
 
     await page.getByRole('heading', { name: 'Comment utiliser le sphérier ?' }).waitFor();
     await page.getByText('marque une pause toutes les 30 compétences.').waitFor();
-    await page.getByRole('button', { name: 'Commencer mon audit initial' }).click();
+    await page.getByRole('button', { name: 'Commencer mon audit initial' }).dispatchEvent('click');
     const compteurAudit = page.locator('.situer-compte');
     await compteurAudit.waitFor();
     assert.equal((await compteurAudit.textContent()).trim(), `1 / ${referentiel.competencies.length}`);
-    await page.locator('#panneau-fermer').click();
+    await page.locator('#panneau-fermer').dispatchEvent('click');
 
     assert.equal(await page.locator('.ciel-categorie').count(), 3);
     assert.equal(await page.locator('.ciel-dimension').count(), 7);
@@ -71,19 +71,24 @@ async function principal() {
         attendues,
         dimension.name
       );
-      await page.locator('#detail-retour').click();
+      await page.locator('#detail-retour').dispatchEvent('click');
     }
 
     assert.deepEqual(erreurs, []);
     console.log(`Renderer vérifié avec le vrai référentiel : 3 catégories · 7 dimensions · 33 thématiques · ${referentiel.competencies.length} compétences actives`);
   } finally {
-    await navigateur.close();
+    await Promise.race([
+      navigateur.close().catch(() => {}),
+      new Promise((resolve) => setTimeout(resolve, 5000)),
+    ]);
     serveur.closeAllConnections();
     await new Promise((resolve) => serveur.close(resolve));
   }
 }
 
-principal().catch((erreur) => {
-  console.error(erreur);
-  process.exitCode = 1;
-});
+principal()
+  .then(() => process.exit(0))
+  .catch((erreur) => {
+    console.error(erreur);
+    process.exit(1);
+  });

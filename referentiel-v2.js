@@ -2,7 +2,7 @@ require('dotenv').config({ quiet: true });
 
 const { Client, collectPaginatedAPI } = require('@notionhq/client');
 const { CATEGORIES, DIMENSIONS, ECHELLE, VERSION_REFERENTIEL, DIFFICULTES,
-        MAX_CIBLES_MAINTENANT, NIVEAU_ACQUIS, CLUB, verifierClub } = require('./club.config.js');
+        MAX_CIBLES_MAINTENANT, NIVEAU_ACQUIS, BOOKING_URL, CLUB, verifierClub } = require('./club.config.js');
 
 const { NOTION_TOKEN, DB_THEMES, DB_COMPETENCES, DB_RESSOURCES } = process.env;
 
@@ -190,6 +190,7 @@ async function lireReferentielDepuisNotion() {
     // ou renommer un palier ne demande alors de toucher qu'à club.config.js.
     difficulties: DIFFICULTES,
     limites: { maxCiblesMaintenant: MAX_CIBLES_MAINTENANT, niveauAcquis: NIVEAU_ACQUIS },
+    bookingUrl: BOOKING_URL,
     categories: CATEGORIES,
     dimensions: DIMENSIONS,
     themes,

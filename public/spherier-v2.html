@@ -2991,9 +2991,7 @@
         <p>Réserve un échange pour obtenir une analyse détaillée de ton sphérier.</p>
         <button type="button" class="audit-rdv" id="audit-rdv">Réserver mon appel pour recevoir une analyse personnalisée de mon sphérier</button>
       </section>`;
-    document.getElementById('audit-rdv').addEventListener('click', () => {
-      bandeau('Lien de réservation à connecter', 'Le lien Zcal ou Calendly de Thomas Gibot sera branché après validation du packaging.', 'succes');
-    });
+    document.getElementById('audit-rdv').addEventListener('click', ouvrirReservation);
     majBarre();
     elPanneauCorps.scrollTop = 0;
     afficherPanneau();
@@ -3455,6 +3453,12 @@
           ? `${retires} cible${retires > 1 ? 's ont' : ' a'} été retirée${retires > 1 ? 's' : ''} : sa thématique s'est refermée.`
           : 'Tu peux fermer cette page.',
         'succes');
+      const evaluees = etat.referentiel.competencies
+        .filter((competence) => (brouillon.levels[competence.id] ?? 0) > 0).length;
+      void signalerProspect('progress', {
+        progression: evaluees / etat.referentiel.competencies.length,
+        priorites: brouillon.current,
+      });
       return true;
     } catch (err) {
       // Rien n'est perdu : le brouillon local tient, l'écran garde les modifications.
@@ -3614,9 +3618,7 @@
 
   document.getElementById('detail-retour').addEventListener('click', allerAuCiel);
 
-  document.getElementById('audit-rdv-accueil').addEventListener('click', () => {
-    bandeau('Lien de réservation à connecter', 'Le lien Zcal ou Calendly de Thomas Gibot sera branché après validation du packaging.', 'succes');
-  });
+  document.getElementById('audit-rdv-accueil').addEventListener('click', ouvrirReservation);
 
   elAuditCta.addEventListener('click', () => {
     const codes = ordreDeLecture(etat.referentiel.competencies).map((competence) => competence.id);
@@ -3642,6 +3644,29 @@
       throw new Error(detail.erreur || `Le serveur a répondu ${reponse.status}`);
     }
     return reponse.json();
+  }
+
+  async function signalerProspect(type, details = {}) {
+    if (!CLIENT_ID) return;
+    try {
+      await fetch('/api/prospect-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uuid: CLIENT_ID, type, ...details }),
+      });
+    } catch (erreur) {
+      console.warn('Suivi prospect indisponible :', erreur.message);
+    }
+  }
+
+  async function ouvrirReservation() {
+    await signalerProspect('agenda_clicked');
+    const lien = etat.referentiel?.bookingUrl;
+    if (lien) {
+      window.open(lien, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    bandeau('Lien de réservation à connecter', 'Le lien Zcal ou Calendly de Thomas Gibot sera branché après validation du packaging.', 'succes');
   }
 
   async function demarrer() {
@@ -3713,6 +3738,7 @@
       // comme 34 portes fermées, alors que c'est une invitation.
       elHeaderEtatTexte.textContent = `${ouvertes} thématique${ouvertes > 1 ? 's' : ''} à explorer`;
       elHeaderEtat.hidden = false;
+      void signalerProspect('started');
 
       majAuditInitial();
 

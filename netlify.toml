@@ -31,9 +31,19 @@
   status = 200
 
 [[redirects]]
-  from = "/api/snapshot"
-  to = "/.netlify/functions/snapshot"
-  status = 200
+from = "/api/snapshot"
+to = "/.netlify/functions/snapshot"
+status = 200
+
+[[redirects]]
+from = "/api/access"
+to = "/.netlify/functions/access"
+status = 200
+
+[[redirects]]
+from = "/api/prospect-event"
+to = "/.netlify/functions/prospect-event"
+status = 200
 
 # La racine sert le sphérier sans redirection visible : https://<site>/?c=<uuid>
 # fonctionne donc aussi bien que /spherier-v2.html?c=<uuid>.
