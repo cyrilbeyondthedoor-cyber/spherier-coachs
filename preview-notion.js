@@ -3,6 +3,7 @@ require('dotenv').config({ quiet: true });
 const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
+const { randomUUID } = require('node:crypto');
 const { getReferentielV2 } = require('./referentiel-v2.js');
 
 const PORT = Number(process.env.PORT || 8890);
@@ -38,6 +39,7 @@ async function principal() {
   let selections = { current: [], later: [] };
   let snapshot = null;
   const notes = {};
+  const prospects = new Map();
 
   const etatThemes = () => Object.fromEntries(
     referentiel.themes.map((theme) => [theme.id, { status: 'open', unlock_hint: '' }])
@@ -49,11 +51,25 @@ async function principal() {
 
       if (url.pathname === '/api/referential') return json(reponse, referentiel);
       if (url.pathname === '/api/state') {
+        const demoComplet = (requete.headers.referer || '').includes('demo=complete');
+        const levelsServis = demoComplet
+          ? Object.fromEntries(referentiel.competencies.map((competence, index) => [competence.id, (index % 3) + 1]))
+          : levels;
         return json(reponse, {
           snapshot,
-          computed: { levels, themes: etatThemes() },
+          computed: { levels: levelsServis, themes: etatThemes() },
           notes,
         });
+      }
+      if (url.pathname === '/api/access' && requete.method === 'POST') {
+        const corps = await lireCorps(requete);
+        const email = String(corps.email || '').trim().toLowerCase();
+        const prenom = String(corps.prenom || '').trim();
+        if (!prenom || !/^\S+@\S+\.\S+$/.test(email) || corps.consentement !== true) {
+          return json(reponse, { erreur: 'Prénom, email et consentement valides requis' }, 400);
+        }
+        if (!prospects.has(email)) prospects.set(email, { prenom, email, uuid: randomUUID() });
+        return json(reponse, { accepte: true }, 202);
       }
       if (url.pathname === '/api/snapshot' && requete.method === 'POST') {
         const corps = await lireCorps(requete);

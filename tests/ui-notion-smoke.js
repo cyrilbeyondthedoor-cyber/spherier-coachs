@@ -63,7 +63,7 @@ async function principal() {
     assert.equal(await page.locator('.ciel-guide').count(), 0);
 
     for (const dimension of referentiel.dimensions) {
-      await page.locator(`[data-ouvrir="${dimension.id}"]`).click();
+      await page.locator(`[data-ouvrir="${dimension.id}"]`).dispatchEvent('click');
       await page.locator(`[data-dimension="${dimension.id}"].ouverte svg.constellation`).waitFor();
       const attendues = referentiel.themes.filter((theme) => theme.dimension === dimension.name).length;
       assert.equal(

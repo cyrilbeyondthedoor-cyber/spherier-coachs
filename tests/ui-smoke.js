@@ -63,11 +63,21 @@ function json(reponse, valeur) {
 const serveur = http.createServer((requete, reponse) => {
   if (requete.url.startsWith('/api/referential')) return json(reponse, referential);
   if (requete.url.startsWith('/api/state')) {
+    const auditComplet = requete.url.includes('00000000-0000-4000-8000-000000000002');
+    const levels = auditComplet
+      ? Object.fromEntries(competencies.map((competence, index) => [competence.id, (index % 3) + 1]))
+      : niveauxVides;
     return json(reponse, {
       snapshot: null,
-      computed: { levels: niveauxVides, themes: etatThemes },
+      computed: { levels, themes: etatThemes },
       notes: {},
     });
+  }
+  if (requete.url === '/api/access' && requete.method === 'POST') {
+    let corps = '';
+    requete.on('data', (morceau) => { corps += morceau; });
+    requete.on('end', () => json(reponse, { accepte: Boolean(JSON.parse(corps).email) }));
+    return;
   }
   if (requete.url === '/api/snapshot' && requete.method === 'POST') {
     let corps = '';
@@ -171,6 +181,42 @@ async function principal() {
     await page.locator('.syn-maitrise-nom', { hasText: 'Professionnel établi' }).waitFor();
     assert.equal(await page.locator('[data-filtre="ouvertes"]').count(), 0);
     assert.ok(await page.locator('.syn-compte', { hasText: '100 % maîtrisées' }).count() >= 2);
+
+    const publicPage = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
+    await publicPage.goto(`http://127.0.0.1:${adresse.port}/`);
+    await publicPage.getByRole('heading', { name: 'Accède au sphérier de compétences du coach' }).waitFor();
+    await publicPage.locator('#acces-prenom').fill('Camille');
+    await publicPage.locator('#acces-email').fill('camille@example.com');
+    await publicPage.locator('#acces-consentement').check();
+    await publicPage.getByRole('button', { name: 'Recevoir mon lien personnel' }).click();
+    await publicPage.getByRole('heading', { name: 'Ton lien personnel est en route' }).waitFor();
+    assert.ok(await publicPage.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+
+    const resultatPage = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
+    await resultatPage.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000002`);
+    await resultatPage.locator('#audit-cta').click();
+    await resultatPage.getByRole('heading', { name: 'Tes principales zones de progression' }).waitFor();
+    assert.equal(await resultatPage.locator('.audit-zone').count(), 5);
+    const options = resultatPage.locator('.audit-competence');
+    await options.nth(0).click();
+    await options.nth(1).click();
+    await options.nth(2).click();
+    await resultatPage.locator('#audit-suite').click();
+    await resultatPage.getByRole('heading', { name: 'Tes trois priorités de progression' }).waitFor();
+    await resultatPage.getByRole('button', { name: 'Réserver mon appel pour recevoir une analyse personnalisée de mon sphérier' }).waitFor();
+    assert.equal(await resultatPage.locator('#bar.visible').count(), 0);
+
+    const publicMobile = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
+    await publicMobile.goto(`http://127.0.0.1:${adresse.port}/`);
+    await publicMobile.getByRole('heading', { name: 'Accède au sphérier de compétences du coach' }).waitFor();
+    assert.equal(await publicMobile.locator('#header-etat').isVisible(), false);
+    assert.ok(await publicMobile.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+
+    const resultatMobile = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
+    await resultatMobile.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000002`);
+    await resultatMobile.locator('#audit-cta').click();
+    await resultatMobile.getByRole('heading', { name: 'Tes principales zones de progression' }).waitFor();
+    assert.ok(await resultatMobile.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
 
     const mobile = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
     await mobile.goto(url);
