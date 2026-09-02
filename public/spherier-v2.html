@@ -299,6 +299,7 @@
     font-weight: 500;
   }
   .audit-depart-texte span { display: block; margin-top: 3px; color: var(--stone); font-size: 11.5px; }
+  .audit-actions { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
   .audit-cta {
     min-height: 46px;
     padding: 11px 19px;
@@ -316,6 +317,14 @@
   }
   .audit-cta:hover { background: var(--gold-bright); }
   .audit-cta:active { transform: scale(.97); }
+  .audit-rdv-secondaire {
+    min-height: 46px; padding: 11px 17px; border: 1px solid var(--line);
+    border-radius: 999px; background: transparent; color: var(--paper-dim);
+    cursor: pointer; font: inherit; font-size: 12px;
+    transition: transform .16s cubic-bezier(.23,1,.32,1), border-color .16s ease, color .16s ease;
+  }
+  .audit-rdv-secondaire:hover { border-color: var(--gold); color: var(--paper); }
+  .audit-rdv-secondaire:active { transform: scale(.97); }
 
   /* ÉTAT DE CHARGEMENT / MESSAGE */
   .message {
@@ -1264,7 +1273,8 @@
     }
     .mode-emploi li::before { position: absolute; left: 0; top: 2px; }
     .audit-depart { align-items: stretch; flex-direction: column; padding: 17px; }
-    .audit-cta { width: 100%; white-space: normal; }
+    .audit-actions { align-items: stretch; flex-direction: column; }
+    .audit-cta, .audit-rdv-secondaire { width: 100%; white-space: normal; }
     .portail { padding-top: 48px; }
     .portail-form { padding: 18px; }
     .portail-champs { grid-template-columns: 1fr; }
@@ -1401,7 +1411,10 @@
     </div>
     <div class="audit-depart">
       <p class="audit-depart-texte"><b>Commence par ton audit initial</b><span id="audit-meta">192 compétences · marque une pause toutes les 30 compétences.</span></p>
-      <button type="button" class="audit-cta" id="audit-cta">Commencer mon audit initial</button>
+      <div class="audit-actions">
+        <button type="button" class="audit-rdv-secondaire" id="audit-rdv-accueil">Réserver un échange</button>
+        <button type="button" class="audit-cta" id="audit-cta">Commencer mon audit initial</button>
+      </div>
     </div>
   </section>
 
@@ -2902,7 +2915,7 @@
 
     elPanneauTete.innerHTML = `
       <p class="panneau-fil"><b>Fin de l'audit</b></p>
-      <h2 class="panneau-titre" id="panneau-titre">Tes principales zones de progression</h2>`;
+      <h2 class="panneau-titre" id="panneau-titre">Sélectionne tes principales zones de progression</h2>`;
 
     const zones = affichees.map(({ theme, competences, score }) => {
       const dimension = etat.referentiel.dimensions.find((d) => d.name === theme.dimension);
@@ -2929,7 +2942,7 @@
     }).join('');
 
     elPanneauCorps.innerHTML = `
-      <p class="audit-resultat-intro">Ces thématiques ressortent comme les moins maîtrisées dans ton audit. Sélectionne les trois compétences qui te semblent les plus utiles pour progresser maintenant.</p>
+      <p class="audit-resultat-intro">Voici les thématiques avec les scores les moins élevés. Sélectionne les trois compétences qui te semblent les plus prioritaires à adresser pour progresser en tant que coach.</p>
       <div class="audit-zones">${zones}</div>
       <button type="button" class="audit-toutes" id="audit-toutes">${auditToutesThemes ? 'Revenir aux 5 thématiques suggérées' : 'Voir toutes les thématiques'}</button>
       <div class="audit-selection-pied">
@@ -2974,8 +2987,8 @@
         }).join('')}
       </div>
       <section class="audit-rdv-bloc">
-        <h3>Reçois une analyse personnalisée de ton sphérier</h3>
-        <p>Réserve un échange gratuit avec Thomas Gibot pour obtenir une analyse détaillée de ton audit et clarifier tes trois priorités de progression.</p>
+        <h3>Réserve un échange</h3>
+        <p>Réserve un échange pour obtenir une analyse détaillée de ton sphérier.</p>
         <button type="button" class="audit-rdv" id="audit-rdv">Réserver mon appel pour recevoir une analyse personnalisée de mon sphérier</button>
       </section>`;
     document.getElementById('audit-rdv').addEventListener('click', () => {
@@ -3600,6 +3613,10 @@
   }
 
   document.getElementById('detail-retour').addEventListener('click', allerAuCiel);
+
+  document.getElementById('audit-rdv-accueil').addEventListener('click', () => {
+    bandeau('Lien de réservation à connecter', 'Le lien Zcal ou Calendly de Thomas Gibot sera branché après validation du packaging.', 'succes');
+  });
 
   elAuditCta.addEventListener('click', () => {
     const codes = ordreDeLecture(etat.referentiel.competencies).map((competence) => competence.id);

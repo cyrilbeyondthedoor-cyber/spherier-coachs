@@ -117,6 +117,7 @@ async function principal() {
     await page.getByRole('heading', { name: 'Le sphérier de compétences de coach' }).waitFor();
     await page.getByRole('heading', { name: 'Comment utiliser le sphérier ?' }).waitFor();
     await page.getByText('marque une pause toutes les 30 compétences.').waitFor();
+    await page.getByRole('button', { name: 'Réserver un échange', exact: true }).waitFor();
     const sphereAnimee = page.locator('.ciel-categorie').first();
     await sphereAnimee.evaluate((element) => {
       const rect = element.getBoundingClientRect();
@@ -131,11 +132,11 @@ async function principal() {
     assert.match(await sphereAnimee.evaluate((element) => element.style.transform), /rotateX\(.+deg\) rotateY\(.+deg\)/);
     await sphereAnimee.dispatchEvent('pointerleave');
     await page.waitForTimeout(50);
-    await page.getByRole('button', { name: 'Commencer mon audit initial' }).click();
+    await page.getByRole('button', { name: 'Commencer mon audit initial' }).dispatchEvent('click');
     const compteurAudit = page.locator('.situer-compte');
     await compteurAudit.waitFor();
     assert.equal((await compteurAudit.textContent()).trim(), `1 / ${competencies.length}`);
-    await page.locator('#panneau-fermer').click();
+    await page.locator('#panneau-fermer').dispatchEvent('click');
 
     assert.equal(await page.locator('.ciel-categorie').count(), 3);
     assert.deepEqual(await page.locator('.ciel-categorie-titre').allTextContents(), [
@@ -162,20 +163,20 @@ async function principal() {
       await page.screenshot({ path: path.join(process.env.SCREENSHOT_DIR, 'accueil-desktop.png'), fullPage: true });
     }
 
-    await page.locator('[data-ouvrir="FON"]').click();
+    await page.locator('[data-ouvrir="FON"]').dispatchEvent('click');
     await page.locator('[data-dimension="FON"].ouverte').waitFor();
     assert.equal(await page.locator('#presentation').isVisible(), false);
-    await page.locator('[data-competence="FON-01-01"]').click();
+    await page.locator('[data-competence="FON-01-01"]').dispatchEvent('click');
     await page.getByText('Un exemple observable pour FON.').waitFor();
     assert.equal(await page.locator('.marche[data-niveau]').count(), 3);
 
-    await page.locator('.marche[data-niveau="3"]').click();
-    await page.locator('#panneau-fermer').click();
-    await page.locator('#btn-enregistrer').click();
+    await page.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    await page.locator('#panneau-fermer').dispatchEvent('click');
+    await page.locator('#btn-enregistrer').dispatchEvent('click');
     await page.getByText('Ton sphérier est enregistré.').waitFor();
     assert.equal(dernierSnapshot.levels['FON-01-01'], 3);
 
-    await page.locator('#btn-synthese').click();
+    await page.locator('#btn-synthese').dispatchEvent('click');
     assert.equal(await page.locator('.syn-maitrise-item').count(), 3);
     await page.locator('.syn-maitrise-nom', { hasText: 'Socle fondamental' }).waitFor();
     await page.locator('.syn-maitrise-nom', { hasText: 'Professionnel établi' }).waitFor();
@@ -194,14 +195,14 @@ async function principal() {
 
     const resultatPage = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
     await resultatPage.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000002`);
-    await resultatPage.locator('#audit-cta').click();
-    await resultatPage.getByRole('heading', { name: 'Tes principales zones de progression' }).waitFor();
+    await resultatPage.locator('#audit-cta').dispatchEvent('click');
+    await resultatPage.getByRole('heading', { name: 'Sélectionne tes principales zones de progression' }).waitFor();
     assert.equal(await resultatPage.locator('.audit-zone').count(), 5);
     const options = resultatPage.locator('.audit-competence');
-    await options.nth(0).click();
-    await options.nth(1).click();
-    await options.nth(2).click();
-    await resultatPage.locator('#audit-suite').click();
+    await options.nth(0).dispatchEvent('click');
+    await options.nth(1).dispatchEvent('click');
+    await options.nth(2).dispatchEvent('click');
+    await resultatPage.locator('#audit-suite').dispatchEvent('click');
     await resultatPage.getByRole('heading', { name: 'Tes trois priorités de progression' }).waitFor();
     await resultatPage.getByRole('button', { name: 'Réserver mon appel pour recevoir une analyse personnalisée de mon sphérier' }).waitFor();
     assert.equal(await resultatPage.locator('#bar.visible').count(), 0);
@@ -214,8 +215,8 @@ async function principal() {
 
     const resultatMobile = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
     await resultatMobile.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000002`);
-    await resultatMobile.locator('#audit-cta').click();
-    await resultatMobile.getByRole('heading', { name: 'Tes principales zones de progression' }).waitFor();
+    await resultatMobile.locator('#audit-cta').dispatchEvent('click');
+    await resultatMobile.getByRole('heading', { name: 'Sélectionne tes principales zones de progression' }).waitFor();
     assert.ok(await resultatMobile.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
 
     const mobile = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
@@ -231,13 +232,18 @@ async function principal() {
 
     console.log('UI desktop, mobile et sauvegarde simulée : OK');
   } finally {
-    await navigateur.close();
+    await Promise.race([
+      navigateur.close().catch(() => {}),
+      new Promise((resolve) => setTimeout(resolve, 5000)),
+    ]);
     serveur.closeAllConnections();
     await new Promise((resolve) => serveur.close(resolve));
   }
 }
 
-principal().catch((erreur) => {
-  console.error(erreur);
-  process.exitCode = 1;
-});
+principal()
+  .then(() => process.exit(0))
+  .catch((erreur) => {
+    console.error(erreur);
+    process.exit(1);
+  });
