@@ -14,7 +14,7 @@
     --night-soft: #131826;
     --paper: #f0ebe0;
     --paper-dim: #c9c2b3;
-    --stone: #6b6557;
+    --stone: #948c7d; /* 5,3:1 minimum sur les fonds nuit (AA), ex-#6b6557 à 3,2:1 */
     --gold: #c9a661;
     --gold-bright: #e8c987;
     --line-faint: rgba(240, 235, 224, 0.08);
@@ -793,6 +793,7 @@
   }
   .bandeau.visible { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
   .bandeau.succes { border-color: var(--gold); color: var(--gold-bright); }
+  .bandeau.erreur { border-color: #c8735a; color: #f0b7a3; }
   .bandeau.echec { border-color: #c4523e; color: #e8a08f; }
   .bandeau b { display: block; color: inherit; margin-bottom: 3px; font-weight: 500; }
   .bandeau button { margin-top: 9px; background: none; border: 1px solid currentColor;
@@ -2148,7 +2149,7 @@
     conteneur.innerHTML = `
       <svg class="constellation" viewBox="${vb.minX} ${vb.minY} ${vb.largeur} ${vb.hauteur}"
            style="--teinte-amas:${teinte}"
-           preserveAspectRatio="xMidYMid meet" role="img"
+           preserveAspectRatio="xMidYMid meet" role="group"
            aria-label="Constellation de la dimension ${echapper(dimension.name)}">
         <path class="parcours-stellaire" d="${cheminStellaire(themes)}"/>
         <g class="liaisons-themes">${liaisonsThemes(themes)}</g>
@@ -4063,32 +4064,40 @@
     return reponse.json();
   }
 
-  async function signalerProspect(type, details = {}) {
+  async function signalerProspect(type, details = {}, options = {}) {
     if (!CLIENT_ID) return;
     try {
       await fetch('/api/prospect-event', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uuid: CLIENT_ID, type, ...details }),
+        ...options,
       });
     } catch (erreur) {
       console.warn('Suivi prospect indisponible :', erreur.message);
     }
   }
 
-  async function ouvrirReservation() {
-    await signalerProspect('agenda_clicked');
+  // La fenêtre s'ouvre AVANT tout appel réseau : l'activation utilisateur qui autorise
+  // window.open expire en quelques secondes (cinq sur Chrome et Firefox, moins sur
+  // Safari). Attendre la réponse de /api/prospect-event, surtout à froid, suffisait à
+  // faire bloquer la fenêtre par le navigateur : le clic de conversion ne faisait rien.
+  function ouvrirReservation() {
     const lien = etat.referentiel?.bookingUrl;
+    let ouvert = false;
     if (lien) {
       try {
         const url = new URL(lien);
         if (['https:', 'http:'].includes(url.protocol)) {
-          window.open(url.href, '_blank', 'noopener,noreferrer');
-          return;
+          ouvert = Boolean(window.open(url.href, '_blank', 'noopener,noreferrer'));
         }
       } catch {}
     }
-    bandeau('Lien de réservation à connecter', 'Le lien Zcal ou Calendly de Thomas Gibot sera branché après validation du packaging.', 'succes');
+    // keepalive : la requête part même si l'onglet change ou se ferme juste après.
+    void signalerProspect('agenda_clicked', {}, { keepalive: true });
+    if (!ouvert) {
+      bandeau('Réservation indisponible', 'Le lien de réservation ne s\'est pas ouvert. Réessaie, ou vérifie que ton navigateur autorise les nouvelles fenêtres.', 'erreur');
+    }
   }
 
   async function demarrer() {
