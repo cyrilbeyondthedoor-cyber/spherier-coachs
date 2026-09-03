@@ -2,7 +2,7 @@ require('dotenv').config({ quiet: true });
 
 const { Client, collectPaginatedAPI } = require('@notionhq/client');
 const { CATEGORIES, DIMENSIONS, ECHELLE, VERSION_REFERENTIEL, DIFFICULTES,
-        MAX_CIBLES_MAINTENANT, NIVEAU_ACQUIS, THEME_LOCKING, BOOKING_URL, CLUB, verifierClub } = require('./club.config.js');
+        MAX_CIBLES_MAINTENANT, NIVEAU_ACQUIS, THEME_LOCKING, BOOKING_URL, CLUB, LEXIQUE, verifierClub } = require('./club.config.js');
 
 const { NOTION_TOKEN, DB_THEMES, DB_COMPETENCES, DB_RESSOURCES } = process.env;
 
@@ -227,6 +227,7 @@ async function lireReferentielDepuisNotion() {
     competencies,
     resources,
     scale: ECHELLE,
+    lexique: LEXIQUE,
   };
 }
 

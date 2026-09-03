@@ -226,7 +226,53 @@ function seuilDOuverture(nombreDeCompetences) {
 verifierClub();
 console.log(`[sphérier] club = ${CLUB} · référentiel v${VERSION_REFERENTIEL} · ${DIMENSIONS.length} dimensions`);
 
+// --- Lexique de l'approche des Sommets -------------------------------------------
+//
+// Repris tel quel de l'onglet « Lexique » du classeur V6 (33 termes). Servi au
+// navigateur par /api/referential, affiché dans un panneau depuis la page d'accueil.
+// Les mots marqués d'un astérisque dans les énoncés renvoient à ces définitions.
+const LEXIQUE = {
+  titre: "Lexique de l'approche des Sommets",
+  intro: "Au fil de son développement, l’approche des Sommets a construit un vocabulaire qui traduit sa vision et sa pratique du coaching. Nous avons simplifié les formulations de ce référentiel afin de le rendre clair et accessible. Certains termes ont été conservés car ils nomment avec précision des distinctions, des postures ou des techniques qui apportent une valeur réelle à notre manière de coacher. Les mots marqués d’un astérisque sont définis dans ce lexique.",
+  termes: [
+    { terme: "Sphérier de compétences", definition: "Référentiel qui organise les compétences attendues des coachs du Club selon plusieurs dimensions et niveaux cumulatifs." },
+    { terme: "Dimension", definition: "Grand domaine de compétences utilisé pour structurer le Sphérier." },
+    { terme: "Marqueur observable", definition: "Comportement concret permettant d’évaluer la maîtrise d’une compétence dans la pratique." },
+    { terme: "Niveau Fondamental", definition: "Premier niveau du Sphérier. Il regroupe les acquis requis pour exercer sur un socle sain." },
+    { terme: "Niveau TTC", definition: "Niveau de compétence requis pour accéder au dispositif « Trouve ton coach »." },
+    { terme: "Niveau A-player", definition: "Niveau avancé correspondant à une pratique solide, fine et incarnée du coaching." },
+    { terme: "Trouve ton coach (TTC)", definition: "Dispositif de mise en relation entre des clients et des coachs du Club ayant validé le niveau requis." },
+    { terme: "Développement vertical et horizontal", definition: "Le développement horizontal enrichit les compétences. Le développement vertical transforme la façon dont une personne interprète le monde." },
+    { terme: "Structure d’interprétation", definition: "Ensemble de croyances et de valeurs à travers lesquelles une personne comprend les situations et choisit ses actions." },
+    { terme: "Fils", definition: "Éléments repérés pendant une conversation de coaching, en particulier durant la phase d’exploration. Le coach suit ces fils pour dépasser le sujet apparent et identifier l’enjeu profond qui aidera le client à avancer sur son enjeu de surface. Un fil peut être un mot récurrent, une émotion, une contradiction, une croyance, une règle formulée par « je dois » ou « il faut », une généralisation, un besoin, une valeur ou un motif qui se répète." },
+    { terme: "Domino", definition: "Formulation concise de l’enjeu profond qui produit un effet de levier lorsqu’il est travaillé." },
+    { terme: "Bascule", definition: "Changement de perspective qui redonne au client de l’espace, du choix et du pouvoir d’action." },
+    { terme: "Ancrage", definition: "Intégration d’une prise de conscience dans la tête, le cœur et le corps afin de la rendre durable." },
+    { terme: "Nouveaux possibles", definition: "Phase où le client ouvre plusieurs options après la bascule, avant de choisir ses actions." },
+    { terme: "Programme de coaching", definition: "Parcours d’accompagnement structuré qui permet au client de travailler sur une transformation personnelle profonde." },
+    { terme: "BVR", definition: "Besoins, Valeurs et Rêves. Trois leviers utilisés pour comprendre ce qui guide le client et soutenir une bascule." },
+    { terme: "Reframing ou recadrage", definition: "Technique qui invite le client à regarder une situation depuis une autre perspective." },
+    { terme: "Dépolarisation", definition: "Technique qui équilibre la perception d’une situation en explorant aussi ce qui contredit le récit initial." },
+    { terme: "Parts de soi ou IFS", definition: "Modèle qui considère la personnalité comme un ensemble de parts protectrices, blessées ou réactives coordonnées par le Self." },
+    { terme: "Phase d’exploration", definition: "Phase de la conversation de coaching durant laquelle le coach ouvre plusieurs angles autour du sujet du client, repère les fils porteurs et les approfondit. Elle permet de faire émerger l’enjeu profond avant de converger vers le domino." },
+    { terme: "Enjeu de surface et enjeu profond", definition: "Distinction entre le sujet apporté au début de la conversation et l’enjeu sous-jacent révélé par l’exploration." },
+    { terme: "Coaching émergent", definition: "Posture qui consiste à travailler avec ce qui apparaît pendant la séance, dans un cadre clair." },
+    { terme: "Faits et histoires", definition: "Distinction entre les éléments observables et l’interprétation construite par le client." },
+    { terme: "Lubrifiant verbal", definition: "Formulation qui présente une intuition avec prudence et laisse au client le choix de la valider." },
+    { terme: "Cycles", definition: "Outil qui aide le client à quitter un cycle, clarifier ses besoins, accepter les deuils et entrer dans un nouveau cycle." },
+    { terme: "Choix fort", definition: "Choix assumé qui inclut ce que le client décide et ce à quoi il accepte de renoncer." },
+    { terme: "Dilemme", definition: "Tension entre deux options porteuses de besoins importants, explorée en cherchant un « ET » ou une priorité temporelle." },
+    { terme: "Self", definition: "Dans l’IFS, centre stable associé à la clarté, au calme, à la confiance et à la compassion." },
+    { terme: "Schéma narratif", definition: "Récit récurrent par lequel le client donne du sens à son identité, à ses expériences et à son enjeu. Le coaching l’aide à en reconnaître les limites et à faire émerger un récit plus profond, plus ouvert et plus cohérent avec la manière d’être qu’il souhaite incarner." },
+    { terme: "Métacommunication", definition: "Action de nommer ce qui se joue dans l’échange ou dans la relation de coaching, en parlant depuis le « je », puis d’en vérifier la résonance et l’utilité avec le client." },
+    { terme: "Impertinence", definition: "Capacité à questionner en dehors du champ de pertinence habituel du client afin d’ouvrir des angles qu’il n’avait pas envisagés. Elle s’appuie sur une alliance solide et une intervention ajustée." },
+    { terme: "Miroir de l’enjeu", definition: "Phénomène par lequel ce qui se joue dans la séance reproduit l’enjeu rencontré par le client dans sa vie. Le coach peut utiliser cette dynamique comme terrain d’observation et de pratique en direct." },
+    { terme: "Paradoxe", definition: "Formulation synthétique d’une caractéristique qui sert le client dans certaines situations et le limite face à son enjeu actuel." },
+  ],
+};
+
 module.exports = {
+  LEXIQUE,
   CLUB,
   CLUBS_CONNUS,
   verifierClub,

@@ -254,7 +254,7 @@
   .presentation-texte strong { color: var(--paper); font-weight: 500; }
   .mode-emploi {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0;
     margin-top: 15px;
     list-style: none;
@@ -283,6 +283,34 @@
     font-weight: 500;
   }
   .mode-emploi p { margin-top: 6px; color: var(--stone); font-size: 12.5px; line-height: 1.55; }
+  .lexique-btn {
+    margin-top: 12px; padding: 8px 14px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--gold); background: rgba(201,166,97,.12); color: var(--gold-bright);
+    font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 13.5px;
+    transition: background .2s ease;
+  }
+  .lexique-btn:hover { background: rgba(201,166,97,.24); }
+  .lexique-intro { color: var(--paper-dim); font-size: 13px; line-height: 1.6; margin-bottom: 18px; }
+  .lexique-liste { display: grid; gap: 10px; }
+  .lexique-terme {
+    padding: 12px 14px; border-radius: 9px; background: rgba(240,235,224,.02);
+    border: 1px solid var(--line-faint);
+  }
+  .lexique-terme dt { font-family: 'Cormorant Garamond', serif; font-size: 17px; font-weight: 500; color: var(--gold-bright); }
+  .lexique-terme dd { margin: 5px 0 0; color: var(--paper-dim); font-size: 13px; line-height: 1.55; }
+  .audit-choix { margin-bottom: 18px; }
+  .audit-choix-ligne {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 9px 12px; margin-bottom: 6px; border-radius: 9px;
+    background: rgba(201,166,97,.08); border: 1px solid rgba(201,166,97,.3); font-size: 13px;
+  }
+  .audit-choix-retirer {
+    flex-shrink: 0; padding: 5px 11px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--line); background: transparent; color: var(--paper-dim);
+    font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 12.5px;
+  }
+  .audit-choix-retirer:hover { border-color: #e07a6a; color: #e07a6a; }
+  .categorie-tab .syn-pct { font-size: 1em; margin-left: 7px; }
   .audit-depart {
     display: flex;
     align-items: center;
@@ -1398,6 +1426,11 @@
     .syn-comp-niveau { text-align: left; }
   }
 
+  @media (min-width: 641px) and (max-width: 980px) {
+    .mode-emploi { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 22px; }
+    .mode-emploi li:nth-child(3) { padding-left: 4px; border-left: 0; }
+  }
+
   @media (max-width: 640px) {
     .barre-sauvegarde { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 16px calc(13px + env(safe-area-inset-bottom, 0px)); }
     /* Boutons au-dessus du champ de nom : la ligne du bas, où vit le badge, ne porte
@@ -1515,6 +1548,7 @@
         <li><b>Lis les marqueurs</b><p>Chaque compétence est accompagnée de marqueurs observables pour t'aider à situer avec précision ta maîtrise de cette compétence.</p></li>
         <li><b>Évalue ton niveau de maîtrise</b><p>Trois niveaux sont possibles : Je ne maîtrise pas du tout, Je dois m'améliorer et Je maîtrise. Choisis celui qui correspond le mieux à chaque compétence.</p></li>
         <li><b>Prépare ta progression</b><p>À la fin, utilise la vue d'ensemble pour évaluer les domaines qui demandent le plus à être travaillés et sélectionne jusqu'à trois compétences sur lesquelles te concentrer les prochaines semaines.</p></li>
+        <li><b>Lexique spécifique</b><p>Si tu t'interroges sur certains mots de vocabulaire, tu peux consulter le lexique de l'approche des Sommets. Les mots marqués d'un astérisque y sont définis.</p><button type="button" class="lexique-btn" id="ouvrir-lexique">Consulter le lexique</button></li>
       </ol>
     </div>
     <div class="audit-depart">
@@ -1882,7 +1916,7 @@
     };
 
     elDimensions.innerHTML = `<nav class="categorie-tabs" aria-label="Macro-catégories">
-      ${CATEGORIES.map((item) => `<button type="button" class="categorie-tab${item.id === categorieId ? ' active' : ''}" data-tab-categorie="${echapper(item.id)}" style="--cc:${item.couleur || '#c9a661'}">${echapper(item.name)}</button>`).join('')}
+      ${CATEGORIES.map((item) => `<button type="button" class="categorie-tab${item.id === categorieId ? ' active' : ''}" data-tab-categorie="${echapper(item.id)}" style="--cc:${item.couleur || '#c9a661'}">${echapper(item.name)}${pctHtml(progressionCodes(codesDeCategorie(item.id)).pourcentage)}</button>`).join('')}
     </nav><section class="categorie-dimensions">
       <div class="categorie-detail-entete">
         <h2>${echapper(categorie?.name || '')}</h2>
@@ -1893,7 +1927,11 @@
     </section>`;
 
     elDimensions.querySelectorAll('[data-toggle]').forEach((btn) => {
-      btn.addEventListener('click', () => ouvrirDetail(btn.dataset.toggle));
+      btn.addEventListener('click', () => {
+        // En vue détail, recliquer la dimension ouverte la replie.
+        if (etat.vue === 'detail' && etat.dimensionOuverte === btn.dataset.toggle) basculerDimension(btn.dataset.toggle);
+        else ouvrirDetail(btn.dataset.toggle);
+      });
     });
     elDimensions.querySelectorAll('[data-tab-categorie]').forEach((bouton) => {
       bouton.addEventListener('click', () => ouvrirCategorie(bouton.dataset.tabCategorie));
@@ -3203,8 +3241,19 @@
       </section>`;
     }).join('');
 
+    // Les choix déjà faits restent retirables ici, même quand la compétence vient
+    // d'une thématique qui n'est pas affichée parmi les cinq suggérées.
+    const choix = brouillon.current
+      .map((code) => etat.referentiel.competencies.find((competence) => competence.id === code))
+      .filter(Boolean);
+    const blocChoix = choix.length === 0 ? '' : `<div class="audit-choix">
+      <p class="syn-section-titre">Tes choix · ${choix.length}/3</p>
+      ${choix.map((competence) => `<div class="audit-choix-ligne"><span>${echapper(competence.name)}</span><button type="button" class="audit-choix-retirer" data-retirer="${echapper(competence.id)}">Retirer</button></div>`).join('')}
+    </div>`;
+
     elPanneauCorps.innerHTML = `
-      <p class="audit-resultat-intro">Voici les thématiques avec les scores les moins élevés. Sélectionne les trois compétences qui te semblent les plus prioritaires à adresser pour progresser en tant que coach.</p>
+      <p class="audit-resultat-intro">Voici les thématiques avec les scores les moins élevés. Sélectionne les trois compétences qui te semblent les plus prioritaires à adresser pour progresser en tant que coach. Un clic sur une compétence sélectionnée la retire.</p>
+      ${blocChoix}
       <div class="audit-zones">${zones}</div>
       <button type="button" class="audit-toutes" id="audit-toutes">${auditToutesThemes ? 'Revenir aux 5 thématiques suggérées' : 'Voir toutes les thématiques'}</button>
       <div class="audit-selection-pied">
@@ -3215,6 +3264,9 @@
 
     elPanneauCorps.querySelectorAll('[data-priorite]').forEach((bouton) => {
       bouton.addEventListener('click', () => basculerPrioriteAudit(bouton.dataset.priorite));
+    });
+    elPanneauCorps.querySelectorAll('[data-retirer]').forEach((bouton) => {
+      bouton.addEventListener('click', () => basculerPrioriteAudit(bouton.dataset.retirer));
     });
     document.getElementById('audit-toutes').addEventListener('click', () => {
       auditToutesThemes = !auditToutesThemes;
@@ -3232,7 +3284,9 @@
     synScope = null;
     synVoirMaitrisees = false;
     synFiltres = new Set(['tout']);
-    synDeplies = new Set(etat.referentiel.dimensions.map((dimension) => `D:${dimension.id}`));
+    // Tout replié à l'arrivée : catégories, niveaux et priorités d'abord, le détail
+    // par dimension s'ouvre à la demande.
+    synDeplies = new Set();
     ouvrirSynthese(true);
   }
 
@@ -3713,6 +3767,28 @@
   }
 
   document.getElementById('panneau-fermer').addEventListener('click', fermerPanneau);
+
+  function ouvrirLexique() {
+    const lexique = etat.referentiel?.lexique;
+    if (!lexique) return;
+    configurerPleinEcran(true);
+    situer = null;
+    competenceAffichee = null;
+    themeAffiche = null;
+    elPanneau.style.setProperty('--teinte-p', '#c9a661');
+    elPanneauTete.innerHTML = `
+      <p class="panneau-fil"><b>Lexique</b></p>
+      <h2 class="panneau-titre" id="panneau-titre">${echapper(lexique.titre)}</h2>`;
+    elPanneauCorps.innerHTML = `
+      <p class="lexique-intro">${echapper(lexique.intro)}</p>
+      <dl class="lexique-liste">
+        ${lexique.termes.map((t) => `<div class="lexique-terme"><dt>${echapper(t.terme)}</dt><dd>${echapper(t.definition)}</dd></div>`).join('')}
+      </dl>`;
+    elPanneauCorps.scrollTop = 0;
+    afficherPanneau();
+    document.body.dataset.panneau = 'lexique';
+  }
+  document.getElementById('ouvrir-lexique').addEventListener('click', ouvrirLexique);
   document.getElementById('panneau-plein-ecran').addEventListener('click', () => {
     const scrollInterne = elPanneauCorps.scrollTop;
     const active = elPanneau.classList.toggle('plein-ecran');
