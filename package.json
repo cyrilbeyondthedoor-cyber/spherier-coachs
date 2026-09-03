@@ -6,7 +6,12 @@
   "scripts": {
     "start": "node index.js",
     "build:spherier": "node build-spherier.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npm run test:server && npm run test:ui",
+    "test:server": "node tests/server-functions.js",
+    "test:ui": "node tests/ui-smoke.js",
+    "test:notion": "node tests/ui-notion-smoke.js",
+    "test:prospects": "node tests/prospects-notion-integration.js",
+    "preview:notion": "node preview-notion.js",
     "export:snapshots": "node export-snapshots.js"
   },
   "keywords": [],
@@ -19,6 +24,7 @@
     "dotenv": "^17.4.2"
   },
   "devDependencies": {
+    "exceljs": "^4.4.0",
     "netlify-cli": "^27.0.1",
     "playwright": "^1.62.0"
   }

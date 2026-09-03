@@ -1,5 +1,6 @@
 # Secrets — ne doivent JAMAIS partir sur GitHub
 .env
+.local/
 .env.local
 
 # Dépendances (réinstallables via package-lock.json)

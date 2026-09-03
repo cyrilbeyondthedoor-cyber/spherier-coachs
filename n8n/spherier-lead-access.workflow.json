@@ -1,0 +1,130 @@
+{
+  "name": "Sphérier - Envoyer le lien personnel",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "spherier-lead-access",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-access",
+      "name": "Webhook Netlify",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-720, 0],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gOJdqp2nIRRwreZM",
+          "name": "Sphérier - Secret Netlify"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || {};\nif (!body.email || !body.prenom || !body.lien || !body.uuid) throw new Error('Payload incomplet');\nreturn [{ json: { email: String(body.email).trim().toLowerCase(), prenom: String(body.prenom).trim(), lien: body.lien, uuid: body.uuid, nouveau: body.nouveau === true, listId: 24 } }];"
+      },
+      "id": "valider",
+      "name": "Valider et configurer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-500, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/contacts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ email: $json.email, attributes: { PRENOM: $json.prenom, SPHERIER_LINK: $json.lien, SPHERIER_UUID: $json.uuid }, updateEnabled: true }) }}",
+        "options": {}
+      },
+      "id": "brevo-upsert",
+      "name": "Brevo - Créer ou mettre à jour",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-270, 0],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "EiHlbfYBgd1wTOst",
+          "name": "Brevo - Thomas Argheria"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://api.brevo.com/v3/contacts/lists/' + $('Valider et configurer').item.json.listId + '/contacts/add' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ emails: [$('Valider et configurer').item.json.email] }) }}",
+        "options": {}
+      },
+      "id": "brevo-add",
+      "name": "Brevo - Ajouter à la liste",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-40, 0],
+      "continueOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "EiHlbfYBgd1wTOst",
+          "name": "Brevo - Thomas Argheria"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/smtp/email",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ to: [{ email: $('Valider et configurer').item.json.email, name: $('Valider et configurer').item.json.prenom }], templateId: 43, params: { PRENOM: $('Valider et configurer').item.json.prenom, SPHERIER_LINK: $('Valider et configurer').item.json.lien } }) }}",
+        "options": {}
+      },
+      "id": "brevo-send",
+      "name": "Brevo - Envoyer le lien",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [190, 0],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "EiHlbfYBgd1wTOst",
+          "name": "Brevo - Thomas Argheria"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"accepted\":true}",
+        "options": { "responseCode": 202 }
+      },
+      "id": "repondre",
+      "name": "Répondre à Netlify",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [420, 0]
+    }
+  ],
+  "connections": {
+    "Webhook Netlify": { "main": [[{ "node": "Valider et configurer", "type": "main", "index": 0 }]] },
+    "Valider et configurer": { "main": [[{ "node": "Brevo - Créer ou mettre à jour", "type": "main", "index": 0 }]] },
+    "Brevo - Créer ou mettre à jour": { "main": [[{ "node": "Brevo - Ajouter à la liste", "type": "main", "index": 0 }]] },
+    "Brevo - Ajouter à la liste": { "main": [[{ "node": "Brevo - Envoyer le lien", "type": "main", "index": 0 }]] },
+    "Brevo - Envoyer le lien": { "main": [[{ "node": "Répondre à Netlify", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false,
+  "versionId": "00000000-0000-4000-8000-000000000001"
+}

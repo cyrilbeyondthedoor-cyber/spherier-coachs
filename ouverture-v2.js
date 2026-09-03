@@ -1,7 +1,7 @@
 // Le palier d'acquisition et le seuil d'ouverture sont des réglages de club : ils
 // vivent dans club.config.js. Le plancher à 1 du seuil y est expliqué — sans lui, une
 // thématique très courte ouvrirait ses suites sans que rien n'ait été travaillé.
-const { ECHELLE, NIVEAU_ACQUIS, seuilDOuverture } = require('./club.config.js');
+const { ECHELLE, NIVEAU_ACQUIS, THEME_LOCKING, seuilDOuverture } = require('./club.config.js');
 
 const ECHELLE_V2 = ECHELLE;
 
@@ -16,6 +16,9 @@ const ECHELLE_V2 = ECHELLE;
 // - Une thématique non racine est ouverte dès qu'AU MOINS UNE de ses sources a la
 //   moitié de ses compétences (arrondi inférieur) au niveau 2 ou plus.
 function calculerOuverture({ referentiel, levels = {} }) {
+  if (!THEME_LOCKING) {
+    return Object.fromEntries(referentiel.themes.map((theme) => [theme.id, { status: 'open', unlock_hint: '' }]));
+  }
   const competencesParTheme = new Map();
   referentiel.competencies.forEach((c) => {
     if (!c.theme) return;
