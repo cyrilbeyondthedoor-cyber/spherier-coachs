@@ -1,31 +1,17 @@
 require('dotenv').config({ quiet: true });
 
 const { obtenirOuCreerProspect } = require('../../prospects-notion.js');
+const { creerLimiteur, ipClient } = require('../../limiteur.js');
 
 const HEADERS = {
   'Content-Type': 'application/json; charset=utf-8',
   'Cache-Control': 'no-store',
 };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const FENETRE_MS = 10 * 60 * 1000;
-const MAX_TENTATIVES = 8;
-const tentativesParIp = new Map();
+const limiteur = creerLimiteur({ max: 8 });
 
 function reponse(statusCode, payload) {
   return { statusCode, headers: HEADERS, body: JSON.stringify(payload) };
-}
-
-function ipClient(event) {
-  return String(event.headers?.['x-nf-client-connection-ip'] || event.headers?.['x-forwarded-for'] || 'inconnue')
-    .split(',')[0].trim();
-}
-
-function depasseLaLimite(ip) {
-  const maintenant = Date.now();
-  const recentes = (tentativesParIp.get(ip) || []).filter((date) => maintenant - date < FENETRE_MS);
-  recentes.push(maintenant);
-  tentativesParIp.set(ip, recentes);
-  return recentes.length > MAX_TENTATIVES;
 }
 
 exports.handler = async (event) => {
@@ -44,8 +30,11 @@ exports.handler = async (event) => {
   if (!prenom || prenom.length > 80 || !EMAIL_RE.test(email) || email.length > 254 || corps.consentement !== true) {
     return reponse(400, { erreur: 'Prénom, email et consentement valides requis.' });
   }
-  if (corps.website || Number(corps.dureeMs) < 1200) return reponse(202, { accepte: true });
-  if (depasseLaLimite(ipClient(event))) return reponse(429, { erreur: 'Trop de demandes. Réessaie plus tard.' });
+  // Un corps sans dureeMs donnait NaN, donc « pas trop rapide » : la comparaison est
+  // inversée pour qu'une valeur absente ou invalide soit traitée comme suspecte.
+  const duree = Number(corps.dureeMs);
+  if (corps.website || !(duree >= 1200)) return reponse(202, { accepte: true });
+  if (limiteur.depasse(ipClient(event))) return reponse(429, { erreur: 'Trop de demandes. Réessaie plus tard.' });
 
   try {
     const prospect = await obtenirOuCreerProspect({

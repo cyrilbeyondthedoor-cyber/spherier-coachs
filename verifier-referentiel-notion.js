@@ -2,6 +2,7 @@ require('dotenv').config({ quiet: true });
 
 const assert = require('node:assert/strict');
 const { Client, collectPaginatedAPI } = require('@notionhq/client');
+const { DIFFICULTES } = require('./club.config.js');
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 
@@ -34,9 +35,8 @@ async function principal() {
     interroger(process.env.DB_RESSOURCES),
   ]);
 
-  assert.equal(themes.length, 33, 'Nombre de thématiques');
-  assert.equal(competences.length, 193, 'Nombre de pages de compétences');
-  assert.equal(ressources.length, 0, 'La base Ressources doit être vide au premier import');
+  // Seuls les invariants sont des assertions. Les comptes changent avec la vie du
+  // référentiel : ils sont affichés, pas figés.
   verifierCodes(themes, 'Thématiques');
   verifierCodes(competences, 'Compétences');
 
@@ -45,13 +45,15 @@ async function principal() {
   assert.ok(themes.every((page) => page.properties['Position Y']?.number !== null), 'Position Y absente');
   const competencesActives = competences.filter((page) => page.properties.Actif?.checkbox === true);
   const competencesInactives = competences.filter((page) => page.properties.Actif?.checkbox !== true);
-  assert.equal(competencesActives.length, 192, 'Nombre de compétences actives');
-  assert.equal(competencesInactives.length, 1, 'Nombre de compétences inactives');
-  assert.equal(texte(competencesInactives[0], 'ID source'), 'NEW-ACT-05-01', 'Compétence retirée inattendue');
   assert.ok(competencesActives.every((page) => texte(page, 'Énoncé N1')), 'Énoncé N1 absent');
   assert.ok(competencesActives.every((page) => !texte(page, 'Énoncé N2') && !texte(page, 'Énoncé N3')), 'N2 ou N3 doit rester vide');
   assert.ok(competencesActives.every((page) => page.properties['📚 Thèmes']?.relation?.length === 1), 'Relation de thème invalide');
   assert.ok(competencesActives.every((page) => texte(page, 'Marqueurs').split('\n').every((ligne) => ligne.startsWith('• '))), 'Format des marqueurs non uniforme');
+  const difficultesConnues = new Set(DIFFICULTES.map((difficulte) => difficulte.nom));
+  assert.ok(
+    competencesActives.every((page) => difficultesConnues.has(page.properties.Difficulté?.select?.name)),
+    `Difficulté hors des valeurs connues (${[...difficultesConnues].join(', ')})`
+  );
 
   const sansMarqueurs = competencesActives.filter((page) => !texte(page, 'Marqueurs')).length;
   const aRevoir = competencesActives.filter((page) => page.properties.Revue?.select?.name !== 'OK').length;
@@ -61,17 +63,10 @@ async function principal() {
     return compte;
   }, {});
 
-  assert.equal(sansMarqueurs, 0, 'Nombre de marqueurs vides');
-  assert.equal(aRevoir, 0, 'Nombre de lignes à revoir');
-  assert.deepEqual(difficultes, {
-    'Socle fondamental': 58,
-    'Professionnel établi': 53,
-    'A-player': 81,
-  });
-
-  console.log('Notion vérifié : 33 thématiques · 192 compétences actives · 1 inactive · 0 ressource');
-  console.log('58 Socle fondamental · 53 Professionnel établi · 81 A-player');
-  console.log('0 marqueur vide · 0 ligne à revoir · codes et relations uniques');
+  console.log(`Notion vérifié : ${themes.length} thématiques · ${competencesActives.length} compétences actives · ${competencesInactives.length} inactive(s) · ${ressources.length} ressource(s)`);
+  console.log(Object.entries(difficultes).map(([nom, n]) => `${n} ${nom}`).join(' · '));
+  console.log(`${sansMarqueurs} marqueur(s) vide(s) · ${aRevoir} ligne(s) à revoir · codes et relations uniques`);
+  if (sansMarqueurs || aRevoir) console.warn('Attention : des lignes restent incomplètes, voir ci-dessus.');
 }
 
 principal().catch((erreur) => {

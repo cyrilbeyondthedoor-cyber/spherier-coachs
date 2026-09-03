@@ -2,6 +2,9 @@ require('dotenv').config({ quiet: true });
 
 const { getReferentielV2 } = require('../../referentiel-v2.js');
 const { validerEtNormaliser, ecrireSnapshotV2, composerEtat } = require('../../snapshot-v2.js');
+const { creerLimiteur, ipClient } = require('../../limiteur.js');
+
+const limiteur = creerLimiteur({ max: 60 });
 
 const HEADERS = { 'Content-Type': 'application/json; charset=utf-8' };
 
@@ -20,6 +23,8 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return reponse(405, { erreur: 'Méthode non autorisée, utilisez POST.' });
   }
+  if (String(event.body || '').length > 64000) return reponse(413, { erreur: 'Données trop volumineuses.' });
+  if (limiteur.depasse(ipClient(event))) return reponse(429, { erreur: 'Trop de demandes. Réessaie dans quelques minutes.' });
 
   let corps;
   try {

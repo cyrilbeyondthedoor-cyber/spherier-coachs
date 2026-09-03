@@ -1,6 +1,7 @@
 require('dotenv').config({ quiet: true });
+const { DIFFICULTES } = require('./club.config.js');
 
-const { Client } = require('@notionhq/client');
+const { Client, collectPaginatedAPI } = require('@notionhq/client');
 
 // ===========================================================================
 // Création des quatre bases Notion du sphérier.
@@ -83,9 +84,7 @@ const COMPETENCES = (idThemes) => ({
   'Difficulté': {
     select: {
       options: [
-        { name: 'Socle fondamental', color: 'green' },
-        { name: 'Professionnel établi', color: 'orange' },
-        { name: 'A-player', color: 'purple' },
+        ...DIFFICULTES.map((difficulte, index) => ({ name: difficulte.nom, color: ['green', 'orange', 'purple'][index] || 'default' })),
       ],
     },
   },
@@ -157,6 +156,15 @@ async function principal() {
   if (!PARENT) throw new Error('PAGE_PARENT manquant (id de la page qui accueille les bases)');
 
   console.log(SIMULATION ? '=== SIMULATION — aucune écriture ===\n' : '=== Création des bases ===\n');
+
+  // Relancer ce script sur une page déjà équipée créait quatre bases de plus.
+  if (!SIMULATION) {
+    const enfants = await collectPaginatedAPI(notion.blocks.children.list, { block_id: PARENT });
+    const deja = enfants.find((bloc) => bloc.type === 'child_database' && /Thèmes/.test(bloc.child_database?.title || ''));
+    if (deja) {
+      throw new Error(`La page parent contient déjà une base Thèmes (${deja.id}). Rien n'est créé : utiliser les bases existantes ou une autre page.`);
+    }
+  }
 
   // 1. Thèmes d'abord : les autres bases pointent vers elle.
   const themes = await creerBase('📚 Thèmes', THEMES);

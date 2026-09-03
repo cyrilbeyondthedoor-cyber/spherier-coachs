@@ -1,7 +1,7 @@
 // Le palier d'acquisition et le seuil d'ouverture sont des réglages de club : ils
 // vivent dans club.config.js. Le plancher à 1 du seuil y est expliqué — sans lui, une
 // thématique très courte ouvrirait ses suites sans que rien n'ait été travaillé.
-const { ECHELLE, NIVEAU_ACQUIS, THEME_LOCKING, seuilDOuverture } = require('./club.config.js');
+const { ECHELLE, NIVEAU_ACQUIS, THEME_LOCKING, seuilDOuverture, NIVEAU_MAX } = require('./club.config.js');
 
 const ECHELLE_V2 = ECHELLE;
 
@@ -106,7 +106,7 @@ function niveauxComplets({ referentiel, levels = {} }) {
 function normaliserNiveau(valeur) {
   const n = Number(valeur);
   if (!Number.isFinite(n)) return 0;
-  return Math.min(3, Math.max(0, Math.round(n)));
+  return Math.min(NIVEAU_MAX, Math.max(0, Math.round(n)));
 }
 
 module.exports = { calculerOuverture, niveauxComplets, normaliserNiveau, seuilDOuverture, NIVEAU_ACQUIS };

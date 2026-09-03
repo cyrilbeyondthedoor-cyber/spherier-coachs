@@ -3,6 +3,9 @@ require('dotenv').config({ quiet: true });
 const { estUuidV4 } = require('../../snapshot-v2.js');
 const { getReferentielV2 } = require('../../referentiel-v2.js');
 const { morceaux, trouverProspectParUuid, mettreAJourProspect } = require('../../prospects-notion.js');
+const { creerLimiteur, ipClient } = require('../../limiteur.js');
+
+const limiteur = creerLimiteur({ max: 120 });
 
 const HEADERS = {
   'Content-Type': 'application/json; charset=utf-8',
@@ -15,6 +18,8 @@ function reponse(statusCode, payload) {
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return reponse(405, { erreur: 'Méthode non autorisée.' });
+  if (String(event.body || '').length > 8000) return reponse(413, { erreur: 'Données trop volumineuses.' });
+  if (limiteur.depasse(ipClient(event))) return reponse(429, { erreur: 'Trop de demandes. Réessaie dans quelques minutes.' });
   let corps;
   try {
     corps = JSON.parse(event.body || '{}');

@@ -4,17 +4,25 @@ const fs = require('node:fs');
 const path = require('node:path');
 const ExcelJS = require('exceljs');
 const { Client, collectPaginatedAPI } = require('@notionhq/client');
-const { DIMENSIONS } = require('./club.config.js');
+const { DIMENSIONS, DIFFICULTES: DIFFICULTES_CONFIG } = require('./club.config.js');
 
-const SIMULATION = process.env.SIMULATION === '1';
+// Même convention que les autres scripts : simulation par défaut, APPLIQUER=1 pour
+// écrire. L'ancienne convention (SIMULATION=1) faisait écrire un lancement par réflexe.
+const APPLIQUER = process.env.APPLIQUER === '1';
+const SIMULATION = !APPLIQUER;
 const WORKBOOK_PATH = process.env.WORKBOOK_PATH;
 const DB_THEMES = process.env.DB_THEMES;
 const DB_COMPETENCES = process.env.DB_COMPETENCES;
+// Le mapping est le seul lien entre les lignes du classeur et les codes permanents :
+// une copie horodatée à chaque lancement, et la version courante suivie par git dans
+// data/ (aucun secret dedans).
+const HORODATAGE = new Date().toISOString().replace(/[:.]/g, '-');
 const MAPPING_OUTPUT = process.env.MAPPING_OUTPUT
-  || path.join(__dirname, '.local', 'referentiel-mapping.json');
+  || path.join(__dirname, '.local', `referentiel-mapping-${HORODATAGE}.json`);
+const MAPPING_VERSIONNE = path.join(__dirname, 'data', 'referentiel-mapping.json');
 
 const PREFIXES = new Map(DIMENSIONS.map((dimension) => [dimension.name, dimension.id]));
-const DIFFICULTES = new Set(['Socle fondamental', 'Professionnel établi', 'A-player']);
+const DIFFICULTES = new Set(DIFFICULTES_CONFIG.map((difficulte) => difficulte.nom));
 
 const attendre = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const sansNumero = (valeur) => String(valeur || '').trim().replace(/^\d+\s*-\s*/, '');
@@ -189,17 +197,6 @@ async function importer(donnees) {
   const themesDs = await dataSource(notion, DB_THEMES);
   const competencesDs = await dataSource(notion, DB_COMPETENCES);
 
-  await notion.dataSources.update({
-    data_source_id: themesDs,
-    properties: {
-      Dimension: {
-        select: {
-          options: DIMENSIONS.map((dimension) => ({ name: dimension.name })),
-        },
-      },
-    },
-  });
-
   const themesExistants = await pagesParCode(notion, themesDs);
   const competencesExistantes = await pagesParCode(notion, competencesDs);
   if (themesExistants.size || competencesExistantes.size) {
@@ -218,6 +215,19 @@ async function importer(donnees) {
       + 'Arrêt pour éviter les doublons ou l’écrasement de corrections faites dans Notion.'
     );
   }
+
+  // Les options du select Dimension ne sont posées qu'une fois le contrôle passé :
+  // redéfinir la liste sur une base déjà remplie efface les valeurs assignées.
+  await notion.dataSources.update({
+    data_source_id: themesDs,
+    properties: {
+      Dimension: {
+        select: {
+          options: DIMENSIONS.map((dimension) => ({ name: dimension.name })),
+        },
+      },
+    },
+  });
 
   const pagesThemes = new Map();
   for (const theme of donnees.themes) {
@@ -269,6 +279,10 @@ async function principal() {
 
   fs.mkdirSync(path.dirname(MAPPING_OUTPUT), { recursive: true });
   fs.writeFileSync(MAPPING_OUTPUT, JSON.stringify(donnees, null, 2));
+  if (APPLIQUER) {
+    fs.mkdirSync(path.dirname(MAPPING_VERSIONNE), { recursive: true });
+    fs.writeFileSync(MAPPING_VERSIONNE, JSON.stringify(donnees, null, 2));
+  }
 
   const sansMarqueurs = donnees.competences.filter((competence) => !competence.marqueurs).length;
   const aRevoir = donnees.competences.filter((competence) => competence.revue !== 'OK').length;
@@ -278,7 +292,7 @@ async function principal() {
   console.log(`Mapping : ${MAPPING_OUTPUT}`);
 
   if (SIMULATION) {
-    console.log('Simulation terminée, aucune écriture Notion.');
+    console.log('Simulation terminée, aucune écriture Notion. Relancer avec APPLIQUER=1 pour importer.');
     return;
   }
 

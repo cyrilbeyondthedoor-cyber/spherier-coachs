@@ -1,7 +1,7 @@
 # Démarrage — sphérier du club de coachs
 
 **Pour** : le développeur du club de coachs.
-**À lire après** le mémo d'architecture, qui explique le produit. Ce document-ci ne
+**À lire après** le mémo technique de Cyril, qui explique le produit. Ce document-ci ne
 répète pas le mémo : il dit ce qui est déjà fait, ce qui reste à faire, où sont les
 choses dans le code, et comment demander ce que vous ne pouvez pas faire vous-même.
 
@@ -102,12 +102,18 @@ rapide après un déploiement.
 | `ouverture-v2.js` | Le graphe de progression — la règle vit là et nulle part ailleurs |
 | `snapshot-v2.js` | Validation et écriture des snapshots |
 | `notes-v3.js` | Les notes personnelles |
-| `netlify/functions/` | Cinq fonctions, seules détentrices des secrets |
+| `netlify/functions/` | Sept fonctions (referential, state, snapshot, note, refresh, access, prospect-event), seules détentrices des secrets |
+| `prospects-notion.js`, `limiteur.js` | Base Prospects du lead magnet ; limiteur de débit par IP partagé par les fonctions qui écrivent |
 | `public/spherier-v2.html` | Tout le renderer, en un fichier, sans étape de build |
 | `supabase/schema.sql` | Le schéma appliqué sur votre projet |
-| `creer-bases-notion.js` | Création des quatre bases Notion (§4) |
-| `importer-referentiel-v5.js` | Import initial du classeur V5, avec simulation et garde-fou de relance |
-| `verifier-referentiel-notion.js` | Contrôle ponctuel de l'import initial V5 |
+| `creer-bases-notion.js` | Création des quatre bases Notion du référentiel (§4), refuse une page déjà équipée |
+| `creer-base-prospects-notion.js` | Création de la cinquième base, Prospects Sphérier, pour le lead magnet |
+| `importer-referentiel-v5.js` | Import initial du classeur (`WORKBOOK_PATH`). Simulation par défaut, `APPLIQUER=1` pour écrire. Mapping horodaté dans `.local/` et copie suivie dans `data/referentiel-mapping.json` |
+| `migrer-difficulte-notion.js`, `preview-notion.js` | Renommage d'une difficulté page par page ; recette locale sur le vrai référentiel (`npm run preview:notion`) |
+| `archives/` | Scripts à usage unique déjà appliqués, gardés pour l'histoire |
+| `n8n/` | Workflow d'envoi du lien personnel et son README |
+| `.github/workflows/ci.yml` | `npm test` à chaque push |
+| `verifier-referentiel-notion.js` | Contrôle des invariants du référentiel (codes uniques, relations, marqueurs, difficultés connues) ; les comptes sont affichés, jamais figés |
 
 Le renderer est un seul fichier servi tel quel. **Aucune étape de build, aucun
 `npm run build`**. Vous le modifiez, vous poussez, c'est en ligne.
@@ -139,10 +145,13 @@ Il reste ensuite deux gestes manuels, que le script rappelle en sortie :
 
 - **partager les quatre bases avec l'intégration**, Clients comprise — c'est celle qu'on
   avait oubliée ;
-- renseigner les options du select `Dimension` avec les `name` de `club.config.js`.
+- lancer l'import (`APPLIQUER=1 WORKBOOK_PATH=… node importer-referentiel-v5.js`), qui pose lui-même les options du select `Dimension` ;
+- créer la base Prospects avec `creer-base-prospects-notion.js` si le lead magnet est activé.
 
-Puis transmettez-nous `NOTION_TOKEN`, `DB_THEMES`, `DB_COMPETENCES`, `DB_RESSOURCES` —
-en une seule demande — pour qu'on les pose côté Netlify.
+Puis transmettez-nous les variables à poser côté Netlify, en une seule demande : la liste
+complète est dans `.env.example` (`CLUB`, les quatre `DB_*`, `NOTION_TOKEN`, `SUPABASE_*`,
+`REFRESH_TOKEN`, `PUBLIC_SITE_URL`, `N8N_SPHERIER_WEBHOOK_*`, `BOOKING_URL`). Les secrets
+passent par un canal séparé, jamais par une issue.
 
 ---
 

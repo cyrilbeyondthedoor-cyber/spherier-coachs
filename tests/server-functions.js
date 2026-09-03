@@ -37,6 +37,11 @@ async function testerAcces() {
   const invalide = await acces({ httpMethod: 'POST', body: JSON.stringify({ prenom: '', email: 'x', consentement: false }) });
   assert.equal(invalide.statusCode, 400);
 
+  // Sans dureeMs, la demande est traitée comme un robot : 202 silencieux, aucun appel n8n.
+  const sansDuree = await acces({ httpMethod: 'POST', body: JSON.stringify({ prenom: 'Bot', email: 'bot@example.com', consentement: true }) });
+  assert.equal(sansDuree.statusCode, 202);
+  assert.equal(appelsN8n.length, 0, 'un corps sans dureeMs ne doit pas atteindre n8n');
+
   const corps = { prenom: 'Camille', email: 'Camille@Example.com', consentement: true, source: 'webinaire', dureeMs: 2500 };
   const premier = await acces({ httpMethod: 'POST', body: JSON.stringify(corps) });
   const second = await acces({ httpMethod: 'POST', body: JSON.stringify(corps) });

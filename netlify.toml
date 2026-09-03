@@ -8,6 +8,11 @@
   # Permet de vérifier depuis l'extérieur quel commit est en ligne.
   command = "printf '%s\n' \"${COMMIT_REF:-local}\" > public/version.txt"
 
+[build.environment]
+  # Les dépendances de développement (netlify-cli, playwright) n'ont rien à faire dans
+  # le build de production : elles pèsent et portent des vulnérabilités connues.
+  NPM_FLAGS = "--omit=dev"
+
 [dev]
   framework = "#static"
   publish = "public"

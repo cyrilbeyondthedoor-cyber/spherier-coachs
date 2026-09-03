@@ -66,7 +66,7 @@ async function interroger(databaseId) {
 
 // Cache mémoire du référentiel.
 //
-// Le lire intégralement à chaque affichage n'est pas tenable : 40 thèmes + 152
+// Le lire intégralement à chaque affichage n'est pas tenable : 33 thèmes + 192
 // compétences + ressources représentent plusieurs appels paginés à l'API Notion
 // (limitée à 3 req/s), soit ~1,3 s et du quota consommé à chaque ouverture de page.
 //
@@ -206,6 +206,24 @@ async function lireReferentielDepuisNotion() {
     // compétences sans rang restent départagées par leur code, pour un ordre stable.
     .sort((a, b) => rangCompetence(a) - rangCompetence(b) || a.id.localeCompare(b.id, 'fr'));
 
+  // Deux garde-fous silencieux jusqu'ici : un code présent sur deux pages actives
+  // faisait compter deux fois la même compétence et brouillait les snapshots ; une
+  // compétence sans thématique active comptait dans le total sans être affichée.
+  const codesVus = new Set();
+  const competenciesPropres = [];
+  for (const competence of competencies) {
+    if (!competence.theme) {
+      console.warn(`referentiel: compétence ${competence.id} sans thématique active, ignorée`);
+      continue;
+    }
+    if (codesVus.has(competence.id)) {
+      console.warn(`referentiel: code ${competence.id} en doublon, seule la première page est gardée`);
+      continue;
+    }
+    codesVus.add(competence.id);
+    competenciesPropres.push(competence);
+  }
+
   return {
     // Le club voyage avec le référentiel : c'est le garde-fou contre une configuration
     // croisée entre les deux instances, visible d'un coup d'œil dans la réponse.
@@ -224,7 +242,7 @@ async function lireReferentielDepuisNotion() {
     categories: CATEGORIES,
     dimensions: DIMENSIONS,
     themes,
-    competencies,
+    competencies: competenciesPropres,
     resources,
     scale: ECHELLE,
     lexique: LEXIQUE,

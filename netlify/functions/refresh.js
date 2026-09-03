@@ -23,7 +23,9 @@ function jetonValide(fourni, attendu) {
   return crypto.timingSafeEqual(a, b);
 }
 
-// POST /api/refresh?token=…   (le jeton est aussi accepté en en-tête X-Refresh-Token)
+// POST /api/refresh   avec l'en-tête X-Refresh-Token
+//
+// Le jeton n'est plus accepté en query string : il finissait dans les journaux d'accès.
 //
 // Vide le cache du référentiel et le recharge aussitôt : c'est le bouton « appliquer
 // maintenant » après une correction dans Notion, sans attendre l'expiration du TTL.
@@ -38,9 +40,7 @@ exports.handler = async (event) => {
     return reponse(503, { erreur: 'Purge non configurée sur ce serveur.' });
   }
 
-  const fourni = (event.queryStringParameters || {}).token
-    || event.headers?.['x-refresh-token']
-    || '';
+  const fourni = event.headers?.['x-refresh-token'] || '';
 
   if (!jetonValide(fourni, attendu)) {
     return reponse(401, { erreur: 'Jeton de purge invalide.' });

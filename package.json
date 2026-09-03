@@ -4,15 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "build:spherier": "node build-spherier.js",
     "test": "npm run test:server && npm run test:ui",
     "test:server": "node tests/server-functions.js && node tests/referentiel-cache.js",
     "test:ui": "node tests/ui-smoke.js",
     "test:notion": "node tests/ui-notion-smoke.js",
     "test:prospects": "node tests/prospects-notion-integration.js",
-    "preview:notion": "node preview-notion.js",
-    "export:snapshots": "node export-snapshots.js"
+    "preview:notion": "node preview-notion.js"
   },
   "keywords": [],
   "author": "",
@@ -27,5 +24,8 @@
     "exceljs": "^4.4.0",
     "netlify-cli": "^27.0.1",
     "playwright": "^1.62.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
