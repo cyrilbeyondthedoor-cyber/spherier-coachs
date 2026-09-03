@@ -291,6 +291,14 @@
   }
   .lexique-btn:hover { background: rgba(201,166,97,.24); }
   .lexique-intro { color: var(--paper-dim); font-size: 13px; line-height: 1.6; margin-bottom: 18px; }
+  .lexique-recherche {
+    width: 100%; padding: 11px 14px; margin-bottom: 8px; border-radius: 10px;
+    background: rgba(240,235,224,.04); border: 1px solid var(--line); color: var(--paper);
+    font: inherit; font-size: 14px; outline: none;
+  }
+  .lexique-recherche::placeholder { color: var(--stone); }
+  .lexique-recherche:focus { border-color: var(--gold); }
+  .lexique-compte { margin: 0 0 12px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--stone); }
   .lexique-liste { display: grid; gap: 10px; }
   .lexique-terme {
     padding: 12px 14px; border-radius: 9px; background: rgba(240,235,224,.02);
@@ -3781,12 +3789,40 @@
       <h2 class="panneau-titre" id="panneau-titre">${echapper(lexique.titre)}</h2>`;
     elPanneauCorps.innerHTML = `
       <p class="lexique-intro">${echapper(lexique.intro)}</p>
-      <dl class="lexique-liste">
-        ${lexique.termes.map((t) => `<div class="lexique-terme"><dt>${echapper(t.terme)}</dt><dd>${echapper(t.definition)}</dd></div>`).join('')}
-      </dl>`;
+      <input type="search" class="lexique-recherche" id="lexique-recherche" placeholder="Rechercher un mot (ex. : domino, bascule, fils)" aria-label="Rechercher dans le lexique" autocomplete="off">
+      <p class="lexique-compte" id="lexique-compte" aria-live="polite"></p>
+      <dl class="lexique-liste" id="lexique-liste">
+        ${lexique.termes.map((t) => `<div class="lexique-terme" data-recherche="${echapper(normaliserRecherche(t.terme + ' ' + t.definition))}"><dt>${echapper(t.terme)}</dt><dd>${echapper(t.definition)}</dd></div>`).join('')}
+      </dl>
+      <p class="syn-vide" id="lexique-vide" hidden>Aucun terme ne correspond.</p>`;
     elPanneauCorps.scrollTop = 0;
+
+    const champ = document.getElementById('lexique-recherche');
+    const compte = document.getElementById('lexique-compte');
+    const vide = document.getElementById('lexique-vide');
+    const entrees = [...elPanneauCorps.querySelectorAll('.lexique-terme')];
+    const filtrer = () => {
+      const q = normaliserRecherche(champ.value);
+      let visibles = 0;
+      entrees.forEach((entree) => {
+        const ok = q === '' || entree.dataset.recherche.includes(q);
+        entree.hidden = !ok;
+        if (ok) visibles += 1;
+      });
+      compte.textContent = q === '' ? `${entrees.length} termes` : `${visibles} terme${visibles > 1 ? 's' : ''} sur ${entrees.length}`;
+      vide.hidden = visibles > 0;
+    };
+    champ.addEventListener('input', filtrer);
+    filtrer();
     afficherPanneau();
     document.body.dataset.panneau = 'lexique';
+    // Le focus va dans le champ une fois le panneau visible, sans faire défiler la page.
+    requestAnimationFrame(() => champ.focus({ preventScroll: true }));
+  }
+
+  // Comparaison sans accents ni casse : « Metacommunication » trouve « Métacommunication ».
+  function normaliserRecherche(texte) {
+    return String(texte || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   }
   document.getElementById('ouvrir-lexique').addEventListener('click', ouvrirLexique);
   document.getElementById('panneau-plein-ecran').addEventListener('click', () => {
