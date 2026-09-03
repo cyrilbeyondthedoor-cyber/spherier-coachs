@@ -79,16 +79,19 @@ const CATEGORIES = [
     id: 'COACH',
     name: 'Moi en tant que coach',
     definition: 'Ton cadre, ta posture et la manière dont tu entretiens ton niveau de pratique.',
+    couleur: '#b07d97',
   },
   {
     id: 'CLIENTS',
     name: 'Moi et mes clients',
     definition: 'La relation, la communication et les transformations que tu rends possibles avec tes clients.',
+    couleur: '#7ca0bc',
   },
   {
     id: 'ACTIVITE',
     name: 'Moi et mon activité',
     definition: 'La manière dont tu construis, vends et fais vivre une activité de coaching durable.',
+    couleur: '#bd7f5f',
   },
 ];
 
@@ -196,7 +199,7 @@ const NIVEAU_MIN = 0;
 const NIVEAU_MAX = 3;
 const NIVEAU_ACQUIS = 3;
 const MAX_CIBLES_MAINTENANT = 3;
-const BOOKING_URL = process.env.BOOKING_URL || '';
+const BOOKING_URL = process.env.BOOKING_URL || 'https://calendly.com/thomasgibot/55min';
 
 function seuilDOuverture(nombreDeCompetences) {
   return Math.max(1, Math.floor(nombreDeCompetences / 2));

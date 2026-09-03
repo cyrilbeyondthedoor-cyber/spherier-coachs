@@ -7,13 +7,30 @@ const HEADERS = {
   'Cache-Control': 'no-store',
 };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const FENETRE_MS = 10 * 60 * 1000;
+const MAX_TENTATIVES = 8;
+const tentativesParIp = new Map();
 
 function reponse(statusCode, payload) {
   return { statusCode, headers: HEADERS, body: JSON.stringify(payload) };
 }
 
+function ipClient(event) {
+  return String(event.headers?.['x-nf-client-connection-ip'] || event.headers?.['x-forwarded-for'] || 'inconnue')
+    .split(',')[0].trim();
+}
+
+function depasseLaLimite(ip) {
+  const maintenant = Date.now();
+  const recentes = (tentativesParIp.get(ip) || []).filter((date) => maintenant - date < FENETRE_MS);
+  recentes.push(maintenant);
+  tentativesParIp.set(ip, recentes);
+  return recentes.length > MAX_TENTATIVES;
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return reponse(405, { erreur: 'Méthode non autorisée.' });
+  if (String(event.body || '').length > 10000) return reponse(413, { erreur: 'Données trop volumineuses.' });
   let corps;
   try {
     corps = JSON.parse(event.body || '{}');
@@ -27,7 +44,8 @@ exports.handler = async (event) => {
   if (!prenom || prenom.length > 80 || !EMAIL_RE.test(email) || email.length > 254 || corps.consentement !== true) {
     return reponse(400, { erreur: 'Prénom, email et consentement valides requis.' });
   }
-  if (corps.website) return reponse(202, { accepte: true });
+  if (corps.website || Number(corps.dureeMs) < 1200) return reponse(202, { accepte: true });
+  if (depasseLaLimite(ipClient(event))) return reponse(429, { erreur: 'Trop de demandes. Réessaie plus tard.' });
 
   try {
     const prospect = await obtenirOuCreerProspect({

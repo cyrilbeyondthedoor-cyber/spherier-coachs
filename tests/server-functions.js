@@ -21,7 +21,7 @@ require.cache[prospectsPath] = {
       const prospect = pages.get(email);
       return { pageId: 'page-1', ...prospect, nouveau: pages.size === 1 };
     },
-    trouverProspectParUuid: async (uuid) => uuid === UUID ? { id: 'page-1' } : null,
+    trouverProspectParUuid: async (uuid) => uuid === UUID ? { id: 'page-1', properties: {} } : null,
     mettreAJourProspect: async (pageId, properties) => { misesAJour.push({ pageId, properties }); },
   },
 };
@@ -37,7 +37,7 @@ async function testerAcces() {
   const invalide = await acces({ httpMethod: 'POST', body: JSON.stringify({ prenom: '', email: 'x', consentement: false }) });
   assert.equal(invalide.statusCode, 400);
 
-  const corps = { prenom: 'Camille', email: 'Camille@Example.com', consentement: true, source: 'webinaire' };
+  const corps = { prenom: 'Camille', email: 'Camille@Example.com', consentement: true, source: 'webinaire', dureeMs: 2500 };
   const premier = await acces({ httpMethod: 'POST', body: JSON.stringify(corps) });
   const second = await acces({ httpMethod: 'POST', body: JSON.stringify(corps) });
   assert.equal(premier.statusCode, 202);
@@ -46,6 +46,11 @@ async function testerAcces() {
   assert.equal(appelsN8n[0].body.uuid, UUID);
   assert.equal(appelsN8n[1].body.uuid, UUID);
   assert.equal(appelsN8n[0].options.headers['x-spherier-secret'], 'secret-test');
+
+  const avantPiege = appelsN8n.length;
+  const piege = await acces({ httpMethod: 'POST', body: JSON.stringify({ ...corps, website: 'robot.example' }) });
+  assert.equal(piege.statusCode, 202);
+  assert.equal(appelsN8n.length, avantPiege);
 }
 
 const referentielPath = require.resolve('../referentiel-v2.js');

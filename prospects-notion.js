@@ -46,10 +46,20 @@ async function obtenirOuCreerProspect({ prenom, email, source, baseUrl }) {
   const emailNormalise = email.trim().toLowerCase();
   const existant = await chercherProspect('Email normalisé', emailNormalise);
   if (existant) {
+    let uuid = texte(existant, 'UUID');
+    let lien = existant.properties['Lien du sphérier']?.url;
+    if (!uuid) uuid = randomUUID();
+    if (!lien) lien = `${baseUrl.replace(/\/$/, '')}/?c=${uuid}`;
+    if (!texte(existant, 'UUID') || !existant.properties['Lien du sphérier']?.url) {
+      await mettreAJourProspect(existant.id, {
+        UUID: { rich_text: morceaux(uuid) },
+        'Lien du sphérier': { url: lien },
+      });
+    }
     return {
       pageId: existant.id,
-      uuid: texte(existant, 'UUID'),
-      lien: existant.properties['Lien du sphérier']?.url,
+      uuid,
+      lien,
       nouveau: false,
     };
   }

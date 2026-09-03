@@ -10,6 +10,7 @@ const {
   ECHELLE,
   NIVEAU_ACQUIS,
   MAX_CIBLES_MAINTENANT,
+  BOOKING_URL,
 } = require('../club.config.js');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'spherier-v2.html'));
@@ -46,6 +47,7 @@ const referential = {
   difficulties: DIFFICULTES,
   scale: ECHELLE,
   limites: { maxCiblesMaintenant: MAX_CIBLES_MAINTENANT, niveauAcquis: NIVEAU_ACQUIS },
+  bookingUrl: BOOKING_URL,
   themes,
   competencies,
   resources: [],
@@ -177,6 +179,12 @@ async function principal() {
     assert.equal(dernierSnapshot.levels['FON-01-01'], 3);
 
     await page.locator('#btn-synthese').dispatchEvent('click');
+    assert.equal(await page.locator('.syn-categorie-item').count(), 3);
+    assert.deepEqual(await page.locator('.syn-categorie-nom').allTextContents(), [
+      'Moi en tant que coach',
+      'Moi et mes clients',
+      'Moi et mon activité',
+    ]);
     assert.equal(await page.locator('.syn-maitrise-item').count(), 3);
     await page.locator('.syn-maitrise-nom', { hasText: 'Socle fondamental' }).waitFor();
     await page.locator('.syn-maitrise-nom', { hasText: 'Professionnel établi' }).waitFor();

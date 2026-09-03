@@ -33,12 +33,16 @@ exports.handler = async (event) => {
     const maintenant = new Date().toISOString();
     const properties = {};
 
-    if (type === 'started') properties['Audit commencé le'] = { date: { start: maintenant } };
+    if (type === 'started' && !prospect.properties['Audit commencé le']?.date) {
+      properties['Audit commencé le'] = { date: { start: maintenant } };
+    }
     if (type === 'agenda_clicked') properties['Agenda cliqué le'] = { date: { start: maintenant } };
     if (type === 'progress') {
       const progression = Math.min(1, Math.max(0, Number(corps.progression) || 0));
       properties['Progression audit'] = { number: progression };
-      if (progression === 1) properties['Audit terminé le'] = { date: { start: maintenant } };
+      if (progression === 1 && !prospect.properties['Audit terminé le']?.date) {
+        properties['Audit terminé le'] = { date: { start: maintenant } };
+      }
 
       const referentiel = await getReferentielV2();
       const parCode = new Map(referentiel.competencies.map((competence) => [competence.id, competence]));

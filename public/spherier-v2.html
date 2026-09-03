@@ -215,6 +215,7 @@
   .portail-champ input:focus { outline: 2px solid color-mix(in srgb, var(--gold) 58%, transparent); outline-offset: 2px; }
   .portail-consentement { display: flex; gap: 9px; align-items: flex-start; margin-top: 14px; color: var(--stone); font-size: 11.5px; line-height: 1.5; }
   .portail-consentement input { margin-top: 2px; accent-color: var(--gold); }
+  .portail-piege { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
   .portail-submit {
     width: 100%; min-height: 48px; margin-top: 18px; border: 1px solid var(--gold); border-radius: 999px;
     background: var(--gold); color: var(--night-deep); cursor: pointer; font: inherit; font-weight: 600;
@@ -1042,6 +1043,25 @@
   .syn-maitrise-barre { height: 5px; margin-top: 10px; border-radius: 999px; overflow: hidden; background: var(--line-faint); }
   .syn-maitrise-barre i { display: block; height: 100%; border-radius: inherit; background: var(--dc); }
   .syn-maitrise-detail { margin-top: 7px; font-size: 10.5px; color: var(--stone); }
+  .syn-section-titre {
+    margin: 18px 0 9px;
+    font-size: 9.5px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--stone);
+  }
+  .syn-categories { display: grid; gap: 8px; }
+  .syn-categorie-item {
+    padding: 12px 14px;
+    border: 1px solid color-mix(in srgb, var(--cc) 34%, transparent);
+    border-radius: 11px;
+    background: color-mix(in srgb, var(--cc) 6%, transparent);
+  }
+  .syn-categorie-ligne { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; }
+  .syn-categorie-nom { font-family: 'Cormorant Garamond', serif; font-size: 17px; }
+  .syn-categorie-score { color: var(--paper-dim); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .syn-categorie-barre { height: 5px; margin-top: 9px; border-radius: 999px; overflow: hidden; background: var(--line-faint); }
+  .syn-categorie-barre i { display: block; height: 100%; border-radius: inherit; background: var(--cc); }
 
   .syn-dim + .syn-dim { margin-top: 10px; }
   .syn-ligne {
@@ -1355,6 +1375,10 @@
       <h1>Accède au sphérier de compétences du coach</h1>
       <p class="portail-intro">Évalue ta pratique, identifie tes zones de progression et choisis les compétences sur lesquelles concentrer ton travail.</p>
       <form class="portail-form" id="form-acces">
+        <div class="portail-piege" aria-hidden="true">
+          <label for="acces-website">Site web</label>
+          <input id="acces-website" name="website" type="text" tabindex="-1" autocomplete="off">
+        </div>
         <div class="portail-champs">
           <div class="portail-champ">
             <label for="acces-prenom">Prénom</label>
@@ -1475,6 +1499,7 @@
   }
 
   const CLIENT_ID = lireClientId();
+  const ACCES_CHARGE_A = Date.now();
 
   // ============================================================
   // ÉTAT
@@ -1619,7 +1644,14 @@
       const reponse = await fetch('/api/access', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prenom, email, consentement, source }),
+        body: JSON.stringify({
+          prenom,
+          email,
+          consentement,
+          source,
+          website: document.getElementById('acces-website').value,
+          dureeMs: Date.now() - ACCES_CHARGE_A,
+        }),
       });
       const data = await reponse.json().catch(() => ({}));
       if (!reponse.ok) throw new Error(data.erreur || `Le serveur a répondu ${reponse.status}`);
@@ -3101,6 +3133,26 @@
       </article>`;
     }).join('');
 
+    const categories = CATEGORIES.map((categorie) => {
+      const dimensions = new Set(etat.referentiel.dimensions
+        .filter((dimension) => dimension.category === categorie.id)
+        .map((dimension) => dimension.name));
+      const themes = new Set(etat.referentiel.themes
+        .filter((theme) => dimensions.has(theme.dimension))
+        .map((theme) => theme.id));
+      const comps = etat.referentiel.competencies.filter((competence) => themes.has(competence.theme));
+      const codes = comps.map((competence) => competence.id);
+      const progression = progressionCodes(codes);
+      const evaluees = codes.filter((code) => (brouillon.levels[code] ?? 0) > 0).length;
+      return `<article class="syn-categorie-item" style="--cc:${echapper(categorie.couleur || '#c9a661')}">
+        <div class="syn-categorie-ligne">
+          <span class="syn-categorie-nom">${echapper(categorie.name)}</span>
+          <span class="syn-categorie-score">${progression.pourcentage} % maîtrisées · ${evaluees}/${codes.length} évaluées</span>
+        </div>
+        <div class="syn-categorie-barre" role="progressbar" aria-label="${echapper(categorie.name)} maîtrisé à ${progression.pourcentage} %" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progression.pourcentage}"><i style="width:${progression.pourcentage}%"></i></div>
+      </article>`;
+    }).join('');
+
     elPanneauTete.innerHTML = `
       <p class="panneau-fil"><b>Vue d'ensemble</b></p>
       <h2 class="panneau-titre" id="panneau-titre">Où j'en suis</h2>
@@ -3153,7 +3205,10 @@
       </section>`;
     }).join('');
 
-    elPanneauCorps.innerHTML = `<section class="syn-maitrise" aria-label="Progression par niveau de difficulté">${maitrise}</section>`
+    elPanneauCorps.innerHTML = `<p class="syn-section-titre">Progression par grande catégorie</p>
+      <section class="syn-categories" aria-label="Progression par grande catégorie">${categories}</section>
+      <p class="syn-section-titre">Progression par niveau de difficulté</p>
+      <section class="syn-maitrise" aria-label="Progression par niveau de difficulté">${maitrise}</section>`
       + actionSituer
       + (corps || `<p class="syn-vide">Aucune compétence ne correspond à ce croisement de filtres.</p>`);
     elPanneauCorps.scrollTop = 0;
@@ -3538,8 +3593,7 @@
     const categories = CATEGORIES.length
       ? CATEGORIES
       : [{ id: 'TOUT', name: 'Mes dimensions', definition: '' }];
-    const couleurs = ['#b07d97', '#7ca0bc', '#bd7f5f'];
-    elCielPiste.innerHTML = categories.map((categorie, index) => {
+    elCielPiste.innerHTML = categories.map((categorie) => {
       const dimensions = etat.referentiel.dimensions.filter((d) => d.category === categorie.id || categorie.id === 'TOUT');
       const boutons = dimensions.map((d) => {
         const { codes, situees } = situeesDe(d);
@@ -3549,7 +3603,7 @@
           <i></i><span class="ciel-dimension-nom">${echapper(d.name)}</span><span class="ciel-dimension-compte">${compte}</span>
         </button>`;
       }).join('');
-      return `<section class="ciel-categorie" style="--sphere-color:${couleurs[index] || '#c9a661'}">
+      return `<section class="ciel-categorie" style="--sphere-color:${categorie.couleur || '#c9a661'}">
         <h2 class="ciel-categorie-titre">${echapper(categorie.name)}</h2>
         ${categorie.definition ? `<p class="ciel-categorie-def">${echapper(categorie.definition)}</p>` : ''}
         <div class="ciel-categorie-dims">${boutons}</div>
@@ -3663,8 +3717,13 @@
     await signalerProspect('agenda_clicked');
     const lien = etat.referentiel?.bookingUrl;
     if (lien) {
-      window.open(lien, '_blank', 'noopener,noreferrer');
-      return;
+      try {
+        const url = new URL(lien);
+        if (['https:', 'http:'].includes(url.protocol)) {
+          window.open(url.href, '_blank', 'noopener,noreferrer');
+          return;
+        }
+      } catch {}
     }
     bandeau('Lien de réservation à connecter', 'Le lien Zcal ou Calendly de Thomas Gibot sera branché après validation du packaging.', 'succes');
   }
