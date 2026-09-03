@@ -1128,6 +1128,13 @@
   .syn-nom { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 16px; }
   .syn-dim > .syn-ligne .syn-nom { font-size: 18px; }
   .syn-compte { font-size: 11.5px; color: var(--stone); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .syn-pct {
+    font-family: 'Inter Tight', system-ui, sans-serif; font-style: normal; font-weight: 600;
+    font-size: 1.2em; margin-right: 2px; font-variant-numeric: tabular-nums;
+  }
+  .syn-pct.haut { color: #8fc48a; }
+  .syn-pct.moyen { color: #e0a44a; }
+  .syn-pct.bas { color: #e07a6a; }
   .syn-chev { font-size: 11px; color: var(--stone); transition: transform .25s ease; }
   .syn-ouvert > .syn-ligne .syn-chev { transform: rotate(180deg); }
 
@@ -1160,6 +1167,12 @@
   }
   .syn-comp-niveau.situe { color: var(--paper-dim); }
   .syn-comp-marques { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 5px; }
+  .syn-comp-contexte {
+    grid-column: 1 / -1; display: flex; align-items: center; gap: 7px;
+    font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--stone);
+  }
+  .syn-comp-contexte i { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .syn-niveau { margin-bottom: 6px; }
 
   /* FIN D'AUDIT ET SÉLECTION GUIDÉE */
   .audit-resultat-intro { color: var(--paper-dim); font-size: 13.5px; line-height: 1.65; }
@@ -3175,7 +3188,7 @@
       return `<section class="audit-zone">
         <div class="audit-zone-tete">
           <p class="audit-zone-fil">${echapper(categorie?.name || '')} · ${echapper(theme.dimension)}</p>
-          <div class="audit-zone-ligne"><h3 class="audit-zone-nom">${echapper(theme.name)}</h3><span class="audit-zone-score">${score} %</span></div>
+          <div class="audit-zone-ligne"><h3 class="audit-zone-nom">${echapper(theme.name)}</h3><span class="audit-zone-score">${pctHtml(score)}</span></div>
         </div>
         <div class="audit-zone-competences">
           ${aTravailler.map((competence) => {
@@ -3277,8 +3290,24 @@
     </span>`;
   }
 
-  function ligneCompetence(c) {
+  // Pourcentage mis en avant, coloré par seuil : vert à partir de 80 %, orange entre
+  // 50 et 80 %, rouge en dessous de 50 %.
+  function pctHtml(pct) {
+    const classe = pct >= 80 ? 'haut' : (pct >= 50 ? 'moyen' : 'bas');
+    return `<b class="syn-pct ${classe}">${pct} %</b>`;
+  }
+
+  function ligneCompetence(c, { contexte = false } = {}) {
     const niveau = brouillon.levels[c.id] ?? 0;
+    // Dans les zooms, les compétences sont triées par niveau et non regroupées par
+    // dimension : chaque carte porte donc sa dimension et sa thématique.
+    let etiquette = '';
+    if (contexte) {
+      const theme = etat.referentiel.themes.find((t) => t.id === c.theme);
+      const dimension = etat.referentiel.dimensions.find((d) => d.name === theme?.dimension);
+      const teinte = (dimension && TEINTES_HEX[dimension.id]) || '#c9a661';
+      etiquette = `<span class="syn-comp-contexte"><i style="background:${echapper(teinte)}"></i>${echapper(theme?.dimension || '')} · ${echapper(theme?.name || '')}</span>`;
+    }
     const marques = [
       pastilleDifficulte(c),
       marqueNote(c.id),
@@ -3286,6 +3315,7 @@
       brouillon.later.includes(c.id) ? '<span class="comp-marque comp-marque-plus-tard">Plus tard</span>' : '',
     ].filter(Boolean).join('');
     return `<button type="button" class="syn-comp" data-aller="${echapper(c.id)}">
+      ${etiquette}
       <span class="syn-comp-nom">${echapper(c.name)}</span>
       <span class="syn-comp-niveau${niveau ? ' situe' : ''}">${niveau ? echapper(etat.referentiel.scale[niveau]) : 'À évaluer'}</span>
       ${marques ? `<span class="syn-comp-marques">${marques}</span>` : ''}
@@ -3371,7 +3401,7 @@
       return `<button type="button" class="syn-maitrise-item" data-scope-difficulte="${echapper(d.nom)}" style="--dc:${echapper(d.couleur)}">
         <div class="syn-maitrise-tete">
           <span class="syn-maitrise-nom">${echapper(d.nom)}</span>
-          <span class="syn-maitrise-score">${pct} % maîtrisées</span>
+          <span class="syn-maitrise-score">${pctHtml(pct)} maîtrisées</span>
         </div>
         <div class="syn-maitrise-barre" role="progressbar" aria-label="${echapper(d.nom)} maîtrisé à ${pct} %" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div>
         <p class="syn-maitrise-detail">${evaluees}/${comps.length} évaluées</p>
@@ -3392,7 +3422,7 @@
       return `<button type="button" class="syn-categorie-item" data-scope-categorie="${echapper(categorie.id)}" style="--cc:${echapper(categorie.couleur || '#c9a661')}">
         <div class="syn-categorie-ligne">
           <span class="syn-categorie-nom">${echapper(categorie.name)}</span>
-          <span class="syn-categorie-score">${progression.pourcentage} % maîtrisées · ${evaluees}/${codes.length} évaluées</span>
+          <span class="syn-categorie-score">${pctHtml(progression.pourcentage)} maîtrisées · ${evaluees}/${codes.length} évaluées</span>
         </div>
         <div class="syn-categorie-barre" role="progressbar" aria-label="${echapper(categorie.name)} maîtrisé à ${progression.pourcentage} %" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progression.pourcentage}"><i style="width:${progression.pourcentage}%"></i></div>
       </button>`;
@@ -3411,7 +3441,24 @@
          </button></div>`
       : '';
 
-    const corps = etat.referentiel.dimensions.map((d) => {
+    // Zoom sur une catégorie ou un niveau de compétence : une seule liste, du niveau le
+    // plus faible au plus fort, puis par thématique la moins maîtrisée. Le regroupement
+    // par dimension disparaît, l'étiquette de chaque carte le remplace.
+    const themeDe = (c) => etat.referentiel.themes.find((t) => t.id === c.theme);
+    const corpsZoom = () => [1, 2, 3].map((n) => {
+      const comps = ordreDeLecture(retenues.filter((c) => (brouillon.levels[c.id] ?? 0) === n))
+        .sort((a, b) => {
+          const ta = themeDe(a); const tb = themeDe(b);
+          return (ta ? scoreThemeAudit(ta).score : 100) - (tb ? scoreThemeAudit(tb).score : 100);
+        });
+      if (comps.length === 0) return '';
+      return `<section class="syn-niveau">
+        <p class="syn-section-titre">${echapper(etat.referentiel.scale[n] || '')} · ${comps.length}</p>
+        ${comps.map((c) => ligneCompetence(c, { contexte: true })).join('')}
+      </section>`;
+    }).join('');
+
+    const corps = synScope ? corpsZoom() : etat.referentiel.dimensions.map((d) => {
       const teinte = TEINTES_HEX[d.id];
       const themes = etat.referentiel.themes
         .filter((t) => t.dimension === d.name)
@@ -3434,7 +3481,7 @@
         return `<div class="syn-theme${synDeplies.has(cle) ? ' syn-ouvert' : ''}" data-cle="${cle}">
           <button type="button" class="syn-ligne" data-plier="${cle}">
             <span class="syn-nom">${echapper(t.name)}</span>
-            <span class="syn-compte">${progression.pourcentage} % maîtrisées · ${situees}/${codes.length} évaluées</span>
+            <span class="syn-compte">${pctHtml(progression.pourcentage)} maîtrisées · ${situees}/${codes.length} évaluées</span>
             <span class="syn-chev">▾</span>
             ${repartition(codes, teinte)}
           </button>
@@ -3450,7 +3497,7 @@
       return `<section class="syn-dim${synDeplies.has(cleD) ? ' syn-ouvert' : ''}" data-cle="${cleD}" style="--h:${teinte}">
         <button type="button" class="syn-ligne" data-plier="${cleD}">
           <span class="syn-nom">${echapper(d.name)}</span>
-          <span class="syn-compte">${progressionDim.pourcentage} % maîtrisées · ${situeesDim}/${codesDim.length} évaluées</span>
+          <span class="syn-compte">${pctHtml(progressionDim.pourcentage)} maîtrisées · ${situeesDim}/${codesDim.length} évaluées</span>
           <span class="syn-chev">▾</span>
           ${repartition(codesDim, teinte)}
         </button>
@@ -3459,7 +3506,7 @@
     }).join('');
 
     const enteteVue = synScope
-      ? `<p class="syn-zoom-intro">Compétences à renforcer, regroupées par dimension et thématique.</p>
+      ? `<p class="syn-zoom-intro">Compétences à renforcer, des moins maîtrisées aux mieux maîtrisées. Chaque carte indique sa dimension et sa thématique.</p>
          <div class="syn-zoom-actions"><button type="button" class="syn-zoom-toggle" id="syn-voir-maitrisees">${synVoirMaitrisees ? 'Masquer les compétences maîtrisées' : 'Voir aussi les compétences maîtrisées'}</button></div>`
       : `<p class="syn-section-titre">Progression par grande catégorie</p>
          <section class="syn-categories" aria-label="Progression par grande catégorie">${categories}</section>
@@ -3468,9 +3515,12 @@
     const finAudit = synModeFinal && !synScope ? blocFinalAudit() : '';
     const rdvHaut = synModeFinal && !synScope ? blocRendezVous('audit-rdv-haut') : '';
 
+    const titreDimensions = synScope ? '' : '<p class="syn-section-titre">Progression par dimension</p>';
+
     elPanneauCorps.innerHTML = rdvHaut
       + enteteVue
       + actionSituer
+      + titreDimensions
       + (corps || `<p class="syn-vide">Aucune compétence à renforcer dans cette vue.</p>`)
       + finAudit;
     elPanneauCorps.scrollTop = 0;
@@ -3478,8 +3528,13 @@
     elPanneauCorps.querySelectorAll('[data-plier]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const cle = btn.dataset.plier;
-        if (synDeplies.has(cle)) synDeplies.delete(cle); else synDeplies.add(cle);
-        ouvrirSynthese();
+        // Bascule en place : redessiner tout le panneau remettait le défilement en haut
+        // à chaque dimension ouverte. L'état reste mémorisé pour le prochain rendu.
+        const ouvert = !synDeplies.has(cle);
+        if (ouvert) synDeplies.add(cle); else synDeplies.delete(cle);
+        const bloc = btn.closest('[data-cle]');
+        if (bloc) bloc.classList.toggle('syn-ouvert', ouvert);
+        btn.setAttribute('aria-expanded', String(ouvert));
       });
     });
     elPanneauCorps.querySelectorAll('[data-aller]').forEach((btn) => {
