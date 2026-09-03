@@ -793,7 +793,6 @@
   }
   .bandeau.visible { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
   .bandeau.succes { border-color: var(--gold); color: var(--gold-bright); }
-  .bandeau.erreur { border-color: #c8735a; color: #f0b7a3; }
   .bandeau.echec { border-color: #c4523e; color: #e8a08f; }
   .bandeau b { display: block; color: inherit; margin-bottom: 3px; font-weight: 500; }
   .bandeau button { margin-top: 9px; background: none; border: 1px solid currentColor;
@@ -4096,7 +4095,7 @@
     // keepalive : la requête part même si l'onglet change ou se ferme juste après.
     void signalerProspect('agenda_clicked', {}, { keepalive: true });
     if (!ouvert) {
-      bandeau('Réservation indisponible', 'Le lien de réservation ne s\'est pas ouvert. Réessaie, ou vérifie que ton navigateur autorise les nouvelles fenêtres.', 'erreur');
+      bandeau('Réservation indisponible', 'Le lien de réservation ne s\'est pas ouvert. Réessaie, ou vérifie que ton navigateur autorise les nouvelles fenêtres.', 'echec');
     }
   }
 
