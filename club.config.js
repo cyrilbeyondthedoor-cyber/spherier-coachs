@@ -171,8 +171,8 @@ const ECHELLE = {
 // Propriété `Difficulté` dans Notion. Les NOMS doivent correspondre exactement aux
 // options du select Notion : c'est la clé de correspondance.
 //
-// Le mot qualifie la COMPÉTENCE, pas la personne — un membre à « J'incarne » sur une
-// compétence dite « Débutant » y lisait une contradiction avec l'échelle ci-dessus.
+// Le mot qualifie la COMPÉTENCE, pas la personne : la difficulté reste distincte de
+// l'auto-évaluation ci-dessus.
 //
 // Le vert et l'orange sont sémantiques : ils ne concurrencent ni les teintes de
 // dimension ni le doré de la sélection.

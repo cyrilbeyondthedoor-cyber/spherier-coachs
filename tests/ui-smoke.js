@@ -217,9 +217,25 @@ async function principal() {
     await options.nth(1).dispatchEvent('click');
     await options.nth(2).dispatchEvent('click');
     await resultatPage.locator('#audit-suite').dispatchEvent('click');
-    await resultatPage.getByRole('heading', { name: 'Tes trois priorités de progression' }).waitFor();
+    await resultatPage.getByRole('heading', { name: 'Ton sphérier en un regard' }).waitFor();
+    assert.equal(await resultatPage.locator('.syn-categorie-item').count(), 3);
+    assert.equal(await resultatPage.locator('.syn-maitrise-item').count(), 3);
+    assert.equal(await resultatPage.locator('.syn-dim').count(), 7);
+    assert.equal(await resultatPage.locator('.syn-theme').count(), 7);
+    assert.equal(await resultatPage.locator('.audit-priorite').count(), 3);
     await resultatPage.getByRole('button', { name: 'Réserver mon appel pour recevoir une analyse personnalisée de mon sphérier' }).waitFor();
     assert.equal(await resultatPage.locator('#bar.visible').count(), 0);
+
+    await resultatPage.locator('[data-scope-categorie="CLIENTS"]').dispatchEvent('click');
+    await resultatPage.locator('#panneau-titre', { hasText: 'Moi et mes clients' }).waitFor();
+    assert.equal(await resultatPage.locator('.syn-comp').count(), 2);
+    assert.equal(await resultatPage.locator('.syn-comp-niveau', { hasText: 'Je maîtrise' }).count(), 0);
+    await resultatPage.locator('#syn-voir-maitrisees').dispatchEvent('click');
+    assert.equal(await resultatPage.locator('.syn-comp').count(), 3);
+    await resultatPage.locator('#syn-retour').dispatchEvent('click');
+    await resultatPage.locator('[data-scope-difficulte="Professionnel établi"]').dispatchEvent('click');
+    await resultatPage.locator('#panneau-titre', { hasText: 'Professionnel établi' }).waitFor();
+    assert.ok(await resultatPage.locator('.syn-comp').count() > 0);
 
     const publicMobile = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
     await publicMobile.goto(`http://127.0.0.1:${adresse.port}/`);

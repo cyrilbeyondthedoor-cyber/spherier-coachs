@@ -1048,11 +1048,13 @@
     gap: 10px;
   }
   .syn-maitrise-item {
+    width: 100%; color: inherit; font: inherit; text-align: left; cursor: pointer;
     padding: 13px 14px 12px;
     border: 1px solid color-mix(in srgb, var(--dc) 34%, transparent);
     border-radius: 11px;
     background: color-mix(in srgb, var(--dc) 7%, transparent);
   }
+  .syn-maitrise-item:hover { border-color: color-mix(in srgb, var(--dc) 62%, transparent); }
   .syn-maitrise-tete { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
   .syn-maitrise-nom { font-family: 'Cormorant Garamond', serif; font-size: 15px; color: var(--paper); }
   .syn-maitrise-score { font-size: 11px; color: var(--paper-dim); font-variant-numeric: tabular-nums; }
@@ -1068,16 +1070,25 @@
   }
   .syn-categories { display: grid; gap: 8px; }
   .syn-categorie-item {
+    width: 100%; color: inherit; font: inherit; text-align: left; cursor: pointer;
     padding: 12px 14px;
     border: 1px solid color-mix(in srgb, var(--cc) 34%, transparent);
     border-radius: 11px;
     background: color-mix(in srgb, var(--cc) 6%, transparent);
   }
+  .syn-categorie-item:hover { border-color: color-mix(in srgb, var(--cc) 62%, transparent); }
   .syn-categorie-ligne { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; }
   .syn-categorie-nom { font-family: 'Cormorant Garamond', serif; font-size: 17px; }
   .syn-categorie-score { color: var(--paper-dim); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .syn-categorie-barre { height: 5px; margin-top: 9px; border-radius: 999px; overflow: hidden; background: var(--line-faint); }
   .syn-categorie-barre i { display: block; height: 100%; border-radius: inherit; background: var(--cc); }
+  .syn-zoom-intro { margin: 4px 0 14px; color: var(--paper-dim); font-size: 12.5px; line-height: 1.6; }
+  .syn-zoom-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
+  .syn-zoom-toggle {
+    padding: 7px 12px; border: 1px solid var(--line-faint); border-radius: 999px;
+    background: rgba(240,235,224,.03); color: var(--paper-dim); cursor: pointer; font: inherit; font-size: 11.5px;
+  }
+  .syn-zoom-toggle:hover { border-color: var(--gold); color: var(--paper); }
 
   .syn-dim + .syn-dim { margin-top: 10px; }
   .syn-ligne {
@@ -1095,7 +1106,7 @@
   .syn-chev { font-size: 11px; color: var(--stone); transition: transform .25s ease; }
   .syn-ouvert > .syn-ligne .syn-chev { transform: rotate(180deg); }
 
-  /* Répartition par niveau : quatre segments, du non évalué à J'incarne. */
+  /* Répartition par niveau : quatre segments, du non évalué à Je maîtrise. */
   .syn-repartition { grid-column: 1 / -1; display: flex; height: 4px; border-radius: 2px; overflow: hidden; background: var(--line-faint); }
   .syn-repartition i { display: block; height: 100%; }
   .syn-seg0 { background: rgba(240,235,224,.07); }
@@ -2761,7 +2772,7 @@
       ? (niveau === 0 ? 'À évaluer' : echapper(etat.referentiel.scale[niveau]))
       : (ouverte
           ? `<span>Accessible</span>`
-          : `<span class="sel-verrou">Thématique à débloquer</span>`);
+          : '');
 
     // La promotion n'a de sens que si la thématique est ouverte : c'est la seule
     // contrainte du serveur sur « maintenant ».
@@ -3127,35 +3138,11 @@
   }
 
   function ouvrirResultatAudit() {
-    const priorites = brouillon.current
-      .map((code) => etat.referentiel.competencies.find((competence) => competence.id === code))
-      .filter(Boolean);
-    elPanneauTete.innerHTML = `
-      <p class="panneau-fil"><b>Ton audit</b></p>
-      <h2 class="panneau-titre" id="panneau-titre">Tes trois priorités de progression</h2>`;
-    elPanneauCorps.innerHTML = `
-      <p class="audit-resultat-intro">Tu as identifié trois compétences sur lesquelles concentrer ton travail dans les prochaines semaines.</p>
-      <div class="audit-priorites">
-        ${priorites.map((competence, index) => {
-          const theme = etat.referentiel.themes.find((t) => t.id === competence.theme);
-          const niveau = brouillon.levels[competence.id] ?? 0;
-          return `<article class="audit-priorite">
-            <p class="audit-priorite-fil">Priorité ${index + 1} · ${echapper(theme?.dimension || '')} · ${echapper(theme?.name || '')}</p>
-            <h3 class="audit-priorite-nom">${echapper(competence.name)}</h3>
-            <p class="audit-priorite-niveau">Niveau actuel : ${echapper(etat.referentiel.scale[niveau] || 'À évaluer')}</p>
-          </article>`;
-        }).join('')}
-      </div>
-      <section class="audit-rdv-bloc">
-        <h3>Réserve un échange</h3>
-        <p>Réserve un échange pour obtenir une analyse détaillée de ton sphérier.</p>
-        <button type="button" class="audit-rdv" id="audit-rdv">Réserver mon appel pour recevoir une analyse personnalisée de mon sphérier</button>
-      </section>`;
-    document.getElementById('audit-rdv').addEventListener('click', ouvrirReservation);
-    majBarre();
-    elPanneauCorps.scrollTop = 0;
-    afficherPanneau();
-    document.body.dataset.panneau = 'resultat-audit';
+    synScope = null;
+    synVoirMaitrisees = false;
+    synFiltres = new Set(['tout']);
+    synDeplies = new Set(etat.referentiel.dimensions.map((dimension) => `D:${dimension.id}`));
+    ouvrirSynthese(true);
   }
 
   // ============================================================
@@ -3173,12 +3160,34 @@
 
   let synFiltres = new Set(['tout']);
   let synDeplies = new Set();
+  let synScope = null;
+  let synVoirMaitrisees = false;
+  let synModeFinal = false;
 
   // Les filtres se cumulent, sauf « Tout » qui les remplace tous. Croiser « Fondamental »
   // et « Non évaluées » est justement le cas qui donne son sens à la pastille.
   function synGarde(c) {
     if (synFiltres.has('tout')) return true;
     return [...synFiltres].every((f) => FILTRES[f].garde(c));
+  }
+
+  function synGardeScope(competence) {
+    if (!synScope) return synGarde(competence);
+    const niveau = brouillon.levels[competence.id] ?? 0;
+    if (niveau === 0 || (!synVoirMaitrisees && niveau >= NIVEAU_ACQUIS)) return false;
+    if (synScope.type === 'difficulte') return competence.difficulty === synScope.id;
+    if (synScope.type === 'categorie') {
+      const theme = etat.referentiel.themes.find((item) => item.id === competence.theme);
+      const dimension = etat.referentiel.dimensions.find((item) => item.name === theme?.dimension);
+      return dimension?.category === synScope.id;
+    }
+    return true;
+  }
+
+  function nomDuScope() {
+    if (!synScope) return '';
+    if (synScope.type === 'difficulte') return synScope.id;
+    return CATEGORIES.find((categorie) => categorie.id === synScope.id)?.name || '';
   }
 
   function repartition(codes, teinte) {
@@ -3226,13 +3235,38 @@
       || a.id.localeCompare(b.id));
   }
 
-  function ouvrirSynthese() {
+  function blocFinalAudit() {
+    const priorites = brouillon.current
+      .map((code) => etat.referentiel.competencies.find((competence) => competence.id === code))
+      .filter(Boolean);
+    return `<p class="syn-section-titre">Tes trois priorités de progression</p>
+      <p class="audit-resultat-intro">Tu as identifié trois compétences sur lesquelles concentrer ton travail dans les prochaines semaines.</p>
+      <div class="audit-priorites">
+        ${priorites.map((competence, index) => {
+          const theme = etat.referentiel.themes.find((item) => item.id === competence.theme);
+          const niveau = brouillon.levels[competence.id] ?? 0;
+          return `<article class="audit-priorite">
+            <p class="audit-priorite-fil">Priorité ${index + 1} · ${echapper(theme?.dimension || '')} · ${echapper(theme?.name || '')}</p>
+            <h3 class="audit-priorite-nom">${echapper(competence.name)}</h3>
+            <p class="audit-priorite-niveau">Niveau actuel : ${echapper(etat.referentiel.scale[niveau] || 'À évaluer')}</p>
+          </article>`;
+        }).join('')}
+      </div>
+      <section class="audit-rdv-bloc">
+        <h3>Réserve un échange</h3>
+        <p>Réserve un échange pour obtenir une analyse détaillée de ton sphérier.</p>
+        <button type="button" class="audit-rdv" id="audit-rdv">Réserver mon appel pour recevoir une analyse personnalisée de mon sphérier</button>
+      </section>`;
+  }
+
+  function ouvrirSynthese(finalAudit = null) {
+    if (typeof finalAudit === 'boolean') synModeFinal = finalAudit;
     competenceAffichee = null;
     themeAffiche = null;
     situer = null;
     elPanneau.style.setProperty('--teinte-p', '#c9a661');
 
-    const retenues = etat.referentiel.competencies.filter(synGarde);
+    const retenues = etat.referentiel.competencies.filter(synGardeScope);
     // Le parcours doit suivre l'ordre du TABLEAU, pas celui de la liste plate renvoyée
     // par Notion — qui trie par code et donne donc AUT avant MOI. Un membre qui lit ses
     // trous de haut en bas puis clique « M'évaluer sur ces N compétences » attend de
@@ -3240,7 +3274,7 @@
     // thématiques dans l'ordre du référentiel.
     const codesRetenus = ordreDeLecture(retenues).map((c) => c.id);
 
-    const chips = Object.entries(FILTRES).map(([cle, f]) => {
+    const chips = (!synScope && !synModeFinal ? Object.entries(FILTRES) : []).map(([cle, f]) => {
       const n = etat.referentiel.competencies.filter(f.garde).length;
       return `<button type="button" class="syn-filtre${synFiltres.has(cle) ? ' actif' : ''}" data-filtre="${cle}">
         ${echapper(f.libelle)}<span class="n">${n}</span></button>`;
@@ -3251,14 +3285,14 @@
       const evaluees = comps.filter((c) => (brouillon.levels[c.id] ?? 0) > 0).length;
       const maitrisees = comps.filter((c) => (brouillon.levels[c.id] ?? 0) >= NIVEAU_ACQUIS).length;
       const pct = comps.length ? Math.round((maitrisees / comps.length) * 100) : 0;
-      return `<article class="syn-maitrise-item" style="--dc:${echapper(d.couleur)}">
+      return `<button type="button" class="syn-maitrise-item" data-scope-difficulte="${echapper(d.nom)}" style="--dc:${echapper(d.couleur)}">
         <div class="syn-maitrise-tete">
           <span class="syn-maitrise-nom">${echapper(d.nom)}</span>
           <span class="syn-maitrise-score">${maitrisees}/${comps.length}</span>
         </div>
         <div class="syn-maitrise-barre" role="progressbar" aria-label="${echapper(d.nom)} maîtrisé à ${pct} %" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div>
         <p class="syn-maitrise-detail">${pct} % maîtrisées · ${evaluees}/${comps.length} évaluées</p>
-      </article>`;
+      </button>`;
     }).join('');
 
     const categories = CATEGORIES.map((categorie) => {
@@ -3272,22 +3306,23 @@
       const codes = comps.map((competence) => competence.id);
       const progression = progressionCodes(codes);
       const evaluees = codes.filter((code) => (brouillon.levels[code] ?? 0) > 0).length;
-      return `<article class="syn-categorie-item" style="--cc:${echapper(categorie.couleur || '#c9a661')}">
+      return `<button type="button" class="syn-categorie-item" data-scope-categorie="${echapper(categorie.id)}" style="--cc:${echapper(categorie.couleur || '#c9a661')}">
         <div class="syn-categorie-ligne">
           <span class="syn-categorie-nom">${echapper(categorie.name)}</span>
           <span class="syn-categorie-score">${progression.pourcentage} % maîtrisées · ${evaluees}/${codes.length} évaluées</span>
         </div>
         <div class="syn-categorie-barre" role="progressbar" aria-label="${echapper(categorie.name)} maîtrisé à ${progression.pourcentage} %" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progression.pourcentage}"><i style="width:${progression.pourcentage}%"></i></div>
-      </article>`;
+      </button>`;
     }).join('');
 
     elPanneauTete.innerHTML = `
-      <p class="panneau-fil"><b>Vue d'ensemble</b></p>
-      <h2 class="panneau-titre" id="panneau-titre">Où j'en suis</h2>
-      <div class="syn-filtres">${chips}</div>`;
+      ${synScope ? '<button type="button" class="panneau-retour" id="syn-retour">← Revenir à la vue d’ensemble</button>' : ''}
+      <p class="panneau-fil"><b>${synModeFinal ? 'Synthèse de ton audit' : 'Vue d’ensemble'}</b></p>
+      <h2 class="panneau-titre" id="panneau-titre">${synScope ? echapper(nomDuScope()) : (synModeFinal ? 'Ton sphérier en un regard' : 'Où j’en suis')}</h2>
+      ${chips ? `<div class="syn-filtres">${chips}</div>` : ''}`;
 
     // Le rattrapage naturel : une fois les trous visibles, on va les combler.
-    const actionSituer = (synFiltres.has('nonSituees') && codesRetenus.length > 0)
+    const actionSituer = (!synScope && !synModeFinal && synFiltres.has('nonSituees') && codesRetenus.length > 0)
       ? `<div class="syn-action"><button type="button" class="dimension-situer" id="syn-situer" style="--teinte:#c9a661">
            M'évaluer sur ces ${codesRetenus.length} compétences
          </button></div>`
@@ -3302,7 +3337,8 @@
       const blocsThemes = themes.map((t) => {
         const comps = retenues.filter((c) => c.theme === t.id);
         if (comps.length === 0) return '';
-        const codes = comps.map((c) => c.id);
+        const toutesComps = etat.referentiel.competencies.filter((c) => c.theme === t.id);
+        const codes = toutesComps.map((c) => c.id);
         const situees = codes.filter((x) => (brouillon.levels[x] ?? 0) > 0).length;
         const progression = progressionCodes(codes);
         const cle = 'T:' + t.id;
@@ -3318,7 +3354,7 @@
       }).join('');
 
       if (!blocsThemes) return '';
-      const codesDim = retenues.filter((c) => themes.some((t) => t.id === c.theme)).map((c) => c.id);
+      const codesDim = etat.referentiel.competencies.filter((c) => themes.some((t) => t.id === c.theme)).map((c) => c.id);
       const situeesDim = codesDim.filter((x) => (brouillon.levels[x] ?? 0) > 0).length;
       const progressionDim = progressionCodes(codesDim);
       const cleD = 'D:' + d.id;
@@ -3333,12 +3369,19 @@
       </section>`;
     }).join('');
 
-    elPanneauCorps.innerHTML = `<p class="syn-section-titre">Progression par grande catégorie</p>
-      <section class="syn-categories" aria-label="Progression par grande catégorie">${categories}</section>
-      <p class="syn-section-titre">Progression par niveau de difficulté</p>
-      <section class="syn-maitrise" aria-label="Progression par niveau de difficulté">${maitrise}</section>`
+    const enteteVue = synScope
+      ? `<p class="syn-zoom-intro">Compétences à renforcer, regroupées par dimension et thématique.</p>
+         <div class="syn-zoom-actions"><button type="button" class="syn-zoom-toggle" id="syn-voir-maitrisees">${synVoirMaitrisees ? 'Masquer les compétences maîtrisées' : 'Voir aussi les compétences maîtrisées'}</button></div>`
+      : `<p class="syn-section-titre">Progression par grande catégorie</p>
+         <section class="syn-categories" aria-label="Progression par grande catégorie">${categories}</section>
+         <p class="syn-section-titre">Progression par niveau de compétence</p>
+         <section class="syn-maitrise" aria-label="Progression par niveau de compétence">${maitrise}</section>`;
+    const finAudit = synModeFinal && !synScope ? blocFinalAudit() : '';
+
+    elPanneauCorps.innerHTML = enteteVue
       + actionSituer
-      + (corps || `<p class="syn-vide">Aucune compétence ne correspond à ce croisement de filtres.</p>`);
+      + (corps || `<p class="syn-vide">Aucune compétence à renforcer dans cette vue.</p>`)
+      + finAudit;
     elPanneauCorps.scrollTop = 0;
 
     elPanneauCorps.querySelectorAll('[data-plier]').forEach((btn) => {
@@ -3351,6 +3394,33 @@
     elPanneauCorps.querySelectorAll('[data-aller]').forEach((btn) => {
       btn.addEventListener('click', () => allerVersCompetence(btn.dataset.aller));
     });
+    elPanneauCorps.querySelectorAll('[data-scope-categorie]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        synScope = { type: 'categorie', id: bouton.dataset.scopeCategorie };
+        synVoirMaitrisees = false;
+        ouvrirSynthese();
+      });
+    });
+    elPanneauCorps.querySelectorAll('[data-scope-difficulte]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        synScope = { type: 'difficulte', id: bouton.dataset.scopeDifficulte };
+        synVoirMaitrisees = false;
+        ouvrirSynthese();
+      });
+    });
+    const retourScope = document.getElementById('syn-retour');
+    if (retourScope) retourScope.addEventListener('click', () => {
+      synScope = null;
+      synVoirMaitrisees = false;
+      ouvrirSynthese();
+    });
+    const voirMaitrisees = document.getElementById('syn-voir-maitrisees');
+    if (voirMaitrisees) voirMaitrisees.addEventListener('click', () => {
+      synVoirMaitrisees = !synVoirMaitrisees;
+      ouvrirSynthese();
+    });
+    const rdvAudit = document.getElementById('audit-rdv');
+    if (rdvAudit) rdvAudit.addEventListener('click', ouvrirReservation);
     const btnSituer = document.getElementById('syn-situer');
     if (btnSituer) btnSituer.addEventListener('click', () => ouvrirMeSituer({
       codes: codesRetenus, titre: 'Mes compétences non évaluées', teinte: '#c9a661',
@@ -3375,10 +3445,15 @@
     });
 
     afficherPanneau();
-    document.body.dataset.panneau = 'synthese';
+    document.body.dataset.panneau = synModeFinal ? 'resultat-audit' : 'synthese';
   }
 
-  document.getElementById('btn-synthese').addEventListener('click', ouvrirSynthese);
+  document.getElementById('btn-synthese').addEventListener('click', () => {
+    synModeFinal = false;
+    synScope = null;
+    synVoirMaitrisees = false;
+    ouvrirSynthese(false);
+  });
 
   function afficherPanneau() {
     clearTimeout(minuteurFermeture);
