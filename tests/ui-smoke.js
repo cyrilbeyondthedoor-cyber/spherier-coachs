@@ -150,7 +150,7 @@ async function principal() {
       'Moi et mes clients',
       'Moi et mon activité',
     ]);
-    assert.equal(await page.locator('.ciel-dimension').count(), 0);
+    assert.equal(await page.locator('.ciel-dimension').count(), 7);
     const cercles = await page.locator('.ciel-categorie').evaluateAll((elements) => elements.map((element) => {
       const rect = element.getBoundingClientRect();
       return {
@@ -171,10 +171,22 @@ async function principal() {
     await page.locator('[data-categorie="COACH"]').dispatchEvent('click');
     await page.getByRole('heading', { name: 'Moi en tant que coach' }).waitFor();
     assert.equal(await page.locator('.dimension').count(), 2);
+    await page.locator('[data-tab-categorie="CLIENTS"]').dispatchEvent('click');
+    assert.equal(await page.locator('.dimension').count(), 3);
+    await page.locator('[data-tab-categorie="COACH"]').dispatchEvent('click');
     await page.locator('[data-toggle="FON"]').dispatchEvent('click');
     await page.locator('[data-dimension="FON"].ouverte').waitFor();
     assert.equal(await page.locator('#presentation').isVisible(), false);
-    await page.locator('[data-competence="FON-01-01"]').dispatchEvent('click');
+    assert.equal(await page.getByText('Thématique à débloquer').count(), 0);
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    const scrollAvantTheme = await page.evaluate(() => window.scrollY);
+    await page.locator('[data-dimension="FON"] .theme[data-theme]').first().dispatchEvent('click');
+    await page.locator('body[data-panneau^="theme:"]').waitFor({ state: 'attached' });
+    await page.waitForTimeout(50);
+    const scrollApresTheme = await page.evaluate(() => window.scrollY);
+    assert.ok(Math.abs(scrollAvantTheme - scrollApresTheme) <= 1);
+    await page.locator('#panneau-fermer').dispatchEvent('click');
+    await page.locator('.etoile[data-competence="FON-01-01"]').dispatchEvent('click');
     await page.getByText('Un exemple observable pour FON.').waitFor();
     assert.equal(await page.locator('.marche[data-niveau]').count(), 3);
 
@@ -195,6 +207,7 @@ async function principal() {
     await page.locator('.syn-maitrise-nom', { hasText: 'Socle fondamental' }).waitFor();
     await page.locator('.syn-maitrise-nom', { hasText: 'Professionnel établi' }).waitFor();
     assert.equal(await page.locator('[data-filtre="ouvertes"]').count(), 0);
+    assert.equal(await page.locator('[data-filtre^="diff:"]').count(), 0);
     assert.ok(await page.locator('.syn-compte', { hasText: '100 % maîtrisées' }).count() >= 2);
 
     const publicPage = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
@@ -223,7 +236,11 @@ async function principal() {
     assert.equal(await resultatPage.locator('.syn-dim').count(), 7);
     assert.equal(await resultatPage.locator('.syn-theme').count(), 7);
     assert.equal(await resultatPage.locator('.audit-priorite').count(), 3);
-    await resultatPage.getByRole('button', { name: 'Réserver mon appel pour recevoir une analyse personnalisée de mon sphérier' }).waitFor();
+    assert.equal(await resultatPage.locator('[data-audit-rdv]').count(), 2);
+    await resultatPage.locator('#panneau-plein-ecran').dispatchEvent('click');
+    assert.equal(await resultatPage.locator('#panneau.plein-ecran').count(), 1);
+    await resultatPage.locator('#panneau-plein-ecran').dispatchEvent('click');
+    assert.equal(await resultatPage.locator('#panneau.plein-ecran').count(), 0);
     assert.equal(await resultatPage.locator('#bar.visible').count(), 0);
 
     await resultatPage.locator('[data-scope-categorie="CLIENTS"]').dispatchEvent('click');

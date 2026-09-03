@@ -370,6 +370,15 @@
   .categorie-detail-entete h2 { font-family: 'Cormorant Garamond', serif; font-size: 30px; font-weight: 500; }
   .categorie-detail-entete p { max-width: 58ch; margin-top: 7px; color: var(--paper-dim); font-size: 13.5px; line-height: 1.65; }
   .categorie-detail-entete small { display: block; margin-top: 10px; color: var(--stone); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+  .categorie-tabs {
+    display: flex; gap: 7px; margin-bottom: 22px; overflow-x: auto; scrollbar-width: none;
+  }
+  .categorie-tabs::-webkit-scrollbar { display: none; }
+  .categorie-tab {
+    flex: 0 0 auto; padding: 8px 13px; border: 1px solid var(--line-faint); border-radius: 999px;
+    background: rgba(240,235,224,.025); color: var(--stone); cursor: pointer; font: inherit; font-size: 11.5px;
+  }
+  .categorie-tab.active { border-color: var(--cc); color: var(--paper); background: color-mix(in srgb, var(--cc) 10%, transparent); }
   .categorie-dimensions-liste { display: flex; flex-direction: column; gap: 12px; }
 
   .dimension {
@@ -490,6 +499,7 @@
   }
   .filiation-verrouillee { stroke-opacity: 0.09; stroke-dasharray: 3 6; }
   .parcours-stellaire { fill: none; stroke: var(--teinte-amas); stroke-width: 1.1; stroke-opacity: .18; stroke-dasharray: 2 7; }
+  .liaison-theme { fill: none; stroke: var(--teinte-amas); stroke-width: 1; stroke-opacity: .24; stroke-dasharray: 3 8; }
   .amas-lien { stroke: var(--teinte-amas); stroke-width: .8; stroke-opacity: .24; }
   .amas-orbite { fill: none; stroke: var(--teinte-amas); stroke-width: .7; stroke-opacity: .16; }
 
@@ -565,6 +575,12 @@
     transform: translateY(16px);
     transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
+  .panneau.plein-ecran {
+    width: min(1200px, calc(100vw - 36px));
+    max-width: 1200px;
+    max-height: calc(100dvh - 36px);
+    height: calc(100dvh - 36px);
+  }
   .voile.visible .panneau { transform: translateY(0); }
   .panneau-poignee {
     width: 40px; height: 4px; border-radius: 2px;
@@ -595,6 +611,13 @@
     transition: all 0.25s ease;
   }
   .panneau-fermer:hover { border-color: var(--line); color: var(--paper); }
+  .panneau-plein-ecran {
+    position: absolute; top: 14px; right: 60px; min-height: 34px; padding: 6px 12px;
+    border: 1px solid var(--line-faint); border-radius: 999px; background: rgba(240,235,224,.04);
+    color: var(--paper-dim); cursor: pointer; font: inherit; font-size: 11px;
+  }
+  .panneau-plein-ecran:hover { border-color: var(--gold); color: var(--paper); }
+  .panneau-plein-ecran[hidden] { display: none; }
 
   .panneau-corps { overflow-y: auto; padding: 20px 26px 30px; -webkit-overflow-scrolling: touch; }
   .panneau-section + .panneau-section { margin-top: 26px; }
@@ -1225,7 +1248,7 @@
     background:
       radial-gradient(circle at 36% 30%, color-mix(in srgb, var(--sphere-color) 15%, transparent), transparent 44%),
       rgba(240,235,224,.018);
-    padding: 28px 24px;
+    padding: 23px 22px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -1271,22 +1294,23 @@
     width: 76%;
     margin-inline: auto;
     font-family: 'Cormorant Garamond', serif;
-    font-size: 28px;
+    font-size: 22px;
     font-weight: 500;
     line-height: 1.15;
     overflow-wrap: anywhere;
   }
   .ciel-categorie-def {
     width: 76%;
-    margin: 6px auto 0;
-    font-size: 12px;
-    line-height: 1.4;
+    margin: 5px auto 0;
+    font-size: 10px;
+    line-height: 1.3;
     color: var(--stone);
   }
-  .ciel-categorie-meta { margin-top: 17px; color: var(--paper-dim); font-size: 11px; line-height: 1.55; }
-  .ciel-categorie-cta { margin-top: 13px; color: var(--sphere-color); font-family: 'Cormorant Garamond', serif; font-size: 14px; font-style: italic; }
+  .ciel-categorie-dims { width: 84%; display: grid; gap: 1px; margin: 7px auto 0; }
+  .ciel-categorie-meta { margin-top: 7px; color: var(--paper-dim); font-size: 8.5px; line-height: 1.3; }
+  .ciel-categorie-cta { margin-top: 6px; padding: 0; border: 0; background: none; color: var(--sphere-color); cursor: pointer; font-family: 'Cormorant Garamond', serif; font-size: 12.5px; font-style: italic; }
   .ciel-dimension {
-    width: 100%; min-height: 34px; padding: 5px 7px;
+    width: 100%; min-height: 24px; padding: 2px 5px;
     display: grid; grid-template-columns: 9px minmax(0, 1fr); gap: 3px 8px; align-items: center;
     border: 0; border-bottom: 1px solid color-mix(in srgb, var(--h) 25%, transparent);
     border-radius: 0; background: transparent;
@@ -1296,8 +1320,8 @@
   .ciel-dimension:hover { transform: translateX(3px); border-color: color-mix(in srgb, var(--h) 58%, transparent); background: color-mix(in srgb, var(--h) 7%, transparent); }
   .ciel-dimension:active { transform: scale(.98); }
   .ciel-dimension i { grid-row: 1 / 3; width: 9px; height: 9px; border-radius: 50%; background: var(--h); box-shadow: 0 0 11px color-mix(in srgb, var(--h) 70%, transparent); }
-  .ciel-dimension-nom { font-family: 'Cormorant Garamond', serif; font-size: 14px; line-height: 1.15; }
-  .ciel-dimension-compte { font-size: 8.5px; color: var(--stone); font-variant-numeric: tabular-nums; }
+  .ciel-dimension-nom { font-family: 'Cormorant Garamond', serif; font-size: 12px; line-height: 1.05; }
+  .ciel-dimension-compte { font-size: 7px; color: var(--stone); font-variant-numeric: tabular-nums; }
 
   /* Retour vers le ciel, dans le détail : une navigation de lieu, pas un bouton d'outil. */
   .detail-retour {
@@ -1339,6 +1363,7 @@
     .amas-mobile svg { display: block; width: 100%; height: 175px; }
     .amas-mobile-titre { width: 100%; border: 0; background: none; color: var(--paper); cursor: pointer; font-family: 'Cormorant Garamond', serif; font-size: 18px; text-align: center; }
     .amas-mobile-meta { margin-top: 4px; color: var(--stone); font-size: 10px; text-align: center; }
+    .panneau.plein-ecran { width: 100%; height: 100dvh; max-width: none; max-height: 100dvh; border-radius: 0; }
   }
 
   @media (min-width: 641px) and (max-width: 900px) {
@@ -1514,6 +1539,7 @@
 <div class="voile" id="voile" hidden>
   <div class="panneau" id="panneau" role="dialog" aria-modal="true" aria-labelledby="panneau-titre">
     <div class="panneau-poignee"></div>
+    <button type="button" class="panneau-plein-ecran" id="panneau-plein-ecran" hidden>Agrandir</button>
     <button type="button" class="panneau-fermer" id="panneau-fermer" aria-label="Fermer">✕</button>
     <div class="panneau-tete" id="panneau-tete"></div>
     <div class="panneau-corps" id="panneau-corps"></div>
@@ -1597,13 +1623,6 @@
     NIVEAU_ACQUIS = referentiel.limites?.niveauAcquis ?? NIVEAU_ACQUIS;
     THEME_LOCKING = referentiel.limites?.themeLocking === true;
 
-    // Les filtres de difficulté de la vue d'ensemble sont eux aussi engendrés.
-    (referentiel.difficulties || []).forEach((d) => {
-      FILTRES['diff:' + d.nom] = {
-        libelle: d.nom,
-        garde: (c) => c.difficulty === d.nom,
-      };
-    });
   }
 
   // ============================================================
@@ -1765,7 +1784,7 @@
       elDimensions.querySelectorAll(`[data-entree="${d.id}"]`)
         .forEach((el) => { el.textContent = libelle; });
       elDimensions.querySelectorAll(`[data-avancement="${d.id}"]`)
-        .forEach((el) => { el.textContent = `${situees} / ${codes.length} évaluées · ${progression.pourcentage} % maîtrisées`; });
+        .forEach((el) => { el.textContent = `${progression.pourcentage} % maîtrisées · ${situees} / ${codes.length} évaluées`; });
       elDimensions.querySelectorAll(`[data-progression-dim="${d.id}"]`)
         .forEach((el) => { el.textContent = `${progression.pourcentage} % maîtrisées`; });
     });
@@ -1797,7 +1816,7 @@
         return `<button type="button" class="categorie-navigation" data-choisir-categorie="${echapper(categorie.id)}" style="--cc:${categorie.couleur || '#c9a661'}">
           <h2>${echapper(categorie.name)}</h2>
           <p>${echapper(categorie.definition || '')}</p>
-          <small>${nombreDimensions} dimensions · ${codes.length} compétences · ${progression.pourcentage} % maîtrisées · ${evaluees}/${codes.length} évaluées</small>
+          <small>${progression.pourcentage} % maîtrisées · ${evaluees}/${codes.length} évaluées · ${nombreDimensions} dimensions</small>
         </button>`;
       }).join('')}</div>`;
       elDimensions.querySelectorAll('[data-choisir-categorie]').forEach((bouton) => {
@@ -1814,13 +1833,15 @@
     const carteDimension = (d) => {
       const themes = etat.referentiel.themes.filter((t) => t.dimension === d.name);
       const competences = competencesDeDimension(d);
+      const progression = progressionCodes(competences.map((competence) => competence.id));
+      const evaluees = competences.filter((competence) => (brouillon.levels[competence.id] ?? 0) > 0).length;
       return `
         <section class="dimension" data-dimension="${echapper(d.id)}" style="--teinte: ${TEINTES[d.id] || 'var(--paper)'}">
           <button type="button" class="dimension-entete" aria-expanded="false" data-toggle="${echapper(d.id)}">
             <span class="dimension-astre">${astreDimension(d.id)}</span>
             <span>
               <span class="dimension-nom">${echapper(d.name)}</span>
-              <span class="dimension-compte">${themes.length} thématiques · ${competences.length} compétences · <span data-progression-dim="${echapper(d.id)}">${progressionCodes(competences.map((c) => c.id)).pourcentage} % maîtrisées</span></span>
+              <span class="dimension-compte"><span data-progression-dim="${echapper(d.id)}">${progression.pourcentage} % maîtrisées</span> · ${evaluees}/${competences.length} évaluées · ${themes.length} thématiques</span>
             </span>
             <span class="dimension-chevron">▾</span>
           </button>
@@ -1842,17 +1863,22 @@
       `;
     };
 
-    elDimensions.innerHTML = `<section class="categorie-dimensions">
+    elDimensions.innerHTML = `<nav class="categorie-tabs" aria-label="Macro-catégories">
+      ${CATEGORIES.map((item) => `<button type="button" class="categorie-tab${item.id === categorieId ? ' active' : ''}" data-tab-categorie="${echapper(item.id)}" style="--cc:${item.couleur || '#c9a661'}">${echapper(item.name)}</button>`).join('')}
+    </nav><section class="categorie-dimensions">
       <div class="categorie-detail-entete">
         <h2>${echapper(categorie?.name || '')}</h2>
         <p>${echapper(categorie?.definition || '')}</p>
-        <small>${dimensionsCategorie.length} dimensions · ${codesCategorie.length} compétences · ${progressionCategorie.pourcentage} % maîtrisées · ${evalueesCategorie}/${codesCategorie.length} évaluées</small>
+        <small>${progressionCategorie.pourcentage} % maîtrisées · ${evalueesCategorie}/${codesCategorie.length} évaluées · ${dimensionsCategorie.length} dimensions</small>
       </div>
       <div class="categorie-dimensions-liste">${dimensionsCategorie.map(carteDimension).join('')}</div>
     </section>`;
 
     elDimensions.querySelectorAll('[data-toggle]').forEach((btn) => {
       btn.addEventListener('click', () => ouvrirDetail(btn.dataset.toggle));
+    });
+    elDimensions.querySelectorAll('[data-tab-categorie]').forEach((bouton) => {
+      bouton.addEventListener('click', () => ouvrirCategorie(bouton.dataset.tabCategorie));
     });
 
     elDimensions.querySelectorAll('[data-situer]').forEach((btn) => {
@@ -1933,6 +1959,45 @@
     return d;
   }
 
+  function positionnerThemes(themes) {
+    const ordonnes = themes.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    if (ordonnes.length === 1) return [{ ...ordonnes[0], x: 400, y: 245 }];
+    const n = ordonnes.length;
+    return ordonnes.map((theme, index) => {
+      const graine = [...String(theme.code || theme.name)].reduce((total, caractere) => total + caractere.charCodeAt(0), 0);
+      const angle = -Math.PI / 2 + (Math.PI * 2 * index) / n + ((graine % 13) - 6) * .018;
+      const alternance = n >= 5 && index % 2 ? .78 : 1;
+      const variation = .9 + (graine % 17) / 100;
+      return {
+        ...theme,
+        x: 400 + Math.cos(angle) * 255 * alternance * variation,
+        y: 245 + Math.sin(angle) * 165 * alternance * variation,
+      };
+    });
+  }
+
+  function liaisonsThemes(themes) {
+    const vues = new Set();
+    const liens = [];
+    themes.forEach((theme, index) => {
+      const voisins = themes
+        .map((autre, autreIndex) => ({ autre, autreIndex, distance: Math.hypot(autre.x - theme.x, autre.y - theme.y) }))
+        .filter((item) => item.autreIndex !== index)
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, Math.min(2, themes.length - 1));
+      voisins.forEach(({ autre, autreIndex }) => {
+        const cle = [index, autreIndex].sort((a, b) => a - b).join(':');
+        if (vues.has(cle)) return;
+        vues.add(cle);
+        const milieuX = (theme.x + autre.x) / 2;
+        const milieuY = (theme.y + autre.y) / 2;
+        const courbe = ((index + autreIndex) % 2 ? 1 : -1) * 13;
+        liens.push(`<path class="liaison-theme" d="M ${theme.x} ${theme.y} Q ${milieuX.toFixed(1)} ${(milieuY + courbe).toFixed(1)} ${autre.x} ${autre.y}"/>`);
+      });
+    });
+    return liens.join('');
+  }
+
   function dessinAmas(points, cx, cy) {
     const liens = points.map((point) => `<line class="amas-lien" x1="${cx}" y1="${cy}" x2="${point.x.toFixed(1)}" y2="${point.y.toFixed(1)}"/>`).join('');
     const orbite = points.length > 2
@@ -1998,7 +2063,7 @@
     if (!dimension || !conteneur || conteneur.dataset.rendu === 'oui') return;
 
     const teinte = TEINTES_HEX[idDimension] || '#f0ebe0';
-    const themes = etat.referentiel.themes.filter((t) => t.dimension === dimension.name);
+    const themes = positionnerThemes(etat.referentiel.themes.filter((t) => t.dimension === dimension.name));
     const parId = new Map(themes.map((t) => [t.id, t]));
     const vb = calculerViewBox(themes);
 
@@ -2086,6 +2151,7 @@
            preserveAspectRatio="xMidYMid meet" role="img"
            aria-label="Constellation de la dimension ${echapper(dimension.name)}">
         <path class="parcours-stellaire" d="${cheminStellaire(themes)}"/>
+        <g class="liaisons-themes">${liaisonsThemes(themes)}</g>
         <g class="filiations">${traits}</g>
         <g class="themes">${groupes}</g>
       </svg>
@@ -2677,6 +2743,7 @@
   function ouvrirTheme(themeId, idDimension) {
     const theme = etat.referentiel.themes.find((t) => t.id === themeId);
     if (!theme) return;
+    configurerPleinEcran(false);
     const dimension = etat.referentiel.dimensions.find((d) => d.id === idDimension);
     const teinte = TEINTES_HEX[idDimension] || '#f0ebe0';
     const ouverte = estOuverte(themeId);
@@ -2685,7 +2752,9 @@
     themeAffiche = { id: themeId, dimension: idDimension };
     competenceAffichee = null;
 
-    const competences = etat.referentiel.competencies.filter((c) => c.theme === themeId);
+    const competences = etat.referentiel.competencies
+      .filter((c) => c.theme === themeId)
+      .sort((a, b) => (brouillon.levels[a.id] ?? 0) - (brouillon.levels[b.id] ?? 0) || (a.order ?? 0) - (b.order ?? 0));
     const items = competences.map((c) => {
       const niveau = brouillon.levels[c.id] ?? 0;
       const marques = [
@@ -2741,6 +2810,7 @@
   // délai — enchaîner deux étoiles, par exemple — laissait le minuteur masquer le
   // panneau fraîchement ouvert : il apparaissait puis disparaissait aussitôt.
   let minuteurFermeture = null;
+  let scrollPageAvantPanneau = 0;
 
   // ============================================================
   // PANNEAU « MON MOIS » — les sélections rassemblées
@@ -2790,6 +2860,7 @@
   }
 
   function ouvrirMois() {
+    configurerPleinEcran(false);
     competenceAffichee = null;
     themeAffiche = null;
     elPanneau.style.setProperty('--teinte-p', '#c9a661');
@@ -2890,6 +2961,7 @@
   function ouvrirMeSituer({ codes, titre, teinte = '#c9a661', depart = 0, mode = 'standard' }) {
     const liste = codes.filter((c) => etat.referentiel.competencies.some((x) => x.id === c));
     if (liste.length === 0) return;
+    configurerPleinEcran(false);
 
     situer = {
       codes: liste,
@@ -3077,6 +3149,7 @@
   }
 
   function ouvrirSelectionAudit() {
+    configurerPleinEcran(false);
     situer = null;
     competenceAffichee = null;
     themeAffiche = null;
@@ -3235,6 +3308,14 @@
       || a.id.localeCompare(b.id));
   }
 
+  function blocRendezVous(classe = '') {
+    return `<section class="audit-rdv-bloc ${classe}">
+      <h3>Réserve un échange</h3>
+      <p>Réserve un échange pour obtenir une analyse détaillée de ton sphérier.</p>
+      <button type="button" class="audit-rdv" data-audit-rdv>Réserver mon appel pour recevoir une analyse personnalisée de mon sphérier</button>
+    </section>`;
+  }
+
   function blocFinalAudit() {
     const priorites = brouillon.current
       .map((code) => etat.referentiel.competencies.find((competence) => competence.id === code))
@@ -3252,15 +3333,12 @@
           </article>`;
         }).join('')}
       </div>
-      <section class="audit-rdv-bloc">
-        <h3>Réserve un échange</h3>
-        <p>Réserve un échange pour obtenir une analyse détaillée de ton sphérier.</p>
-        <button type="button" class="audit-rdv" id="audit-rdv">Réserver mon appel pour recevoir une analyse personnalisée de mon sphérier</button>
-      </section>`;
+      ${blocRendezVous('audit-rdv-bas')}`;
   }
 
   function ouvrirSynthese(finalAudit = null) {
     if (typeof finalAudit === 'boolean') synModeFinal = finalAudit;
+    configurerPleinEcran(true);
     competenceAffichee = null;
     themeAffiche = null;
     situer = null;
@@ -3288,10 +3366,10 @@
       return `<button type="button" class="syn-maitrise-item" data-scope-difficulte="${echapper(d.nom)}" style="--dc:${echapper(d.couleur)}">
         <div class="syn-maitrise-tete">
           <span class="syn-maitrise-nom">${echapper(d.nom)}</span>
-          <span class="syn-maitrise-score">${maitrisees}/${comps.length}</span>
+          <span class="syn-maitrise-score">${pct} % maîtrisées</span>
         </div>
         <div class="syn-maitrise-barre" role="progressbar" aria-label="${echapper(d.nom)} maîtrisé à ${pct} %" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div>
-        <p class="syn-maitrise-detail">${pct} % maîtrisées · ${evaluees}/${comps.length} évaluées</p>
+        <p class="syn-maitrise-detail">${evaluees}/${comps.length} évaluées</p>
       </button>`;
     }).join('');
 
@@ -3332,10 +3410,16 @@
       const teinte = TEINTES_HEX[d.id];
       const themes = etat.referentiel.themes
         .filter((t) => t.dimension === d.name)
-        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        .sort((a, b) => synScope
+          ? scoreThemeAudit(a).score - scoreThemeAudit(b).score || (a.order ?? 0) - (b.order ?? 0)
+          : (a.order ?? 0) - (b.order ?? 0));
 
       const blocsThemes = themes.map((t) => {
-        const comps = retenues.filter((c) => c.theme === t.id);
+        const comps = retenues
+          .filter((c) => c.theme === t.id)
+          .sort((a, b) => synScope
+            ? (brouillon.levels[a.id] ?? 0) - (brouillon.levels[b.id] ?? 0) || (a.order ?? 0) - (b.order ?? 0)
+            : (a.order ?? 0) - (b.order ?? 0));
         if (comps.length === 0) return '';
         const toutesComps = etat.referentiel.competencies.filter((c) => c.theme === t.id);
         const codes = toutesComps.map((c) => c.id);
@@ -3345,7 +3429,7 @@
         return `<div class="syn-theme${synDeplies.has(cle) ? ' syn-ouvert' : ''}" data-cle="${cle}">
           <button type="button" class="syn-ligne" data-plier="${cle}">
             <span class="syn-nom">${echapper(t.name)}</span>
-            <span class="syn-compte">${situees}/${codes.length} évaluées · ${progression.pourcentage} % maîtrisées</span>
+            <span class="syn-compte">${progression.pourcentage} % maîtrisées · ${situees}/${codes.length} évaluées</span>
             <span class="syn-chev">▾</span>
             ${repartition(codes, teinte)}
           </button>
@@ -3361,7 +3445,7 @@
       return `<section class="syn-dim${synDeplies.has(cleD) ? ' syn-ouvert' : ''}" data-cle="${cleD}" style="--h:${teinte}">
         <button type="button" class="syn-ligne" data-plier="${cleD}">
           <span class="syn-nom">${echapper(d.name)}</span>
-          <span class="syn-compte">${situeesDim}/${codesDim.length} évaluées · ${progressionDim.pourcentage} % maîtrisées</span>
+          <span class="syn-compte">${progressionDim.pourcentage} % maîtrisées · ${situeesDim}/${codesDim.length} évaluées</span>
           <span class="syn-chev">▾</span>
           ${repartition(codesDim, teinte)}
         </button>
@@ -3377,8 +3461,10 @@
          <p class="syn-section-titre">Progression par niveau de compétence</p>
          <section class="syn-maitrise" aria-label="Progression par niveau de compétence">${maitrise}</section>`;
     const finAudit = synModeFinal && !synScope ? blocFinalAudit() : '';
+    const rdvHaut = synModeFinal && !synScope ? blocRendezVous('audit-rdv-haut') : '';
 
-    elPanneauCorps.innerHTML = enteteVue
+    elPanneauCorps.innerHTML = rdvHaut
+      + enteteVue
       + actionSituer
       + (corps || `<p class="syn-vide">Aucune compétence à renforcer dans cette vue.</p>`)
       + finAudit;
@@ -3419,8 +3505,9 @@
       synVoirMaitrisees = !synVoirMaitrisees;
       ouvrirSynthese();
     });
-    const rdvAudit = document.getElementById('audit-rdv');
-    if (rdvAudit) rdvAudit.addEventListener('click', ouvrirReservation);
+    elPanneauCorps.querySelectorAll('[data-audit-rdv]').forEach((bouton) => {
+      bouton.addEventListener('click', ouvrirReservation);
+    });
     const btnSituer = document.getElementById('syn-situer');
     if (btnSituer) btnSituer.addEventListener('click', () => ouvrirMeSituer({
       codes: codesRetenus, titre: 'Mes compétences non évaluées', teinte: '#c9a661',
@@ -3455,16 +3542,28 @@
     ouvrirSynthese(false);
   });
 
+  function configurerPleinEcran(autorise) {
+    const bouton = document.getElementById('panneau-plein-ecran');
+    bouton.hidden = !autorise;
+    if (!autorise) {
+      elPanneau.classList.remove('plein-ecran');
+      bouton.textContent = 'Agrandir';
+      bouton.setAttribute('aria-pressed', 'false');
+    }
+  }
+
   function afficherPanneau() {
     clearTimeout(minuteurFermeture);
     minuteurFermeture = null;
     const etaitFerme = elVoile.hidden || !elVoile.classList.contains('visible');
     if (etaitFerme) {
+      scrollPageAvantPanneau = window.scrollY;
       if (elVoile.hidden) dernierFocus = document.activeElement;
       elVoile.hidden = false;
       requestAnimationFrame(() => elVoile.classList.add('visible'));
       document.body.style.overflow = 'hidden';
-      document.getElementById('panneau-fermer').focus();
+      document.getElementById('panneau-fermer').focus({ preventScroll: true });
+      requestAnimationFrame(() => window.scrollTo({ top: scrollPageAvantPanneau, behavior: 'auto' }));
     }
   }
 
@@ -3513,6 +3612,7 @@
     const dimension = etat.referentiel.dimensions.find((d) => d.id === idDimension);
     const teinte = TEINTES_HEX[idDimension] || '#f0ebe0';
     const niveau = brouillon.levels[code] ?? 0;
+    configurerPleinEcran(false);
 
     elPanneau.style.setProperty('--teinte-p', teinte);
     const retour = themeAffiche && themeAffiche.id === competence.theme;
@@ -3543,17 +3643,32 @@
     competenceAffichee = null;
     themeAffiche = null;
     situer = null;
+    configurerPleinEcran(false);
     elVoile.classList.remove('visible');
     document.body.style.overflow = '';
     delete document.body.dataset.panneau;
     minuteurFermeture = setTimeout(() => { elVoile.hidden = true; minuteurFermeture = null; }, 280);
-    if (dernierFocus && dernierFocus.focus) dernierFocus.focus();
+    if (dernierFocus && dernierFocus.focus) dernierFocus.focus({ preventScroll: true });
+    requestAnimationFrame(() => window.scrollTo({ top: scrollPageAvantPanneau, behavior: 'auto' }));
   }
 
   document.getElementById('panneau-fermer').addEventListener('click', fermerPanneau);
+  document.getElementById('panneau-plein-ecran').addEventListener('click', () => {
+    const scrollInterne = elPanneauCorps.scrollTop;
+    const active = elPanneau.classList.toggle('plein-ecran');
+    const bouton = document.getElementById('panneau-plein-ecran');
+    bouton.textContent = active ? 'Réduire' : 'Agrandir';
+    bouton.setAttribute('aria-pressed', String(active));
+    requestAnimationFrame(() => { elPanneauCorps.scrollTop = scrollInterne; });
+  });
   elVoile.addEventListener('click', (e) => { if (e.target === elVoile) fermerPanneau(); });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !elVoile.hidden) fermerPanneau();
+    if (e.key === 'Escape' && !elVoile.hidden) {
+      if (elPanneau.classList.contains('plein-ecran')) {
+        elPanneau.classList.remove('plein-ecran');
+        document.getElementById('panneau-plein-ecran').textContent = 'Agrandir';
+      } else fermerPanneau();
+    }
   });
 
   // ============================================================
@@ -3801,16 +3916,34 @@
       const codes = codesDeCategorie(categorie.id);
       const progression = progressionCodes(codes);
       const evaluees = codes.filter((code) => (brouillon.levels[code] ?? 0) > 0).length;
-      return `<button type="button" class="ciel-categorie" data-categorie="${echapper(categorie.id)}" style="--sphere-color:${categorie.couleur || '#c9a661'}">
+      const dimensionsHtml = dimensions.map((dimension) => {
+        const codesDimension = codesDeDimension(dimension);
+        const progressionDimension = progressionCodes(codesDimension);
+        return `<button type="button" class="ciel-dimension" data-ouvrir="${echapper(dimension.id)}" style="--h:${TEINTES_HEX[dimension.id]}">
+          <i></i><span class="ciel-dimension-nom">${echapper(dimension.name)}</span><span class="ciel-dimension-compte">${progressionDimension.pourcentage} % · ${codesDimension.length} compétences</span>
+        </button>`;
+      }).join('');
+      return `<section class="ciel-categorie" data-categorie="${echapper(categorie.id)}" role="button" tabindex="0" style="--sphere-color:${categorie.couleur || '#c9a661'}">
         <h2 class="ciel-categorie-titre">${echapper(categorie.name)}</h2>
         ${categorie.definition ? `<p class="ciel-categorie-def">${echapper(categorie.definition)}</p>` : ''}
-        <p class="ciel-categorie-meta">${dimensions.length} dimensions · ${codes.length} compétences<br>${progression.pourcentage} % maîtrisées · ${evaluees}/${codes.length} évaluées</p>
-        <span class="ciel-categorie-cta">Explorer cette catégorie →</span>
-      </button>`;
+        <div class="ciel-categorie-dims">${dimensionsHtml}</div>
+        <p class="ciel-categorie-meta">${progression.pourcentage} % maîtrisées · ${evaluees}/${codes.length} évaluées</p>
+        <button type="button" class="ciel-categorie-cta" data-explorer-categorie="${echapper(categorie.id)}">Explorer cette catégorie →</button>
+      </section>`;
     }).join('');
 
-    elCielPiste.querySelectorAll('[data-categorie]').forEach((btn) => {
-      btn.addEventListener('click', () => ouvrirCategorie(btn.dataset.categorie));
+    elCielPiste.querySelectorAll('.ciel-categorie[data-categorie]').forEach((bloc) => {
+      const ouvrir = (event) => {
+        if (event?.target?.closest('[data-ouvrir]')) return;
+        ouvrirCategorie(bloc.dataset.categorie);
+      };
+      bloc.addEventListener('click', ouvrir);
+      bloc.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); ouvrir(event); }
+      });
+    });
+    elCielPiste.querySelectorAll('[data-ouvrir]').forEach((bouton) => {
+      bouton.addEventListener('click', (event) => { event.stopPropagation(); ouvrirDetail(bouton.dataset.ouvrir); });
     });
     brancherMouvementSpheres();
   }

@@ -47,9 +47,9 @@ async function principal() {
     await page.locator('#panneau-fermer').dispatchEvent('click');
 
     assert.equal(await page.locator('.ciel-categorie').count(), 3);
-    assert.equal(await page.locator('.ciel-dimension').count(), 0);
+    assert.equal(await page.locator('.ciel-dimension').count(), 7);
     assert.equal(referentiel.bookingUrl, 'https://calendly.com/thomasgibot/55min');
-    assert.ok((await page.locator('.ciel-dimension-compte').allTextContents()).every((texte) => texte.includes('% maîtrisées')));
+    assert.ok((await page.locator('.ciel-dimension-compte').allTextContents()).every((texte) => texte.includes('%')));
     const cercles = await page.locator('.ciel-categorie').evaluateAll((elements) => elements.map((element) => {
       const rect = element.getBoundingClientRect();
       return {
