@@ -4093,7 +4093,15 @@
       try {
         const url = new URL(lien);
         if (['https:', 'http:'].includes(url.protocol)) {
-          ouvert = Boolean(window.open(url.href, '_blank', 'noopener,noreferrer'));
+          // Sans l'option noopener : avec elle, window.open renvoie toujours null et un
+          // onglet bien ouvert passait pour bloqué. Le lien d'ouverture est coupé juste
+          // après, ce qui revient au même pour la page cible. Le referrer est déjà
+          // limité à l'origine par l'en-tête Referrer-Policy du site : l'UUID ne part pas.
+          const fenetre = window.open(url.href, '_blank');
+          if (fenetre) {
+            try { fenetre.opener = null; } catch {}
+            ouvert = true;
+          }
         }
       } catch {}
     }
