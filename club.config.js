@@ -161,9 +161,9 @@ const DIMENSIONS = [
 // Le club de coachs évalue un énoncé unique avec les trois paliers du socle. Le niveau
 // 0 n'y figure pas : c'est l'absence d'évaluation, pas un palier nommé.
 const ECHELLE = {
-  1: 'Je découvre',
-  2: "J'expérimente",
-  3: "J'incarne",
+  1: 'Je ne maîtrise pas du tout',
+  2: "Je dois m'améliorer",
+  3: 'Je maîtrise',
 };
 
 // --- La difficulté d'une compétence -----------------------------------------------
@@ -199,6 +199,7 @@ const NIVEAU_MIN = 0;
 const NIVEAU_MAX = 3;
 const NIVEAU_ACQUIS = 3;
 const MAX_CIBLES_MAINTENANT = 3;
+const THEME_LOCKING = false;
 const BOOKING_URL = process.env.BOOKING_URL || 'https://calendly.com/thomasgibot/55min';
 
 function seuilDOuverture(nombreDeCompetences) {
@@ -231,6 +232,7 @@ module.exports = {
   NIVEAU_MAX,
   NIVEAU_ACQUIS,
   MAX_CIBLES_MAINTENANT,
+  THEME_LOCKING,
   BOOKING_URL,
   seuilDOuverture,
 };

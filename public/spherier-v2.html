@@ -357,14 +357,19 @@
   /* DIMENSIONS */
   .dimensions { display: flex; flex-direction: column; gap: 12px; }
   .dimensions[hidden] { display: none; }
-  .categorie-dimensions + .categorie-dimensions { margin-top: 22px; }
-  .categorie-dimensions-titre {
-    margin: 0 2px 10px;
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 14px;
-    font-style: italic;
-    color: var(--paper-dim);
+  .categories-navigation { display: grid; gap: 14px; }
+  .categorie-navigation {
+    width: 100%; padding: 24px; border: 1px solid color-mix(in srgb, var(--cc) 38%, transparent);
+    border-radius: 18px; background: color-mix(in srgb, var(--cc) 6%, transparent);
+    color: inherit; text-align: left; cursor: pointer;
   }
+  .categorie-navigation h2 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 500; }
+  .categorie-navigation p { max-width: 52ch; margin-top: 7px; color: var(--paper-dim); font-size: 13px; line-height: 1.6; }
+  .categorie-navigation small { display: block; margin-top: 14px; color: var(--stone); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+  .categorie-detail-entete { margin-bottom: 16px; padding: 4px 3px 18px; border-bottom: 1px solid var(--line-faint); }
+  .categorie-detail-entete h2 { font-family: 'Cormorant Garamond', serif; font-size: 30px; font-weight: 500; }
+  .categorie-detail-entete p { max-width: 58ch; margin-top: 7px; color: var(--paper-dim); font-size: 13.5px; line-height: 1.65; }
+  .categorie-detail-entete small { display: block; margin-top: 10px; color: var(--stone); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
   .categorie-dimensions-liste { display: flex; flex-direction: column; gap: 12px; }
 
   .dimension {
@@ -484,9 +489,16 @@
     stroke-width: 1.2;
   }
   .filiation-verrouillee { stroke-opacity: 0.09; stroke-dasharray: 3 6; }
+  .parcours-stellaire { fill: none; stroke: var(--teinte-amas); stroke-width: 1.1; stroke-opacity: .18; stroke-dasharray: 2 7; }
+  .amas-lien { stroke: var(--teinte-amas); stroke-width: .8; stroke-opacity: .24; }
+  .amas-orbite { fill: none; stroke: var(--teinte-amas); stroke-width: .7; stroke-opacity: .16; }
 
   .theme-halo { pointer-events: none; }
   .theme-noyau { stroke-width: 1.6; }
+  .theme { transition: opacity .22s ease, filter .22s ease; transform-box: fill-box; transform-origin: center; }
+  .theme:hover, .theme:focus { filter: brightness(1.22); }
+  .constellation:has(.theme:hover) .theme:not(:hover),
+  .constellation:has(.theme:focus) .theme:not(:focus) { opacity: .38; }
   .theme-nom {
     font-family: 'Cormorant Garamond', serif;
     font-weight: 500;
@@ -500,6 +512,7 @@
   .theme-verrouille .theme-nom { fill: var(--stone); }
   .theme-verrouille .theme-noyau { stroke-dasharray: 3 3; }
   .theme-cadenas { font-size: 10px; text-anchor: middle; fill: var(--stone); }
+  .theme-progression { font-family: 'Inter Tight', sans-serif; font-size: 8.5px; text-anchor: middle; fill: var(--stone); }
 
   .etoile { pointer-events: none; }
 
@@ -521,6 +534,7 @@
     gap: 7px;
   }
   .constellation-legende svg { display: block; overflow: hidden; flex-shrink: 0; }
+  .amas-mobile-piste { display: none; }
 
 
   /* PANNEAU DE COMPÉTENCE
@@ -899,6 +913,8 @@
 
   .situer-fil { font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--stone); }
   .situer-fil b { color: var(--teinte-p); font-weight: 500; }
+  .situer-difficulte { display: flex; align-items: center; gap: 8px; margin: 9px 0 12px; color: var(--stone); font-size: 11.5px; }
+  .situer-difficulte .pastille-diff { margin: 0; }
   .situer-nom {
     font-family: 'Cormorant Garamond', serif; font-weight: 500;
     font-size: 23px; line-height: 1.2; margin: 8px 0 6px; text-wrap: balance;
@@ -1209,6 +1225,9 @@
     transform-style: preserve-3d;
     transition: transform .28s cubic-bezier(.22,1,.36,1), border-color .22s ease, box-shadow .22s ease;
     will-change: transform;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
   }
   .ciel-categorie::before {
     content: '';
@@ -1241,7 +1260,7 @@
     width: 76%;
     margin-inline: auto;
     font-family: 'Cormorant Garamond', serif;
-    font-size: 20px;
+    font-size: 28px;
     font-weight: 500;
     line-height: 1.15;
     overflow-wrap: anywhere;
@@ -1249,11 +1268,12 @@
   .ciel-categorie-def {
     width: 76%;
     margin: 6px auto 0;
-    font-size: 10.5px;
+    font-size: 12px;
     line-height: 1.4;
     color: var(--stone);
   }
-  .ciel-categorie-dims { width: 82%; display: grid; gap: 2px; margin: 11px auto 0; }
+  .ciel-categorie-meta { margin-top: 17px; color: var(--paper-dim); font-size: 11px; line-height: 1.55; }
+  .ciel-categorie-cta { margin-top: 13px; color: var(--sphere-color); font-family: 'Cormorant Garamond', serif; font-size: 14px; font-style: italic; }
   .ciel-dimension {
     width: 100%; min-height: 34px; padding: 5px 7px;
     display: grid; grid-template-columns: 9px minmax(0, 1fr); gap: 3px 8px; align-items: center;
@@ -1276,11 +1296,10 @@
     font-size: 14px; margin-bottom: 20px;
   }
   .detail-retour:hover { color: var(--paper); }
+  .detail-retour[hidden] { display: none; }
 
   @media (max-width: 640px) {
-    /* Le ciel n'existe pas sur mobile : il n'y a donc nulle part où revenir. L'accueil
-       y est l'accordéon replié, et c'est l'en-tête d'une dimension qui la referme. */
-    .detail-retour { display: none; }
+    .detail-retour { display: inline-flex; }
     .ciel { display: none; }
     .syn-maitrise { grid-template-columns: 1fr; }
     .presentation { margin-bottom: 30px; }
@@ -1298,6 +1317,17 @@
     .portail { padding-top: 48px; }
     .portail-form { padding: 18px; }
     .portail-champs { grid-template-columns: 1fr; }
+    .constellation-zone { overflow: visible; }
+    .constellation-zone > .constellation { display: none; }
+    .amas-mobile-piste {
+      display: grid; grid-auto-flow: column; grid-auto-columns: min(82vw, 320px); gap: 12px;
+      overflow-x: auto; padding: 3px 2px 14px; scroll-snap-type: x mandatory;
+      scrollbar-width: thin; scrollbar-color: rgba(240,235,224,.18) transparent;
+    }
+    .amas-mobile { scroll-snap-align: center; padding: 12px; border: 1px solid var(--line-faint); border-radius: 14px; background: rgba(240,235,224,.02); }
+    .amas-mobile svg { display: block; width: 100%; height: 175px; }
+    .amas-mobile-titre { width: 100%; border: 0; background: none; color: var(--paper); cursor: pointer; font-family: 'Cormorant Garamond', serif; font-size: 18px; text-align: center; }
+    .amas-mobile-meta { margin-top: 4px; color: var(--stone); font-size: 10px; text-align: center; }
   }
 
   @media (min-width: 641px) and (max-width: 900px) {
@@ -1429,7 +1459,7 @@
       <h2 class="presentation-label">Comment utiliser le sphérier ?</h2>
       <ol class="mode-emploi" aria-label="Comment utiliser le sphérier">
         <li><b>Lis les marqueurs</b><p>Chaque compétence est accompagnée de marqueurs observables pour t'aider à situer avec précision ta maîtrise de cette compétence.</p></li>
-        <li><b>Évalue ton niveau de maîtrise</b><p>Trois niveaux sont possibles : Je découvre, J'expérimente et J'incarne. Choisis celui qui correspond le mieux à chaque compétence.</p></li>
+        <li><b>Évalue ton niveau de maîtrise</b><p>Trois niveaux sont possibles : Je ne maîtrise pas du tout, Je dois m'améliorer et Je maîtrise. Choisis celui qui correspond le mieux à chaque compétence.</p></li>
         <li><b>Prépare ta progression</b><p>À la fin, utilise la vue d'ensemble pour évaluer les domaines qui demandent le plus à être travaillés et sélectionne jusqu'à trois compétences sur lesquelles te concentrer les prochaines semaines.</p></li>
       </ol>
     </div>
@@ -1452,7 +1482,7 @@
   </div>
 
   <div class="detail" id="detail" hidden>
-    <button type="button" class="detail-retour" id="detail-retour">← Revenir au ciel</button>
+    <button type="button" class="detail-retour" id="detail-retour" hidden>← Toutes les catégories</button>
     <div class="dimensions" id="dimensions" hidden></div>
   </div>
 </div>
@@ -1512,6 +1542,7 @@
     snapshot: null,
     notes: {},        // { CODE: { texte, cree_le, maj_le } } — hors snapshots, modifiables
 
+    categorieOuverte: null,
     dimensionOuverte: null,
     vue: 'ciel',      // 'ciel' (page d'arrivée) ou 'detail' (une dimension dépliée)
   };
@@ -1525,6 +1556,7 @@
   const DIFFICULTES = {};
   let MAX_MAINTENANT = 3;
   let NIVEAU_ACQUIS = 3;
+  let THEME_LOCKING = false;
   let CATEGORIES = [];
   let DIFFICULTES_ORDRE = [];
 
@@ -1552,6 +1584,7 @@
 
     MAX_MAINTENANT = referentiel.limites?.maxCiblesMaintenant ?? MAX_MAINTENANT;
     NIVEAU_ACQUIS = referentiel.limites?.niveauAcquis ?? NIVEAU_ACQUIS;
+    THEME_LOCKING = referentiel.limites?.themeLocking === true;
 
     // Les filtres de difficulté de la vue d'ensemble sont eux aussi engendrés.
     (referentiel.difficulties || []).forEach((d) => {
@@ -1683,6 +1716,18 @@
       .map((c) => c.id));
   }
 
+  function codesDeCategorie(categorieId) {
+    const dimensions = new Set(etat.referentiel.dimensions
+      .filter((dimension) => dimension.category === categorieId)
+      .map((dimension) => dimension.name));
+    const themes = new Set(etat.referentiel.themes
+      .filter((theme) => dimensions.has(theme.dimension))
+      .map((theme) => theme.id));
+    return etat.referentiel.competencies
+      .filter((competence) => themes.has(competence.theme))
+      .map((competence) => competence.id);
+  }
+
   function premiereNonSituee(codes) {
     const i = codes.findIndex((c) => (brouillon.levels[c] ?? 0) === 0);
     return i === -1 ? 0 : i;
@@ -1731,7 +1776,30 @@
     </svg>`;
   }
 
-  function rendreDimensions() {
+  function rendreDimensions(categorieId = null) {
+    if (!categorieId) {
+      elDimensions.innerHTML = `<div class="categories-navigation">${CATEGORIES.map((categorie) => {
+        const codes = codesDeCategorie(categorie.id);
+        const progression = progressionCodes(codes);
+        const evaluees = codes.filter((code) => (brouillon.levels[code] ?? 0) > 0).length;
+        const nombreDimensions = etat.referentiel.dimensions.filter((dimension) => dimension.category === categorie.id).length;
+        return `<button type="button" class="categorie-navigation" data-choisir-categorie="${echapper(categorie.id)}" style="--cc:${categorie.couleur || '#c9a661'}">
+          <h2>${echapper(categorie.name)}</h2>
+          <p>${echapper(categorie.definition || '')}</p>
+          <small>${nombreDimensions} dimensions · ${codes.length} compétences · ${progression.pourcentage} % maîtrisées · ${evaluees}/${codes.length} évaluées</small>
+        </button>`;
+      }).join('')}</div>`;
+      elDimensions.querySelectorAll('[data-choisir-categorie]').forEach((bouton) => {
+        bouton.addEventListener('click', () => ouvrirCategorie(bouton.dataset.choisirCategorie));
+      });
+      return;
+    }
+
+    const categorie = CATEGORIES.find((item) => item.id === categorieId);
+    const dimensionsCategorie = etat.referentiel.dimensions.filter((dimension) => dimension.category === categorieId);
+    const codesCategorie = codesDeCategorie(categorieId);
+    const progressionCategorie = progressionCodes(codesCategorie);
+    const evalueesCategorie = codesCategorie.filter((code) => (brouillon.levels[code] ?? 0) > 0).length;
     const carteDimension = (d) => {
       const themes = etat.referentiel.themes.filter((t) => t.dimension === d.name);
       const competences = competencesDeDimension(d);
@@ -1763,20 +1831,17 @@
       `;
     };
 
-    const categories = CATEGORIES.length
-      ? CATEGORIES
-      : [{ id: 'TOUT', name: '', dimensions: etat.referentiel.dimensions.map((d) => d.id) }];
-    elDimensions.innerHTML = categories.map((categorie) => {
-      const dimensions = etat.referentiel.dimensions.filter((d) => d.category === categorie.id || categorie.id === 'TOUT');
-      if (!dimensions.length) return '';
-      return `<section class="categorie-dimensions">
-        ${categorie.name ? `<h2 class="categorie-dimensions-titre">${echapper(categorie.name)}</h2>` : ''}
-        <div class="categorie-dimensions-liste">${dimensions.map(carteDimension).join('')}</div>
-      </section>`;
-    }).join('');
+    elDimensions.innerHTML = `<section class="categorie-dimensions">
+      <div class="categorie-detail-entete">
+        <h2>${echapper(categorie?.name || '')}</h2>
+        <p>${echapper(categorie?.definition || '')}</p>
+        <small>${dimensionsCategorie.length} dimensions · ${codesCategorie.length} compétences · ${progressionCategorie.pourcentage} % maîtrisées · ${evalueesCategorie}/${codesCategorie.length} évaluées</small>
+      </div>
+      <div class="categorie-dimensions-liste">${dimensionsCategorie.map(carteDimension).join('')}</div>
+    </section>`;
 
     elDimensions.querySelectorAll('[data-toggle]').forEach((btn) => {
-      btn.addEventListener('click', () => basculerDimension(btn.dataset.toggle));
+      btn.addEventListener('click', () => ouvrirDetail(btn.dataset.toggle));
     });
 
     elDimensions.querySelectorAll('[data-situer]').forEach((btn) => {
@@ -1844,6 +1909,27 @@
     });
   }
 
+  function cheminStellaire(themes) {
+    const ordonnes = themes.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    if (ordonnes.length < 2) return '';
+    let d = `M ${ordonnes[0].x} ${ordonnes[0].y}`;
+    for (let index = 1; index < ordonnes.length; index += 1) {
+      const avant = ordonnes[index - 1];
+      const apres = ordonnes[index];
+      const dx = apres.x - avant.x;
+      d += ` C ${(avant.x + dx * .34).toFixed(1)} ${(avant.y - 18).toFixed(1)}, ${(avant.x + dx * .66).toFixed(1)} ${(apres.y + 18).toFixed(1)}, ${apres.x} ${apres.y}`;
+    }
+    return d;
+  }
+
+  function dessinAmas(points, cx, cy) {
+    const liens = points.map((point) => `<line class="amas-lien" x1="${cx}" y1="${cy}" x2="${point.x.toFixed(1)}" y2="${point.y.toFixed(1)}"/>`).join('');
+    const orbite = points.length > 2
+      ? `<polygon class="amas-orbite" points="${points.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ')}"/>`
+      : '';
+    return liens + orbite;
+  }
+
   // viewBox calculée sur les positions réelles : chaque dimension occupe son emprise
   // propre. Une hauteur fixe laisserait un grand vide sous Intériorité et écraserait
   // Trajectoire, dont les thématiques descendent bien plus bas.
@@ -1887,7 +1973,6 @@
     };
     return `<div class="constellation-legende">
       ${[0, 1, 2, 3].map(cran).join('')}
-      <span><svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="#8d8677" stroke-width="1.4" stroke-dasharray="3 3"/></svg>Thématique à débloquer</span>
     </div>`;
   }
 
@@ -1905,6 +1990,37 @@
     const themes = etat.referentiel.themes.filter((t) => t.dimension === dimension.name);
     const parId = new Map(themes.map((t) => [t.id, t]));
     const vb = calculerViewBox(themes);
+
+    if (surMobile()) {
+      const cartes = themes
+        .slice()
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .map((theme) => {
+          const cx = 130, cy = 76;
+          const competences = etat.referentiel.competencies.filter((c) => c.theme === theme.id);
+          const points = positionsEtoiles(cx, cy, competences.length);
+          const etoiles = competences.map((competence, index) => etoileSvg(
+            points[index].x, points[index].y, etat.computed.levels[competence.id] ?? 0, teinte, false, competence
+          )).join('');
+          const progression = progressionCodes(competences.map((competence) => competence.id));
+          return `<article class="amas-mobile">
+            <svg viewBox="0 0 260 155" style="--teinte-amas:${teinte}" aria-label="Amas de ${echapper(theme.name)}">
+              <g class="theme theme-ouvert" data-theme="${echapper(theme.id)}" role="button" tabindex="0" aria-label="${echapper(theme.name)}">
+                ${dessinAmas(points, cx, cy)}
+                <circle class="theme-halo" cx="${cx}" cy="${cy}" r="26" fill="${teinte}" fill-opacity=".1"/>
+                <circle class="theme-noyau" cx="${cx}" cy="${cy}" r="17" fill="var(--night-deep)" stroke="${teinte}" stroke-opacity=".85"/>
+                ${etoiles}
+              </g>
+            </svg>
+            <button type="button" class="amas-mobile-titre" data-theme="${echapper(theme.id)}">${echapper(theme.name)}</button>
+            <p class="amas-mobile-meta">${competences.length} compétences · ${progression.pourcentage} % maîtrisées</p>
+          </article>`;
+        }).join('');
+      conteneur.innerHTML = `<div class="amas-mobile-piste">${cartes}</div>${avecLegende ? legendeConstellation(teinte) : ''}`;
+      brancherInteractionsConstellation(conteneur, idDimension);
+      conteneur.dataset.rendu = 'oui';
+      return;
+    }
 
     // Traits de filiation, dessinés avant les thématiques pour passer dessous.
     const traits = themes.flatMap((source) => source.feeds.map((cibleId) => {
@@ -1932,28 +2048,33 @@
 
     const groupes = themes.map((theme) => {
       const ouverte = etat.computed.themes[theme.id]?.status === 'open';
+      const verrouillee = THEME_LOCKING && !ouverte;
       const competences = etat.referentiel.competencies.filter((c) => c.theme === theme.id);
       const points = positionsEtoiles(theme.x, theme.y, competences.length);
       const etoiles = competences.map((c, i) => etoileSvg(
-        points[i].x, points[i].y, etat.computed.levels[c.id] ?? 0, teinte, !ouverte, c
+        points[i].x, points[i].y, etat.computed.levels[c.id] ?? 0, teinte, verrouillee, c
       )).join('');
+      const progression = progressionCodes(competences.map((competence) => competence.id));
 
-      const couleurNoyau = ouverte ? teinte : '#8d8677';
-      return `<g class="theme ${ouverte ? 'theme-ouvert' : 'theme-verrouille'}" data-theme="${echapper(theme.id)}" data-code="${echapper(theme.code)}"
-                 role="button" tabindex="0" aria-label="${echapper(theme.name)}${ouverte ? '' : ' — à débloquer'}">
+      const couleurNoyau = verrouillee ? '#8d8677' : teinte;
+      return `<g class="theme ${verrouillee ? 'theme-verrouille' : 'theme-ouvert'}" data-theme="${echapper(theme.id)}" data-code="${echapper(theme.code)}"
+                 role="button" tabindex="0" aria-label="${echapper(theme.name)}">
+        <g class="amas-liens">${dessinAmas(points, theme.x, theme.y)}</g>
         <circle class="theme-cible" cx="${theme.x}" cy="${theme.y}" r="${R_NOYAU + 12}" fill="transparent"/>
-        <circle class="theme-halo" cx="${theme.x}" cy="${theme.y}" r="${R_NOYAU + 9}" fill="${couleurNoyau}" fill-opacity="${ouverte ? 0.10 : 0.04}"/>
-        <circle class="theme-noyau" cx="${theme.x}" cy="${theme.y}" r="${R_NOYAU}" fill="var(--night-deep)" stroke="${couleurNoyau}" stroke-opacity="${ouverte ? 0.85 : 0.4}"/>
-        ${ouverte ? '' : `<text class="theme-cadenas" x="${theme.x}" y="${theme.y + 4}">✦</text>`}
+        <circle class="theme-halo" cx="${theme.x}" cy="${theme.y}" r="${R_NOYAU + 9}" fill="${couleurNoyau}" fill-opacity="${verrouillee ? 0.04 : 0.10}"/>
+        <circle class="theme-noyau" cx="${theme.x}" cy="${theme.y}" r="${R_NOYAU}" fill="var(--night-deep)" stroke="${couleurNoyau}" stroke-opacity="${verrouillee ? 0.4 : 0.85}"/>
         ${etoiles}
         <text class="theme-nom" x="${theme.x}" y="${theme.y + DECALAGE_NOM}">${echapper(theme.name)}</text>
+        <text class="theme-progression" x="${theme.x}" y="${theme.y + DECALAGE_NOM + 15}">${progression.pourcentage} % maîtrisées</text>
       </g>`;
     }).join('');
 
     conteneur.innerHTML = `
       <svg class="constellation" viewBox="${vb.minX} ${vb.minY} ${vb.largeur} ${vb.hauteur}"
+           style="--teinte-amas:${teinte}"
            preserveAspectRatio="xMidYMid meet" role="img"
            aria-label="Constellation de la dimension ${echapper(dimension.name)}">
+        <path class="parcours-stellaire" d="${cheminStellaire(themes)}"/>
         <g class="filiations">${traits}</g>
         <g class="themes">${groupes}</g>
       </svg>
@@ -1962,7 +2083,12 @@
     ajusterCadrage(conteneur.querySelector('svg'));
     centrerSurLesRacines(conteneur, themes);
 
-    conteneur.querySelectorAll('.theme[data-theme]').forEach((g) => {
+    brancherInteractionsConstellation(conteneur, idDimension);
+    conteneur.dataset.rendu = 'oui';
+  }
+
+  function brancherInteractionsConstellation(conteneur, idDimension) {
+    conteneur.querySelectorAll('.theme[data-theme], .amas-mobile-titre[data-theme]').forEach((g) => {
       const ouvrir = () => ouvrirTheme(g.dataset.theme, idDimension);
       g.addEventListener('click', ouvrir);
       g.addEventListener('keydown', (e) => {
@@ -1978,7 +2104,6 @@
       });
     });
 
-    conteneur.dataset.rendu = 'oui';
   }
 
   // Quand la carte déborde en largeur, elle s'ouvrait sur son bord gauche — donc sur
@@ -2098,6 +2223,9 @@
   // SOUMIS : monter deux compétences d'Émotions doit déverrouiller Besoins à l'écran
   // sans attendre la sauvegarde.
   function calculerOuvertureLocale(levels) {
+    if (!THEME_LOCKING) {
+      return Object.fromEntries(etat.referentiel.themes.map((theme) => [theme.id, { status: 'open', unlock_hint: '' }]));
+    }
     const parTheme = new Map();
     etat.referentiel.competencies.forEach((c) => {
       if (!c.theme) return;
@@ -2145,7 +2273,7 @@
     return `${nombre} chemins mènent ici, un seul suffit : au palier « ${palier} », ${chemins}.`;
   }
 
-  const estOuverte = (themeId) => etat.computed.themes[themeId]?.status === 'open';
+  const estOuverte = (themeId) => !THEME_LOCKING || etat.computed.themes[themeId]?.status === 'open';
 
   // ============================================================
   // MODIFICATIONS
@@ -2727,7 +2855,7 @@
     if (!competence) return;
     const d = dimensionDe(competence);
     if (!d) return;
-    if (etat.dimensionOuverte !== d.id) basculerDimension(d.id);
+    ouvrirDetail(d.id);
     const zone = elDimensions.querySelector(`[data-dimension="${d.id}"]`);
     if (zone) zone.scrollIntoView({ block: 'start', behavior: 'smooth' });
     ouvrirCompetence(code, d.id);
@@ -2800,8 +2928,8 @@
     elPanneauCorps.innerHTML = `
       <div class="situer">
         <p class="situer-fil">${echapper(theme ? theme.name : '')}</p>
+        <p class="situer-difficulte">Niveau de la compétence : ${pastilleDifficulte(c)}</p>
         <h2 class="situer-nom" id="panneau-titre">${echapper(c.name)}</h2>
-        ${pastilleDifficulte(c)}
         ${(c.statement || c.definition) && (c.statement || c.definition) !== c.name
           ? `<p class="situer-def">${echapper(c.statement || c.definition)}</p>` : ''}
         <div style="margin-top:18px">${escalier(c, niveau, situer.teinte)}</div>
@@ -3595,23 +3723,19 @@
       : [{ id: 'TOUT', name: 'Mes dimensions', definition: '' }];
     elCielPiste.innerHTML = categories.map((categorie) => {
       const dimensions = etat.referentiel.dimensions.filter((d) => d.category === categorie.id || categorie.id === 'TOUT');
-      const boutons = dimensions.map((d) => {
-        const { codes, situees } = situeesDe(d);
-        const progression = progressionCodes(codes);
-        const compte = `${codes.length} compétences · ${progression.pourcentage} % maîtrisées`;
-        return `<button type="button" class="ciel-dimension" data-ouvrir="${echapper(d.id)}" style="--h:${TEINTES_HEX[d.id]}">
-          <i></i><span class="ciel-dimension-nom">${echapper(d.name)}</span><span class="ciel-dimension-compte">${compte}</span>
-        </button>`;
-      }).join('');
-      return `<section class="ciel-categorie" style="--sphere-color:${categorie.couleur || '#c9a661'}">
+      const codes = codesDeCategorie(categorie.id);
+      const progression = progressionCodes(codes);
+      const evaluees = codes.filter((code) => (brouillon.levels[code] ?? 0) > 0).length;
+      return `<button type="button" class="ciel-categorie" data-categorie="${echapper(categorie.id)}" style="--sphere-color:${categorie.couleur || '#c9a661'}">
         <h2 class="ciel-categorie-titre">${echapper(categorie.name)}</h2>
         ${categorie.definition ? `<p class="ciel-categorie-def">${echapper(categorie.definition)}</p>` : ''}
-        <div class="ciel-categorie-dims">${boutons}</div>
-      </section>`;
+        <p class="ciel-categorie-meta">${dimensions.length} dimensions · ${codes.length} compétences<br>${progression.pourcentage} % maîtrisées · ${evaluees}/${codes.length} évaluées</p>
+        <span class="ciel-categorie-cta">Explorer cette catégorie →</span>
+      </button>`;
     }).join('');
 
-    elCielPiste.querySelectorAll('[data-ouvrir]').forEach((btn) => {
-      btn.addEventListener('click', () => ouvrirDetail(btn.dataset.ouvrir));
+    elCielPiste.querySelectorAll('[data-categorie]').forEach((btn) => {
+      btn.addEventListener('click', () => ouvrirCategorie(btn.dataset.categorie));
     });
     brancherMouvementSpheres();
   }
@@ -3631,8 +3755,11 @@
 
   function allerAuCiel() {
     etat.vue = 'ciel';
+    etat.categorieOuverte = null;
     document.body.dataset.vue = 'ciel';
     elPresentation.hidden = false;
+    document.getElementById('detail-retour').hidden = true;
+    rendreDimensions();
 
     if (surMobile()) {
       elCiel.hidden = true;
@@ -3648,6 +3775,22 @@
     window.scrollTo({ top: 0, behavior: 'auto' });
   }
 
+  function ouvrirCategorie(categorieId) {
+    const categorie = CATEGORIES.find((item) => item.id === categorieId);
+    if (!categorie) return;
+    etat.vue = 'categorie';
+    etat.categorieOuverte = categorieId;
+    etat.dimensionOuverte = null;
+    elPresentation.hidden = true;
+    elCiel.hidden = true;
+    elDetail.hidden = false;
+    document.body.dataset.vue = 'categorie';
+    document.getElementById('detail-retour').textContent = '← Toutes les catégories';
+    document.getElementById('detail-retour').hidden = false;
+    rendreDimensions(categorieId);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }
+
   // Passer d'un format à l'autre — rotation, fenêtre redimensionnée — doit redessiner
   // l'accueil dans sa forme, sans sortir le membre de là où il était.
   requeteMobile.addEventListener('change', () => {
@@ -3657,11 +3800,20 @@
   });
 
   function ouvrirDetail(idDimension, idTheme = null) {
+    const dimension = etat.referentiel.dimensions.find((item) => item.id === idDimension);
+    if (!dimension) return;
+    if (etat.categorieOuverte !== dimension.category) {
+      etat.categorieOuverte = dimension.category;
+      rendreDimensions(dimension.category);
+    }
     etat.vue = 'detail';
     elPresentation.hidden = true;
     elCiel.hidden = true;
     elDetail.hidden = false;
     document.body.dataset.vue = 'detail';
+    const categorie = CATEGORIES.find((item) => item.id === dimension.category);
+    document.getElementById('detail-retour').textContent = `← ${categorie?.name || 'Catégorie'}`;
+    document.getElementById('detail-retour').hidden = false;
     if (etat.dimensionOuverte !== idDimension) basculerDimension(idDimension);
     window.scrollTo({ top: 0, behavior: 'auto' });
     if (idTheme) {
@@ -3670,7 +3822,10 @@
     }
   }
 
-  document.getElementById('detail-retour').addEventListener('click', allerAuCiel);
+  document.getElementById('detail-retour').addEventListener('click', () => {
+    if (etat.vue === 'detail' && etat.categorieOuverte) ouvrirCategorie(etat.categorieOuverte);
+    else allerAuCiel();
+  });
 
   document.getElementById('audit-rdv-accueil').addEventListener('click', ouvrirReservation);
 

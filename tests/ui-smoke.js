@@ -138,6 +138,10 @@ async function principal() {
     const compteurAudit = page.locator('.situer-compte');
     await compteurAudit.waitFor();
     assert.equal((await compteurAudit.textContent()).trim(), `1 / ${competencies.length}`);
+    assert.match(await page.locator('.situer-difficulte').textContent(), /Niveau de la compétence :\s*Socle fondamental/);
+    await page.getByText('Je ne maîtrise pas du tout', { exact: true }).waitFor();
+    await page.getByText("Je dois m'améliorer", { exact: true }).waitFor();
+    await page.getByText('Je maîtrise', { exact: true }).waitFor();
     await page.locator('#panneau-fermer').dispatchEvent('click');
 
     assert.equal(await page.locator('.ciel-categorie').count(), 3);
@@ -146,8 +150,7 @@ async function principal() {
       'Moi et mes clients',
       'Moi et mon activité',
     ]);
-    assert.equal(await page.locator('.ciel-dimension').count(), 7);
-    assert.ok((await page.locator('.ciel-dimension-compte').allTextContents()).every((texte) => texte.includes('% maîtrisées')));
+    assert.equal(await page.locator('.ciel-dimension').count(), 0);
     const cercles = await page.locator('.ciel-categorie').evaluateAll((elements) => elements.map((element) => {
       const rect = element.getBoundingClientRect();
       return {
@@ -165,7 +168,10 @@ async function principal() {
       await page.screenshot({ path: path.join(process.env.SCREENSHOT_DIR, 'accueil-desktop.png'), fullPage: true });
     }
 
-    await page.locator('[data-ouvrir="FON"]').dispatchEvent('click');
+    await page.locator('[data-categorie="COACH"]').dispatchEvent('click');
+    await page.getByRole('heading', { name: 'Moi en tant que coach' }).waitFor();
+    assert.equal(await page.locator('.dimension').count(), 2);
+    await page.locator('[data-toggle="FON"]').dispatchEvent('click');
     await page.locator('[data-dimension="FON"].ouverte').waitFor();
     assert.equal(await page.locator('#presentation').isVisible(), false);
     await page.locator('[data-competence="FON-01-01"]').dispatchEvent('click');
@@ -231,8 +237,13 @@ async function principal() {
     await mobile.goto(url);
     await mobile.locator('#detail:not([hidden])').waitFor();
     await mobile.getByRole('heading', { name: 'À quoi sert le sphérier ?' }).waitFor();
-    assert.equal(await mobile.locator('.categorie-dimensions').count(), 3);
-    assert.equal(await mobile.locator('.dimension').count(), 7);
+    assert.equal(await mobile.locator('.categorie-navigation').count(), 3);
+    assert.equal(await mobile.locator('.dimension').count(), 0);
+    await mobile.locator('[data-choisir-categorie="COACH"]').dispatchEvent('click');
+    assert.equal(await mobile.locator('.dimension').count(), 2);
+    await mobile.locator('[data-toggle="FON"]').dispatchEvent('click');
+    await mobile.locator('.amas-mobile-piste').waitFor();
+    assert.equal(await mobile.locator('.amas-mobile').count(), 1);
     assert.equal(await mobile.locator('#ciel').isVisible(), false);
     if (process.env.SCREENSHOT_DIR) {
       await mobile.screenshot({ path: path.join(process.env.SCREENSHOT_DIR, 'accueil-mobile.png') });

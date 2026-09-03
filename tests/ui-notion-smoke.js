@@ -47,7 +47,7 @@ async function principal() {
     await page.locator('#panneau-fermer').dispatchEvent('click');
 
     assert.equal(await page.locator('.ciel-categorie').count(), 3);
-    assert.equal(await page.locator('.ciel-dimension').count(), 7);
+    assert.equal(await page.locator('.ciel-dimension').count(), 0);
     assert.equal(referentiel.bookingUrl, 'https://calendly.com/thomasgibot/55min');
     assert.ok((await page.locator('.ciel-dimension-compte').allTextContents()).every((texte) => texte.includes('% maîtrisées')));
     const cercles = await page.locator('.ciel-categorie').evaluateAll((elements) => elements.map((element) => {
@@ -63,15 +63,21 @@ async function principal() {
     assert.ok(cercles.every((cercle) => cercle.overflowX === 0 && cercle.overflowY === 0));
     assert.equal(await page.locator('.ciel-guide').count(), 0);
 
-    for (const dimension of referentiel.dimensions) {
-      await page.locator(`[data-ouvrir="${dimension.id}"]`).dispatchEvent('click');
-      await page.locator(`[data-dimension="${dimension.id}"].ouverte svg.constellation`).waitFor();
-      const attendues = referentiel.themes.filter((theme) => theme.dimension === dimension.name).length;
-      assert.equal(
-        await page.locator(`[data-dimension="${dimension.id}"].ouverte .theme[data-theme]`).count(),
-        attendues,
-        dimension.name
-      );
+    for (const categorie of referentiel.categories) {
+      await page.locator(`[data-categorie="${categorie.id}"]`).dispatchEvent('click');
+      const dimensions = referentiel.dimensions.filter((dimension) => dimension.category === categorie.id);
+      assert.equal(await page.locator('.dimension').count(), dimensions.length);
+      for (const dimension of dimensions) {
+        await page.locator(`[data-toggle="${dimension.id}"]`).dispatchEvent('click');
+        await page.locator(`[data-dimension="${dimension.id}"].ouverte svg.constellation`).waitFor();
+        const attendues = referentiel.themes.filter((theme) => theme.dimension === dimension.name).length;
+        assert.equal(
+          await page.locator(`[data-dimension="${dimension.id}"].ouverte .theme[data-theme]`).count(),
+          attendues,
+          dimension.name
+        );
+        await page.locator('#detail-retour').dispatchEvent('click');
+      }
       await page.locator('#detail-retour').dispatchEvent('click');
     }
 
