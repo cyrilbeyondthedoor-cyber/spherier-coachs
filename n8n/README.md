@@ -15,3 +15,5 @@ Avant activation :
 7. Activer le workflow et reporter son URL de production dans `N8N_SPHERIER_WEBHOOK_URL`.
 
 La fonction Netlify réutilise l'UUID connu et le workflow renvoie le même lien avec le template transactionnel.
+
+Workflow d'erreur rattaché (`settings.errorWorkflow`) : `KJ45KLTxFiCqNRNQ` « Sphérier — Alerte erreur », Error Trigger vers une alerte WhatsApp. Sans lui, un échec Brevo ou une panne de l'instance restait silencieux.

@@ -38,7 +38,14 @@ function verifierClub() {
     throw new Error(`club.config.js : CLUB « ${attendu} » inconnu (attendus : ${CLUBS_CONNUS.join(', ')})`);
   }
   // La variable d'environnement est facultative en local ; si elle est posée, elle doit
-  // correspondre. C'est en production qu'elle compte, où les deux instances existent.
+  // correspondre. C'est en production qu'elle compte, où les deux instances existent :
+  // là, son absence est une erreur, sinon le garde-fou ne protège de rien.
+  if (!declare && process.env.NETLIFY === 'true') {
+    throw new Error(
+      `CONFIGURATION INCOMPLÈTE : la variable d'environnement CLUB est absente sur Netlify. `
+      + `Poser CLUB=${attendu} pour confirmer que les secrets Notion et Supabase sont ceux de cette instance.`
+    );
+  }
   if (declare && declare !== attendu) {
     throw new Error(
       `CONFIGURATION CROISÉE : le code est celui du club « ${attendu} » mais la variable `

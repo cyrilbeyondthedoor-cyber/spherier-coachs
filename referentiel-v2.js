@@ -79,6 +79,7 @@ let cache = { referentiel: null, expireA: 0, posePar: null };
 
 function viderCacheReferentiel() {
   cache = { referentiel: null, expireA: 0, posePar: null };
+  lectureEnCours = null;
 }
 
 function etatCacheReferentiel() {
@@ -89,18 +90,43 @@ function etatCacheReferentiel() {
   };
 }
 
+// Lecture en cours, partagée entre les appels concurrents. Sans elle, N requêtes qui
+// arrivent sur un cache vide (démarrage à froid, TTL expiré) lancent N lectures
+// complètes de Notion, soit ~7 appels chacune, et dépassent la limite de 3 req/s.
+let lectureEnCours = null;
+
 // `force: true` contourne le cache sans le vider (lecture fraîche ponctuelle).
 async function getReferentielV2({ force = false } = {}) {
   if (!force && cache.referentiel && Date.now() < cache.expireA) {
     return cache.referentiel;
   }
-  const referentiel = await lireReferentielDepuisNotion();
-  cache = {
-    referentiel,
-    expireA: Date.now() + TTL_CACHE_MS,
-    posePar: new Date().toISOString(),
-  };
-  return referentiel;
+  if (!force && lectureEnCours) return lectureEnCours;
+
+  const lecture = lireReferentielDepuisNotion()
+    .then((referentiel) => {
+      cache = {
+        referentiel,
+        expireA: Date.now() + TTL_CACHE_MS,
+        posePar: new Date().toISOString(),
+      };
+      return referentiel;
+    })
+    .catch((err) => {
+      // Repli : un référentiel expiré vaut mieux qu'un 502. La structure change
+      // rarement, et sans elle aucune sauvegarde ne peut être validée. L'erreur est
+      // journalisée, la prochaine requête retentera la lecture.
+      if (cache.referentiel) {
+        console.error('referentiel: relecture Notion impossible, cache expiré servi :', err.message);
+        return cache.referentiel;
+      }
+      throw err;
+    })
+    .finally(() => {
+      if (!force) lectureEnCours = null;
+    });
+
+  if (!force) lectureEnCours = lecture;
+  return lecture;
 }
 
 async function lireReferentielDepuisNotion() {
