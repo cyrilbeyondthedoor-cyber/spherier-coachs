@@ -16,3 +16,6 @@ deno.lock
 
 # Captures de vérification, régénérables
 screenshot-*.png
+
+# Généré au build Netlify
+public/version.txt

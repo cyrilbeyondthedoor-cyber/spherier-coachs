@@ -4,6 +4,9 @@
 [build]
   publish = "public"
   functions = "netlify/functions"
+  # Trace du déploiement : /version.txt porte le SHA du commit construit par Netlify.
+  # Permet de vérifier depuis l'extérieur quel commit est en ligne.
+  command = "printf '%s\n' \"${COMMIT_REF:-local}\" > public/version.txt"
 
 [dev]
   framework = "#static"
