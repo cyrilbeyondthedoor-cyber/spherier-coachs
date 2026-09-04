@@ -1456,6 +1456,12 @@
     .audit-mini-sphere b { display: none; }
     body[data-vue="categorie"] .categorie-dimensions-liste { grid-template-columns: 1fr; gap: 26px; }
     body[data-vue="categorie"] .categorie-dimensions-liste .dimension:nth-child(3):last-child { grid-column: auto; }
+    body[data-vue="categorie"] .categorie-dimensions,
+    body[data-vue="categorie"] .categorie-dimensions-liste,
+    body[data-vue="categorie"] .dimension,
+    body[data-vue="categorie"] .dimension-corps,
+    body[data-vue="categorie"] .constellation-zone,
+    body[data-vue="categorie"] .amas-mobile-piste { width: 100%; min-width: 0; max-width: 100%; }
     .mode-emploi { grid-template-columns: 1fr; gap: 17px; margin-top: 22px; }
     .mode-emploi li, .mode-emploi li:first-child, .mode-emploi li:last-child {
       padding: 0 0 0 42px;
@@ -1469,7 +1475,7 @@
     .portail { padding-top: 48px; }
     .portail-form { padding: 18px; }
     .portail-champs { grid-template-columns: 1fr; }
-    .constellation-zone { overflow: visible; }
+    .constellation-zone { overflow: hidden; }
     .constellation-zone > .constellation { display: none; }
     .amas-mobile-piste {
       display: grid; grid-auto-flow: column; grid-auto-columns: min(82vw, 320px); gap: 12px;
