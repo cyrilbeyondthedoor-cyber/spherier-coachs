@@ -239,7 +239,7 @@ const LEXIQUE = {
     { terme: "Dimension", definition: "Grand domaine de compétences utilisé pour structurer le Sphérier." },
     { terme: "Marqueur observable", definition: "Comportement concret permettant d’évaluer la maîtrise d’une compétence dans la pratique." },
     { terme: "Niveau Fondamental", definition: "Premier niveau du Sphérier. Il regroupe les acquis requis pour exercer sur un socle sain." },
-    { terme: "Niveau TTC", definition: "Niveau de compétence requis pour accéder au dispositif « Trouve ton coach »." },
+    { terme: "Niveau Professionnel établi", definition: "Niveau de compétence requis pour accéder au dispositif « Trouve ton coach »." },
     { terme: "Niveau A-player", definition: "Niveau avancé correspondant à une pratique solide, fine et incarnée du coaching." },
     { terme: "Trouve ton coach (TTC)", definition: "Dispositif de mise en relation entre des clients et des coachs du Club ayant validé le niveau requis." },
     { terme: "Développement vertical et horizontal", definition: "Le développement horizontal enrichit les compétences. Le développement vertical transforme la façon dont une personne interprète le monde." },

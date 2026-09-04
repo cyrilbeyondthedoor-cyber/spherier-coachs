@@ -72,7 +72,7 @@
   .app {
     position: relative;
     z-index: 3;
-    max-width: 940px;
+    max-width: 1240px;
     margin: 0 auto;
     padding: 0 24px 80px;
   }
@@ -232,16 +232,17 @@
 
   /* PRÉSENTATION DE L'OUTIL */
   .presentation[hidden] { display: none; }
-  .presentation { margin: 4px 0 42px; }
+  .presentation { margin: -4px auto 20px; max-width: 1040px; }
+  .presentation-details { display: none; margin-top: 18px; }
+  .presentation-details.ouverte { display: block; }
   .presentation-intro {
     display: grid;
-    grid-template-columns: minmax(150px, .7fr) minmax(0, 1.7fr);
-    gap: 38px;
-    padding: 25px 4px 27px;
-    border-top: 1px solid var(--line-faint);
+    grid-template-columns: minmax(150px, .48fr) minmax(0, 1.8fr);
+    gap: 28px;
+    padding: 0 4px 18px;
     border-bottom: 1px solid var(--line-faint);
   }
-  .presentation-utilisation { margin-top: 0; }
+  .presentation-utilisation { margin-top: 0; padding-top: 22px; border-top: 0; }
   .presentation-utilisation .mode-emploi { margin-top: 0; }
   .presentation-label {
     font-family: 'Cormorant Garamond', serif;
@@ -252,6 +253,34 @@
   .presentation-texte { color: var(--paper-dim); font-size: 14px; line-height: 1.75; }
   .presentation-texte p + p { margin-top: 11px; }
   .presentation-texte strong { color: var(--paper); font-weight: 500; }
+  .presentation-actions { display: flex; justify-content: center; padding-top: 0; }
+  .comprendre-btn {
+    position: relative; min-height: 44px; padding: 10px 20px; overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent); border-radius: 999px;
+    background: rgba(201,166,97,.08); color: var(--gold-bright); cursor: pointer;
+    font-family: 'Cormorant Garamond', serif; font-size: 15px; font-style: italic;
+  }
+  .comprendre-btn::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(110deg, transparent 25%, rgba(255,243,208,.20) 47%, transparent 68%);
+    transform: translateX(-120%); animation: invitation 4.8s cubic-bezier(.23,1,.32,1) infinite;
+  }
+  @keyframes invitation { 0%, 68% { transform: translateX(-120%); } 90%, 100% { transform: translateX(120%); } }
+
+  .niveaux-accueil { max-width: 1040px; margin: 28px auto 24px; }
+  .niveaux-accueil[hidden] { display: none; }
+  .niveaux-accueil-repere { margin-bottom: 9px; color: var(--stone); font-size: 9.5px; letter-spacing: .2em; text-transform: uppercase; }
+  .niveaux-accueil-grille { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .niveau-accueil {
+    min-height: 68px; padding: 10px 14px; color: inherit; text-align: left; cursor: pointer;
+    border: 1px solid color-mix(in srgb, var(--dc) 38%, transparent); border-radius: 12px;
+    background: color-mix(in srgb, var(--dc) 6%, transparent); font: inherit;
+    transition: transform .18s cubic-bezier(.23,1,.32,1), border-color .18s ease;
+  }
+  .niveau-accueil:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--dc) 72%, transparent); }
+  .niveau-accueil-nom { display: block; font-family: 'Cormorant Garamond', serif; font-size: 16px; }
+  .niveau-accueil-score { display: block; margin-top: 3px; color: var(--paper-dim); font-size: 10.5px; line-height: 1.3; }
+  .niveau-accueil-meta { display: block; margin-top: 2px; color: var(--stone); font-size: 9px; }
   .mode-emploi {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -340,6 +369,7 @@
     border: 1px solid color-mix(in srgb, var(--gold) 34%, transparent);
     background: color-mix(in srgb, var(--gold) 6%, transparent);
   }
+  .audit-depart[hidden] { display: none; }
   .audit-depart-texte b {
     display: block;
     font-family: 'Cormorant Garamond', serif;
@@ -523,7 +553,7 @@
      minimale reste inférieure au conteneur, donc aucune barre n'apparaît. */
   .constellation-zone {
     margin-top: 18px;
-    overflow-x: auto;
+    overflow-x: hidden;
     overflow-y: hidden;
     scrollbar-width: thin;
     scrollbar-color: rgba(240,235,224,0.18) transparent;
@@ -541,14 +571,14 @@
 
   .filiation {
     stroke: var(--paper);
-    stroke-opacity: 0.20;
+    stroke-opacity: 0.28;
     stroke-width: 1.2;
   }
-  .filiation-verrouillee { stroke-opacity: 0.09; stroke-dasharray: 3 6; }
-  .parcours-stellaire { fill: none; stroke: var(--teinte-amas); stroke-width: 1.1; stroke-opacity: .18; stroke-dasharray: 2 7; }
-  .liaison-theme { fill: none; stroke: var(--teinte-amas); stroke-width: 1; stroke-opacity: .24; stroke-dasharray: 3 8; }
-  .amas-lien { stroke: var(--teinte-amas); stroke-width: .8; stroke-opacity: .24; }
-  .amas-orbite { fill: none; stroke: var(--teinte-amas); stroke-width: .7; stroke-opacity: .16; }
+  .filiation-verrouillee { stroke-opacity: 0.14; stroke-dasharray: 3 6; }
+  .parcours-stellaire { fill: none; stroke: var(--teinte-amas); stroke-width: 1.25; stroke-opacity: .27; stroke-dasharray: 2 7; }
+  .liaison-theme { fill: none; stroke: var(--teinte-amas); stroke-width: 1.15; stroke-opacity: .34; stroke-dasharray: 3 8; }
+  .amas-lien { stroke: var(--teinte-amas); stroke-width: .9; stroke-opacity: .32; }
+  .amas-orbite { fill: none; stroke: var(--teinte-amas); stroke-width: .8; stroke-opacity: .23; }
 
   .theme-halo { pointer-events: none; }
   .theme-noyau { stroke-width: 1.6; }
@@ -572,6 +602,13 @@
   .theme-progression { font-family: 'Inter Tight', sans-serif; font-size: 8.5px; text-anchor: middle; fill: var(--stone); }
 
   .etoile { pointer-events: none; }
+  .etoile-tooltip {
+    position: fixed; z-index: 70; width: max-content; max-width: min(320px, calc(100vw - 32px));
+    padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px;
+    background: #121827; color: var(--paper); box-shadow: 0 12px 30px rgba(3,5,11,.38);
+    font-size: 12px; line-height: 1.45; pointer-events: none; transform: translate(12px, 12px);
+  }
+  .etoile-tooltip[hidden] { display: none; }
 
   /* LÉGENDE DE LECTURE */
   .constellation-legende {
@@ -975,6 +1012,27 @@
   /* M'ÉVALUER — parcours compétence par compétence.
      Personne ne se positionne sur 152 compétences en cliquant étoile par étoile. */
   .situer { display: flex; flex-direction: column; min-height: 0; }
+  body[data-panneau="situer"] .panneau { max-width: 980px; }
+  .situer-layout { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 28px; align-items: start; }
+  .audit-mini-carte { position: sticky; top: 0; padding: 16px; border: 1px solid var(--line-faint); border-radius: 14px; background: rgba(240,235,224,.02); }
+  .audit-mini-repere { color: var(--gold); font-size: 9px; letter-spacing: .18em; text-transform: uppercase; }
+  .audit-mini-compte { margin-top: 4px; color: var(--paper-dim); font-family: 'Cormorant Garamond', serif; font-size: 17px; }
+  .audit-mini-spheres { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 14px; }
+  .audit-mini-sphere {
+    aspect-ratio: 1; display: grid; place-content: center; gap: 4px; padding: 8px; border-radius: 50%; text-align: center;
+    border: 1px solid color-mix(in srgb, var(--cc) 42%, transparent); background: color-mix(in srgb, var(--cc) 6%, transparent);
+  }
+  .audit-mini-sphere b { font-family: 'Cormorant Garamond', serif; font-size: 10px; font-weight: 500; line-height: 1; }
+  .audit-mini-astres { display: flex; justify-content: center; gap: 3px; }
+  .audit-mini-astre { width: 6px; height: 6px; border-radius: 50%; border: 1px solid var(--h); background: color-mix(in srgb, var(--h) var(--remplissage), transparent); }
+  .audit-mini-astre.active { box-shadow: 0 0 0 3px color-mix(in srgb, var(--h) 18%, transparent); }
+  .audit-mini-ouvrir { width: 100%; min-height: 44px; margin-top: 14px; border: 1px solid var(--line-faint); border-radius: 999px; background: transparent; color: var(--paper-dim); cursor: pointer; font: inherit; font-size: 11px; }
+  .audit-carte-overlay { position: absolute; inset: 0; z-index: 8; padding: 54px 24px 24px; overflow-y: auto; background: #0d1320; }
+  .audit-carte-overlay[hidden] { display: none; }
+  .audit-carte-overlay .audit-mini-carte { position: static; max-width: 760px; margin: 0 auto; padding: 28px; }
+  .audit-carte-overlay .audit-mini-sphere b { font-size: clamp(13px, 2vw, 18px); }
+  .audit-carte-overlay .audit-mini-astre { width: 11px; height: 11px; }
+  .audit-carte-fermer { position: absolute; top: 14px; right: 18px; min-height: 40px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--night-soft); color: var(--paper); cursor: pointer; }
   .situer-progres {
     display: flex; align-items: center; gap: 12px;
     padding: 0 0 14px; font-size: 12px; color: var(--stone);
@@ -1267,6 +1325,19 @@
   .audit-rdv-bloc h3 { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 500; }
   .audit-rdv-bloc p { margin: 9px auto 0; color: var(--paper-dim); font-size: 12.5px; line-height: 1.6; }
   .audit-rdv { margin-top: 16px; }
+  .carte-resultat-intro { max-width: 620px; margin: 0 auto 20px; color: var(--paper-dim); font-size: 13.5px; line-height: 1.65; text-align: center; }
+  .carte-resultat .niveaux-accueil { margin: 30px auto 0; }
+  .carte-resultat .ciel-piste { max-width: 1040px; margin: 0 auto; }
+  .carte-resultat .ciel-categorie { width: 100%; }
+  .carte-resultat .ciel-categorie-titre { font-size: clamp(27px, 2.6vw, 33px); }
+  .carte-resultat .ciel-dimension { width: 170px; }
+  .carte-resultat .ciel-dimension-nom { font-size: 17px; }
+  .carte-resultat .ciel-dimension-compte { font-size: 9.5px; }
+  .ciel-score { color: var(--paper); font-size: 1.12em; font-weight: 600; }
+  .carte-resultat-actions { display: flex; justify-content: center; gap: 10px; margin: 28px 0 8px; flex-wrap: wrap; }
+  .carte-resultat-cta { min-height: 48px; padding: 11px 22px; border: 1px solid var(--gold); border-radius: 999px; background: var(--gold); color: var(--night-deep); cursor: pointer; font: inherit; font-weight: 600; }
+  .carte-resultat-secondaire { min-height: 48px; padding: 11px 22px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--paper-dim); cursor: pointer; font: inherit; }
+  .priorite-marque { position: absolute; top: 5px; right: 12px; padding: 4px 9px; border: 1px solid rgba(201,166,97,.48); border-radius: 999px; background: rgba(201,166,97,.10); color: var(--gold-bright); font-size: 8.5px; letter-spacing: .13em; text-transform: uppercase; }
 
 
   /* LE CIEL — page d'arrivée.
@@ -1294,96 +1365,67 @@
   .ciel-piste {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    justify-items: center;
-    gap: 20px;
-    perspective: 1000px;
+    gap: clamp(10px, 2vw, 28px);
   }
   .ciel-categorie {
-    width: min(100%, 286px);
-    height: auto;
+    width: 100%;
+    min-height: 410px;
     min-width: 0;
-    min-height: 0;
-    aspect-ratio: 1 / 1;
-    overflow: hidden;
-    border: 1px solid color-mix(in srgb, var(--sphere-color) 44%, var(--line-faint));
-    border-radius: 50%;
-    background:
-      radial-gradient(circle at 36% 30%, color-mix(in srgb, var(--sphere-color) 15%, transparent), transparent 44%),
-      rgba(240,235,224,.018);
-    padding: 23px 22px;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    padding: 12px 4px 0;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
     text-align: center;
     position: relative;
-    isolation: isolate;
-    transform-style: preserve-3d;
-    transition: transform .28s cubic-bezier(.22,1,.36,1), border-color .22s ease, box-shadow .22s ease;
-    will-change: transform;
     color: inherit;
     font: inherit;
     cursor: pointer;
   }
-  .ciel-categorie::before {
-    content: '';
-    position: absolute;
-    inset: 10px;
-    z-index: -1;
-    border: 1px solid color-mix(in srgb, var(--sphere-color) 17%, transparent);
-    border-radius: 50%;
-  }
-  .ciel-categorie::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    border-radius: 50%;
-    pointer-events: none;
-    opacity: 0;
-    background: radial-gradient(circle at var(--pointer-x, 50%) var(--pointer-y, 50%), color-mix(in srgb, var(--sphere-color) 24%, transparent), transparent 43%);
-    transition: opacity .2s ease;
-  }
-  .ciel-categorie > * { position: relative; z-index: 1; }
-  @media (hover: hover) and (pointer: fine) {
-    .ciel-categorie:hover {
-      border-color: color-mix(in srgb, var(--sphere-color) 76%, var(--line-faint));
-      box-shadow: 0 22px 55px -32px color-mix(in srgb, var(--sphere-color) 60%, transparent);
-    }
-    .ciel-categorie:hover::after { opacity: .72; }
-  }
   .ciel-categorie-titre {
-    width: 76%;
+    width: 100%;
     margin-inline: auto;
     font-family: 'Cormorant Garamond', serif;
-    font-size: 22px;
+    font-size: clamp(23px, 2.1vw, 29px);
     font-weight: 500;
     line-height: 1.15;
-    overflow-wrap: anywhere;
   }
+  .ciel-categorie-titre::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 11px; border-radius: 50%; background: var(--sphere-color); box-shadow: 0 0 12px color-mix(in srgb, var(--sphere-color) 75%, transparent); vertical-align: .08em; }
   .ciel-categorie-def {
-    width: 76%;
+    width: min(100%, 310px);
     margin: 5px auto 0;
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.3;
     color: var(--stone);
   }
-  .ciel-categorie-dims { width: 84%; display: grid; gap: 1px; margin: 7px auto 0; }
-  .ciel-categorie-meta { margin-top: 7px; color: var(--paper-dim); font-size: 8.5px; line-height: 1.3; }
-  .ciel-categorie-cta { margin-top: 6px; padding: 0; border: 0; background: none; color: var(--sphere-color); cursor: pointer; font-family: 'Cormorant Garamond', serif; font-size: 12.5px; font-style: italic; }
+  .ciel-categorie-meta { order: -1; margin-bottom: 3px; color: var(--stone); font-size: 9px; line-height: 1.3; letter-spacing: .15em; text-transform: uppercase; }
+  .ciel-categorie-cta { margin-top: -12px; min-height: 44px; padding: 9px 18px; border: 1px solid color-mix(in srgb, var(--sphere-color) 38%, transparent); border-radius: 999px; background: color-mix(in srgb, var(--sphere-color) 5%, transparent); color: var(--paper-dim); cursor: pointer; font-family: 'Cormorant Garamond', serif; font-size: 13px; font-style: italic; }
+  .ciel-categorie-dims { position: relative; width: 100%; height: 290px; margin-top: 4px; }
+  .ciel-liens { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+  .ciel-lien { stroke: var(--sphere-color); stroke-width: .7; stroke-opacity: .22; stroke-dasharray: 2 5; }
   .ciel-dimension {
-    width: 100%; min-height: 24px; padding: 2px 5px;
-    display: grid; grid-template-columns: 9px minmax(0, 1fr); gap: 3px 8px; align-items: center;
-    border: 0; border-bottom: 1px solid color-mix(in srgb, var(--h) 25%, transparent);
-    border-radius: 0; background: transparent;
-    color: inherit; font: inherit; text-align: left; cursor: pointer;
-    transition: transform .18s cubic-bezier(.23,1,.32,1), border-color .18s ease, background .18s ease;
+    position: absolute; left: var(--x); top: var(--y); width: 150px; min-height: 116px; padding: 0;
+    transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center;
+    border: 0; background: transparent; color: inherit; font: inherit; text-align: center; cursor: pointer;
+    transition: transform .2s cubic-bezier(.23,1,.32,1), filter .2s ease;
   }
-  .ciel-dimension:hover { transform: translateX(3px); border-color: color-mix(in srgb, var(--h) 58%, transparent); background: color-mix(in srgb, var(--h) 7%, transparent); }
-  .ciel-dimension:active { transform: scale(.98); }
-  .ciel-dimension i { grid-row: 1 / 3; width: 9px; height: 9px; border-radius: 50%; background: var(--h); box-shadow: 0 0 11px color-mix(in srgb, var(--h) 70%, transparent); }
-  .ciel-dimension-nom { font-family: 'Cormorant Garamond', serif; font-size: 12px; line-height: 1.05; }
-  .ciel-dimension-compte { font-size: 7px; color: var(--stone); font-variant-numeric: tabular-nums; }
+  .ciel-dimension:hover { transform: translate(-50%, -50%) scale(1.05); filter: brightness(1.14); }
+  .ciel-dimension:active { transform: translate(-50%, -50%) scale(.98); }
+  .ciel-dimension-astre { position: relative; width: 72px; height: 72px; }
+  .ciel-dimension-core { position: absolute; inset: 22px; border: 1.5px solid var(--h); border-radius: 50%; background: var(--night-deep); box-shadow: 0 0 0 7px color-mix(in srgb, var(--h) 9%, transparent), 0 0 18px color-mix(in srgb, var(--h) 18%, transparent); }
+  .ciel-mini-theme { position: absolute; left: 34px; top: 34px; width: 6px; height: 6px; border-radius: 50%; background: var(--h); opacity: var(--opacite); transform: rotate(var(--angle)) translateY(-31px); transform-origin: 3px 3px; box-shadow: 0 0 8px color-mix(in srgb, var(--h) 58%, transparent); }
+  .ciel-dimension-nom { margin-top: 2px; font-family: 'Cormorant Garamond', serif; font-size: 15px; line-height: 1.05; }
+  .ciel-dimension-compte { margin-top: 4px; font-size: 8px; color: var(--stone); font-variant-numeric: tabular-nums; }
+
+  body[data-vue="categorie"] .categorie-dimensions-liste { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 34px 26px; }
+  body[data-vue="categorie"] .dimension { border: 0; background: transparent; overflow: visible; }
+  body[data-vue="categorie"] .dimension-entete { padding-inline: 4px; border-bottom: 1px solid color-mix(in srgb, var(--teinte) 22%, var(--line-faint)); }
+  body[data-vue="categorie"] .dimension-corps { display: block; padding-inline: 4px; border-top: 0; }
+  body[data-vue="categorie"] .dimension-chevron { display: none; }
+  body[data-vue="categorie"] .categorie-dimensions-liste .dimension:nth-child(3):last-child { grid-column: 1 / -1; }
 
   /* Retour vers le ciel, dans le détail : une navigation de lieu, pas un bouton d'outil. */
   .detail-retour {
@@ -1397,10 +1439,23 @@
 
   @media (max-width: 640px) {
     .detail-retour { display: inline-flex; }
-    .ciel { display: none; }
+    .ciel { display: block; }
     .syn-maitrise { grid-template-columns: 1fr; }
     .presentation { margin-bottom: 30px; }
-    .presentation-intro { grid-template-columns: 1fr; gap: 8px; padding: 21px 2px; }
+    .presentation-intro { grid-template-columns: 1fr; gap: 8px; padding: 0 2px 17px; }
+    .presentation-utilisation { padding-top: 18px; }
+    .presentation-texte { font-size: 13px; line-height: 1.62; }
+    .niveaux-accueil-grille {
+      grid-auto-flow: column; grid-auto-columns: min(78vw, 300px); grid-template-columns: none;
+      overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x mandatory; scrollbar-width: thin;
+    }
+    .niveau-accueil { min-height: 78px; scroll-snap-align: start; }
+    .situer-layout { grid-template-columns: 1fr; gap: 16px; }
+    .audit-mini-carte { position: static; order: -1; padding: 12px; }
+    .audit-mini-sphere { aspect-ratio: auto; min-height: 66px; }
+    .audit-mini-sphere b { display: none; }
+    body[data-vue="categorie"] .categorie-dimensions-liste { grid-template-columns: 1fr; gap: 26px; }
+    body[data-vue="categorie"] .categorie-dimensions-liste .dimension:nth-child(3):last-child { grid-column: auto; }
     .mode-emploi { grid-template-columns: 1fr; gap: 17px; margin-top: 22px; }
     .mode-emploi li, .mode-emploi li:first-child, .mode-emploi li:last-child {
       padding: 0 0 0 42px;
@@ -1430,7 +1485,7 @@
 
   @media (min-width: 641px) and (max-width: 900px) {
     .ciel-piste { grid-template-columns: 1fr; gap: 18px; }
-    .ciel-categorie { width: 286px; }
+    .ciel-categorie { width: 356px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -1477,6 +1532,15 @@
     .dimension-nom { font-size: 18px; }
     .dimension-corps { padding: 0 16px 18px; }
     .titre { padding: 32px 0 22px; }
+    .ciel-piste {
+      display: grid; grid-auto-flow: column; grid-auto-columns: min(86vw, 340px); grid-template-columns: none;
+      justify-content: start; justify-items: stretch; gap: 14px; overflow-x: auto; padding: 5px 8px 18px;
+      scroll-snap-type: x mandatory; scrollbar-width: thin;
+    }
+    .ciel-categorie { width: 100%; scroll-snap-align: center; }
+    .territoires-intro { margin-bottom: 16px; }
+    .ciel-categorie { min-height: 390px; }
+    .ciel-dimension { width: 132px; }
     .titre h1 { font-size: 32px; }
     .titre h1::before, .titre h1::after { margin: 0 8px; }
   }
@@ -1503,7 +1567,7 @@
       </div>
     </div>
     <div class="header-etat" id="header-etat" hidden>
-      <button type="button" class="btn-mois" id="btn-synthese">Vue d'ensemble</button>
+      <button type="button" class="btn-mois" id="btn-synthese">Vue d'ensemble linéaire</button>
       <button type="button" class="btn-mois" id="btn-mois" hidden>
         Mon mois <span class="compte" id="btn-mois-compte"></span>
       </button>
@@ -1560,39 +1624,42 @@
   </div>
 
   <section class="presentation" id="presentation" hidden aria-labelledby="presentation-label">
-    <div class="presentation-intro">
-      <h2 class="presentation-label" id="presentation-label">À quoi sert le sphérier ?</h2>
-      <div class="presentation-texte">
-        <p>Le sphérier est une carte interactive de 192 compétences qui structurent le métier de coach. Il couvre trois domaines principaux que sont (1) <strong>ta posture de coach</strong>, (2) <strong>ton travail avec tes clients</strong> et (3) <strong>le développement de ton activité</strong>.</p>
-        <p>Grâce à lui, tu vas pouvoir avoir une vue exhaustive de l'état de ta progression en tant que coach : ce que tu as déjà acquis, et ce qu'il te reste à travailler pour atteindre le prochain niveau dans ta pratique.</p>
-        <p>Pour te positionner sur le sphérier, il te suffit juste de cliquer sur le bouton ci-dessous et de suivre le processus.</p>
+    <div class="presentation-actions">
+      <button type="button" class="comprendre-btn" id="comprendre-spherier" aria-expanded="false" aria-controls="presentation-details">Comprendre comment fonctionne le sphérier</button>
+    </div>
+    <div class="presentation-details" id="presentation-details">
+      <div class="presentation-intro">
+        <h2 class="presentation-label" id="presentation-label">À quoi sert le sphérier ?</h2>
+        <div class="presentation-texte">
+          <p>Le sphérier est une carte interactive de 192 compétences qui structurent le métier de coach. Il couvre trois domaines principaux que sont (1) <strong>ta posture de coach</strong>, (2) <strong>ton travail avec tes clients</strong> et (3) <strong>le développement de ton activité</strong>.</p>
+          <p>Grâce à lui, tu vas pouvoir avoir une vue exhaustive de l'état de ta progression en tant que coach : ce que tu as déjà acquis, et ce qu'il te reste à travailler pour atteindre le prochain niveau dans ta pratique.</p>
+          <p>Pour te positionner sur le sphérier, il te suffit juste de cliquer sur le bouton ci-dessous et de suivre le processus.</p>
+        </div>
       </div>
-    </div>
-    <div class="presentation-intro presentation-utilisation">
-      <h2 class="presentation-label">Comment utiliser le sphérier ?</h2>
-      <ol class="mode-emploi" aria-label="Comment utiliser le sphérier">
-        <li><b>Lis les marqueurs</b><p>Chaque compétence est accompagnée de marqueurs observables pour t'aider à situer avec précision ta maîtrise de cette compétence.</p></li>
-        <li><b>Évalue ton niveau de maîtrise</b><p>Trois niveaux sont possibles : Je ne maîtrise pas du tout, Je dois m'améliorer et Je maîtrise. Choisis celui qui correspond le mieux à chaque compétence.</p></li>
-        <li><b>Prépare ta progression</b><p>À la fin, utilise la vue d'ensemble pour évaluer les domaines qui demandent le plus à être travaillés et sélectionne jusqu'à trois compétences sur lesquelles te concentrer les prochaines semaines.</p></li>
-        <li><b>Lexique spécifique</b><p>Si tu t'interroges sur certains mots de vocabulaire, tu peux consulter le lexique de l'approche des Sommets. Les mots marqués d'un astérisque y sont définis.</p><button type="button" class="lexique-btn" id="ouvrir-lexique">Consulter le lexique</button></li>
-      </ol>
-    </div>
-    <div class="audit-depart">
-      <p class="audit-depart-texte"><b>Commence par ton audit initial</b><span id="audit-meta">192 compétences · marque une pause toutes les 30 compétences.</span></p>
-      <div class="audit-actions">
-        <button type="button" class="audit-rdv-secondaire" id="audit-rdv-accueil">Réserver un échange</button>
-        <button type="button" class="audit-cta" id="audit-cta">Commencer mon audit initial</button>
+      <div class="presentation-intro presentation-utilisation">
+        <h2 class="presentation-label">Comment utiliser le sphérier ?</h2>
+        <ol class="mode-emploi" aria-label="Comment utiliser le sphérier">
+          <li><b>Lis les marqueurs</b><p>Chaque compétence est accompagnée de marqueurs observables pour t'aider à situer avec précision ta maîtrise de cette compétence.</p></li>
+          <li><b>Évalue ton niveau de maîtrise</b><p>Trois niveaux sont possibles : Je ne maîtrise pas du tout, Je dois m'améliorer et Je maîtrise. Choisis celui qui correspond le mieux à chaque compétence.</p></li>
+          <li><b>Prépare ta progression</b><p>À la fin, utilise la vue d'ensemble pour évaluer les domaines qui demandent le plus à être travaillés et sélectionne jusqu'à trois compétences sur lesquelles te concentrer les prochaines semaines.</p></li>
+          <li><b>Lexique spécifique</b><p>Si tu t'interroges sur certains mots de vocabulaire, tu peux consulter le lexique de l'approche des Sommets. Les mots marqués d'un astérisque y sont définis.</p><button type="button" class="lexique-btn" id="ouvrir-lexique">Consulter le lexique</button></li>
+        </ol>
       </div>
     </div>
   </section>
 
   <div class="ciel" id="ciel" hidden>
-    <div class="territoires-intro">
-      <p class="territoires-repere">Le référentiel</p>
-      <h2>Trois catégories pour évaluer ta pratique</h2>
-      <p>Clique sur les éléments ci-dessous pour naviguer dans le sphérier.</p>
-    </div>
     <div class="ciel-piste" id="ciel-piste"></div>
+  </div>
+
+  <section class="niveaux-accueil" id="niveaux-accueil" hidden aria-label="Progression par niveau de compétence"></section>
+
+  <div class="audit-depart" id="audit-depart" hidden>
+    <p class="audit-depart-texte"><b>Commence par ton audit initial</b><span id="audit-meta">192 compétences · marque une pause toutes les 30 compétences.</span></p>
+    <div class="audit-actions">
+      <button type="button" class="audit-rdv-secondaire" id="audit-rdv-accueil">Réserver un échange</button>
+      <button type="button" class="audit-cta" id="audit-cta">Commencer mon audit initial</button>
+    </div>
   </div>
 
   <div class="detail" id="detail" hidden>
@@ -1613,6 +1680,7 @@
 </div>
 
 <div class="bandeau" id="bandeau" role="status" aria-live="polite"></div>
+<div class="etoile-tooltip" id="etoile-tooltip" role="tooltip" hidden></div>
 
 <div class="voile" id="voile" hidden>
   <div class="panneau" id="panneau" role="dialog" aria-modal="true" aria-labelledby="panneau-titre">
@@ -1730,6 +1798,8 @@
   const elHeaderEtat = document.getElementById('header-etat');
   const elHeaderEtatTexte = document.getElementById('header-etat-texte');
   const elPresentation = document.getElementById('presentation');
+  const elNiveauxAccueil = document.getElementById('niveaux-accueil');
+  const elAuditDepart = document.getElementById('audit-depart');
   const elAuditMeta = document.getElementById('audit-meta');
   const elAuditCta = document.getElementById('audit-cta');
   const elPortail = document.getElementById('portail');
@@ -1780,6 +1850,8 @@
     elSpherierTitre.hidden = true;
     elMessage.hidden = true;
     elPresentation.hidden = true;
+    elNiveauxAccueil.hidden = true;
+    elAuditDepart.hidden = true;
     document.getElementById('ciel').hidden = true;
     document.getElementById('detail').hidden = true;
     elHeaderEtat.hidden = true;
@@ -1861,6 +1933,40 @@
     return { maitrisees, total, pourcentage: total ? Math.round((maitrisees / total) * 100) : 0 };
   }
 
+  function auditEstComplet() {
+    return Boolean(etat.referentiel?.competencies.length)
+      && etat.referentiel.competencies.every((competence) => (brouillon.levels[competence.id] ?? 0) > 0);
+  }
+
+  function contenuNiveauxAccueil(interactif = true) {
+    const complet = auditEstComplet();
+    const contenu = DIFFICULTES_ORDRE.map((d) => {
+      const comps = etat.referentiel.competencies.filter((competence) => competence.difficulty === d.nom);
+      const evaluees = comps.filter((competence) => (brouillon.levels[competence.id] ?? 0) > 0).length;
+      const maitrisees = comps.filter((competence) => (brouillon.levels[competence.id] ?? 0) >= NIVEAU_ACQUIS).length;
+      const pct = comps.length ? Math.round((maitrisees / comps.length) * 100) : 0;
+      return `<button type="button" class="niveau-accueil" data-niveau-accueil="${echapper(d.nom)}" style="--dc:${echapper(d.couleur)}"${interactif ? '' : ' tabindex="-1"'}>
+        <span class="niveau-accueil-nom">${echapper(d.nom)}</span>
+        <span class="niveau-accueil-score">${complet ? `${pct} % maîtrisées` : 'Finis ton audit pour afficher ton score'}</span>
+        <span class="niveau-accueil-meta">${evaluees}/${comps.length} évaluées${complet ? ' · ouvrir le détail' : ''}</span>
+      </button>`;
+    }).join('');
+    return `<p class="niveaux-accueil-repere">Progression par niveau de compétence</p><div class="niveaux-accueil-grille">${contenu}</div>`;
+  }
+
+  function rendreNiveauxAccueil(conteneur = elNiveauxAccueil, { interactif = true } = {}) {
+    conteneur.innerHTML = contenuNiveauxAccueil(interactif);
+    conteneur.hidden = false;
+    if (interactif) conteneur.querySelectorAll('[data-niveau-accueil]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        synModeFinal = false;
+        synScope = { type: 'difficulte', id: bouton.dataset.niveauAccueil };
+        synVoirMaitrisees = false;
+        ouvrirSynthese(false);
+      });
+    });
+  }
+
   // Une dimension porte DEUX entrées : celle de l'amorce, visible carte repliée sur
   // mobile, et celle du corps. Elles disent la même chose et se mettent à jour
   // ensemble — n'actualiser que la première trouvée en laisserait une périmée.
@@ -1922,14 +2028,15 @@
     const codesCategorie = codesDeCategorie(categorieId);
     const progressionCategorie = progressionCodes(codesCategorie);
     const evalueesCategorie = codesCategorie.filter((code) => (brouillon.levels[code] ?? 0) > 0).length;
+    const auditComplet = auditEstComplet();
     const carteDimension = (d) => {
       const themes = etat.referentiel.themes.filter((t) => t.dimension === d.name);
       const competences = competencesDeDimension(d);
       const progression = progressionCodes(competences.map((competence) => competence.id));
       const evaluees = competences.filter((competence) => (brouillon.levels[competence.id] ?? 0) > 0).length;
       return `
-        <section class="dimension" data-dimension="${echapper(d.id)}" style="--teinte: ${TEINTES[d.id] || 'var(--paper)'}">
-          <button type="button" class="dimension-entete" aria-expanded="false" data-toggle="${echapper(d.id)}">
+        <section class="dimension ouverte" data-dimension="${echapper(d.id)}" style="--teinte: ${TEINTES[d.id] || 'var(--paper)'}">
+          <button type="button" class="dimension-entete" aria-expanded="true" data-toggle="${echapper(d.id)}">
             <span class="dimension-astre">${astreDimension(d.id)}</span>
             <span>
               <span class="dimension-nom">${echapper(d.name)}</span>
@@ -1956,12 +2063,12 @@
     };
 
     elDimensions.innerHTML = `<nav class="categorie-tabs" aria-label="Macro-catégories">
-      ${CATEGORIES.map((item) => `<button type="button" class="categorie-tab${item.id === categorieId ? ' active' : ''}" data-tab-categorie="${echapper(item.id)}" style="--cc:${item.couleur || '#c9a661'}">${echapper(item.name)}${pctHtml(progressionCodes(codesDeCategorie(item.id)).pourcentage)}</button>`).join('')}
+      ${CATEGORIES.map((item) => `<button type="button" class="categorie-tab${item.id === categorieId ? ' active' : ''}" data-tab-categorie="${echapper(item.id)}" style="--cc:${item.couleur || '#c9a661'}">${echapper(item.name)}${auditComplet ? pctHtml(progressionCodes(codesDeCategorie(item.id)).pourcentage) : ''}</button>`).join('')}
     </nav><section class="categorie-dimensions">
       <div class="categorie-detail-entete">
         <h2>${echapper(categorie?.name || '')}</h2>
         <p>${echapper(categorie?.definition || '')}</p>
-        <small>${progressionCategorie.pourcentage} % maîtrisées · ${evalueesCategorie}/${codesCategorie.length} évaluées · ${dimensionsCategorie.length} dimensions</small>
+        <small>${auditComplet ? `${progressionCategorie.pourcentage} % maîtrisées · ` : ''}${evalueesCategorie}/${codesCategorie.length} évaluées · ${dimensionsCategorie.length} dimensions</small>
       </div>
       <div class="categorie-dimensions-liste">${dimensionsCategorie.map(carteDimension).join('')}</div>
     </section>`;
@@ -1993,6 +2100,7 @@
     });
 
     majAvancements();
+    dimensionsCategorie.forEach((dimension) => rendreConstellation(dimension.id));
   }
 
   // Comportement toggle : ouvrir une dimension referme celle qui l'était, et recliquer
@@ -2021,7 +2129,7 @@
   const R_ANNEAU = 38;   // rayon sur lequel les étoiles se répartissent
   const R_NOYAU = 17;    // rayon du noyau de la thématique
   const TRIM = 50;       // les traits de filiation s'arrêtent avant l'anneau d'étoiles
-  const DECALAGE_NOM = 56;
+  const DECALAGE_NOM = 54;
 
   // Luminosité d'une étoile selon le niveau : 4 crans, de l'étoile éteinte (0) à
   // l'étoile pleine (3). Le niveau 0 n'est pas un palier nommé, c'est l'absence.
@@ -2062,12 +2170,12 @@
     return ordonnes.map((theme, index) => {
       const graine = [...String(theme.code || theme.name)].reduce((total, caractere) => total + caractere.charCodeAt(0), 0);
       const angle = -Math.PI / 2 + (Math.PI * 2 * index) / n + ((graine % 13) - 6) * .018;
-      const alternance = n >= 5 && index % 2 ? .78 : 1;
+      const alternance = n >= 5 && index % 2 ? .86 : 1;
       const variation = .9 + (graine % 17) / 100;
       return {
         ...theme,
-        x: 400 + Math.cos(angle) * 255 * alternance * variation,
-        y: 245 + Math.sin(angle) * 165 * alternance * variation,
+        x: 400 + Math.cos(angle) * (n >= 6 ? 272 : 255) * alternance * variation,
+        y: 245 + Math.sin(angle) * (n >= 6 ? 188 : 170) * alternance * variation,
       };
     });
   }
@@ -2102,6 +2210,23 @@
     return liens + orbite;
   }
 
+  function lignesLibelleTheme(nom) {
+    const mots = String(nom || '').trim().split(/\s+/);
+    if (mots.join(' ').length <= 28 || mots.length < 2) return [mots.join(' ')];
+    let meilleurIndex = 1;
+    let meilleurEcart = Infinity;
+    for (let index = 1; index < mots.length; index += 1) {
+      const gauche = mots.slice(0, index).join(' ');
+      const droite = mots.slice(index).join(' ');
+      const ecart = Math.abs(gauche.length - droite.length);
+      if (ecart < meilleurEcart) {
+        meilleurIndex = index;
+        meilleurEcart = ecart;
+      }
+    }
+    return [mots.slice(0, meilleurIndex).join(' '), mots.slice(meilleurIndex).join(' ')];
+  }
+
   // viewBox calculée sur les positions réelles : chaque dimension occupe son emprise
   // propre. Une hauteur fixe laisserait un grand vide sous Intériorité et écraserait
   // Trajectoire, dont les thématiques descendent bien plus bas.
@@ -2127,8 +2252,9 @@
     // Cible de clic large et invisible : une étoile de niveau 0 ne fait que 2,2 unités
     // de rayon, impossible à viser au doigt. Le repère visuel reste petit, la zone
     // sensible non.
-    return `<g class="etoile" data-competence="${echapper(competence.id)}" role="button" tabindex="0"
-              aria-label="${echapper(competence.name)}">
+    return `<g class="etoile" data-competence="${echapper(competence.id)}" data-enonce="${echapper(competence.statement || competence.name)}" role="button" tabindex="0"
+              aria-label="${echapper(competence.statement || competence.name)}">
+      <title>${echapper(competence.statement || competence.name)}</title>
       ${halo}
       <circle class="etoile-corps" cx="${x}" cy="${y}" r="${c.r}" fill="${couleur}" fill-opacity="${(c.opacite * (verrouillee ? 0.5 : 1)).toFixed(2)}"/>
       <circle class="etoile-cible" cx="${x}" cy="${y}" r="16" fill="transparent"/>
@@ -2227,6 +2353,12 @@
         points[i].x, points[i].y, etat.computed.levels[c.id] ?? 0, teinte, verrouillee, c
       )).join('');
       const progression = progressionCodes(competences.map((competence) => competence.id));
+      const lignesNom = lignesLibelleTheme(theme.name);
+      const nomSvg = lignesNom.map((ligne, index) => `<tspan class="theme-nom-ligne" x="${theme.x}" dy="${index === 0 ? 0 : 16}">${echapper(ligne)}</tspan>`).join('');
+      // Une ligne d'air franche après le libellé, y compris lorsqu'il occupe deux lignes.
+      // Le texte SVG utilise sa ligne de base : 27 unités évitent que le pourcentage ne
+      // touche les descendantes tout en restant visuellement rattaché à la thématique.
+      const progressionY = theme.y + DECALAGE_NOM + (lignesNom.length - 1) * 16 + 27;
 
       const couleurNoyau = verrouillee ? '#8d8677' : teinte;
       return `<g class="theme ${verrouillee ? 'theme-verrouille' : 'theme-ouvert'}" data-theme="${echapper(theme.id)}" data-code="${echapper(theme.code)}"
@@ -2236,8 +2368,8 @@
         <circle class="theme-halo" cx="${theme.x}" cy="${theme.y}" r="${R_NOYAU + 9}" fill="${couleurNoyau}" fill-opacity="${verrouillee ? 0.04 : 0.10}"/>
         <circle class="theme-noyau" cx="${theme.x}" cy="${theme.y}" r="${R_NOYAU}" fill="var(--night-deep)" stroke="${couleurNoyau}" stroke-opacity="${verrouillee ? 0.4 : 0.85}"/>
         ${etoiles}
-        <text class="theme-nom" x="${theme.x}" y="${theme.y + DECALAGE_NOM}">${echapper(theme.name)}</text>
-        <text class="theme-progression" x="${theme.x}" y="${theme.y + DECALAGE_NOM + 15}">${progression.pourcentage} % maîtrisées</text>
+        <text class="theme-nom" x="${theme.x}" y="${theme.y + DECALAGE_NOM}">${nomSvg}</text>
+        <text class="theme-progression" x="${theme.x}" y="${progressionY}">${progression.pourcentage} % maîtrisées</text>
       </g>`;
     }).join('');
 
@@ -2271,10 +2403,29 @@
 
     conteneur.querySelectorAll('.etoile[data-competence]').forEach((g) => {
       const ouvrir = () => ouvrirCompetence(g.dataset.competence, idDimension);
-      g.addEventListener('click', (e) => { e.stopPropagation(); ouvrir(); });
+      g.addEventListener('click', (e) => { e.stopPropagation(); document.getElementById('etoile-tooltip').hidden = true; ouvrir(); });
       g.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ouvrir(); }
       });
+      const tooltip = document.getElementById('etoile-tooltip');
+      const positionnerTooltip = (x, y) => {
+        const largeur = Math.min(320, window.innerWidth - 32);
+        tooltip.style.left = `${Math.max(8, Math.min(x, window.innerWidth - largeur - 16))}px`;
+        tooltip.style.top = `${Math.max(8, Math.min(y, window.innerHeight - 100))}px`;
+      };
+      const afficherTooltip = (x, y) => {
+        tooltip.textContent = g.dataset.enonce;
+        positionnerTooltip(Math.max(8, x), Math.max(8, y));
+        tooltip.hidden = false;
+      };
+      g.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') afficherTooltip(e.clientX, e.clientY); });
+      g.addEventListener('pointermove', (e) => { if (!tooltip.hidden && e.pointerType === 'mouse') positionnerTooltip(e.clientX, e.clientY); });
+      g.addEventListener('pointerleave', () => { tooltip.hidden = true; });
+      g.addEventListener('focus', () => {
+        const rect = g.getBoundingClientRect();
+        afficherTooltip(rect.right, rect.bottom);
+      });
+      g.addEventListener('blur', () => { tooltip.hidden = true; });
     });
 
   }
@@ -2293,10 +2444,6 @@
     const x = (centre - vb.x) * echelle;
     conteneur.scrollLeft = Math.max(0, x - conteneur.clientWidth / 2);
   }
-
-  // Échelle en dessous de laquelle les libellés deviennent illisibles. À 0.85, un
-  // libellé de 15 unités s'affiche autour de 12.8 px.
-  const ECHELLE_MINI = 0.85;
 
   // Et une échelle AU-DESSUS de laquelle on cesse d'agrandir.
   //
@@ -2327,10 +2474,9 @@
     const hauteur = bb.height + marge * 2;
     svg.setAttribute('viewBox', `${bb.x - marge} ${bb.y - marge} ${largeur} ${hauteur}`);
 
-    // 2. Sous une certaine largeur d'affichage, la carte devient illisible. On impose
-    //    donc une largeur minimale et on laisse le conteneur défiler : mieux vaut une
-    //    carte que l'on fait glisser qu'une carte que l'on ne peut pas lire.
-    svg.style.minWidth = Math.round(largeur * ECHELLE_MINI) + 'px';
+    // 2. Les libellés longs sont répartis sur deux lignes. La carte peut donc se
+    //    resserrer dans son conteneur sans imposer de navigation horizontale.
+    svg.style.minWidth = '0';
 
     // 3. Et une largeur maximale, pour ne pas gonfler une constellation compacte
     //    jusqu'à remplir un conteneur large. Elle reste alors centrée dans sa boîte.
@@ -2461,13 +2607,17 @@
     enregistrerBrouillon();
     majBarre();
     majBoutonMois();
+    majAuditInitial();
     majAvancements();
     // Une ouverture qui bascule change les traits, les teintes et les cadenas : on
     // redessine la constellation concernée. Sinon un simple rafraîchissement d'étoiles
     // suffit, et l'animation reste imperceptible.
     if (avant !== apres) redessinerConstellations();
     else rafraichirEtoiles();
-    if (etat.vue === 'ciel') rendreCiel();
+    if (etat.vue === 'ciel') {
+      rendreCiel();
+      rendreNiveauxAccueil();
+    }
   }
 
   function definirNiveau(code, niveau) {
@@ -3082,6 +3232,24 @@
     return i > situer.debutBloc && (i - situer.debutBloc) % TAILLE_BLOC === 0;
   }
 
+  function miniCarteAudit(codeActif, agrandie = false) {
+    const competenceActive = etat.referentiel.competencies.find((competence) => competence.id === codeActif);
+    const dimensionActive = competenceActive ? dimensionDe(competenceActive) : null;
+    const total = etat.referentiel.competencies.length;
+    const evaluees = etat.referentiel.competencies.filter((competence) => (brouillon.levels[competence.id] ?? 0) > 0).length;
+    const spheres = CATEGORIES.map((categorie) => {
+      const dimensions = etat.referentiel.dimensions.filter((dimension) => dimension.category === categorie.id);
+      const astres = dimensions.map((dimension) => {
+        const codes = codesDeDimension(dimension);
+        const faits = codes.filter((code) => (brouillon.levels[code] ?? 0) > 0).length;
+        const remplissage = codes.length ? Math.round((faits / codes.length) * 100) : 0;
+        return `<i class="audit-mini-astre${dimension.id === dimensionActive?.id ? ' active' : ''}" style="--h:${echapper(TEINTES_HEX[dimension.id])};--remplissage:${remplissage}%" title="${echapper(dimension.name)} : ${faits}/${codes.length} évaluées"></i>`;
+      }).join('');
+      return `<div class="audit-mini-sphere" style="--cc:${echapper(categorie.couleur || '#c9a661')}"><b>${echapper(categorie.name)}</b><span class="audit-mini-astres">${astres}</span></div>`;
+    }).join('');
+    return `<div class="audit-mini-carte"><p class="audit-mini-repere">Ton sphérier se remplit</p><p class="audit-mini-compte">${evaluees} / ${total} compétences évaluées</p><div class="audit-mini-spheres">${spheres}</div>${agrandie ? '' : '<button type="button" class="audit-mini-ouvrir" id="audit-mini-ouvrir">Agrandir la carte</button>'}</div>`;
+  }
+
   function rendreMeSituer() {
     if (!situer) return;
 
@@ -3105,7 +3273,7 @@
       </div>`;
 
     elPanneauCorps.innerHTML = `
-      <div class="situer">
+      <div class="situer-layout"><div class="situer">
         <p class="situer-fil">${echapper(theme ? theme.name : '')}</p>
         <p class="situer-difficulte">Niveau de la compétence : ${pastilleDifficulte(c)}</p>
         <h2 class="situer-nom" id="panneau-titre">${echapper(c.name)}</h2>
@@ -3121,7 +3289,8 @@
             ? `Déjà évalué à « ${echapper(etat.referentiel.scale[niveau])} ». Reclique sur ta marche pour l'effacer.`
             : 'Coche une marche, ou passe : tu pourras y revenir.'}</p>
         </div>
-      </div>`;
+      </div><aside>${miniCarteAudit(code)}</aside></div>
+      <div class="audit-carte-overlay" id="audit-carte-overlay" hidden><button type="button" class="audit-carte-fermer" id="audit-carte-fermer">Revenir à la question</button>${miniCarteAudit(code, true)}</div>`;
     elPanneauCorps.scrollTop = 0;
 
     // Cocher une marche fait avancer tout seul : c'est ce qui rend le parcours fluide.
@@ -3140,6 +3309,14 @@
     document.getElementById('situer-precedent').addEventListener('click', () => {
       situer.index = Math.max(0, situer.index - 1);
       rendreMeSituer();
+    });
+    document.getElementById('audit-mini-ouvrir').addEventListener('click', () => {
+      document.getElementById('audit-carte-overlay').hidden = false;
+      document.getElementById('audit-carte-fermer').focus();
+    });
+    document.getElementById('audit-carte-fermer').addEventListener('click', () => {
+      document.getElementById('audit-carte-overlay').hidden = true;
+      document.getElementById('audit-mini-ouvrir').focus();
     });
   }
 
@@ -3212,7 +3389,7 @@
     const synthese = document.getElementById('situer-synthese');
     if (synthese) synthese.addEventListener('click', async () => {
       const ok = await enregistrer();
-      if (ok) ouvrirSelectionAudit();
+      if (ok) ouvrirResultatAudit(false);
     });
     document.getElementById('situer-fermer').addEventListener('click', fermerPanneau);
   }
@@ -3314,20 +3491,72 @@
     });
     document.getElementById('audit-suite').addEventListener('click', async () => {
       const ok = await enregistrer();
-      if (ok) ouvrirResultatAudit();
+      if (ok) ouvrirResultatAudit(true);
     });
     afficherPanneau();
     document.body.dataset.panneau = 'selection-audit';
   }
 
-  function ouvrirResultatAudit() {
+  function ouvrirResultatAudit(prioritesChoisies = true) {
     synScope = null;
     synVoirMaitrisees = false;
     synFiltres = new Set(['tout']);
-    // Tout replié à l'arrivée : catégories, niveaux et priorités d'abord, le détail
-    // par dimension s'ouvre à la demande.
     synDeplies = new Set();
-    ouvrirSynthese(true);
+    synModeFinal = true;
+    configurerPleinEcran(true);
+    elPanneau.classList.add('plein-ecran');
+    document.getElementById('panneau-plein-ecran').textContent = 'Réduire';
+    document.getElementById('panneau-plein-ecran').setAttribute('aria-pressed', 'true');
+    situer = null;
+    competenceAffichee = null;
+    themeAffiche = null;
+    elPanneau.style.setProperty('--teinte-p', '#c9a661');
+    elPanneauTete.innerHTML = `<p class="panneau-fil"><b>Synthèse de ton audit</b></p><h2 class="panneau-titre" id="panneau-titre">Ton sphérier en un regard</h2>`;
+
+    const categories = CATEGORIES.map((categorie) => categorieCielHtml(categorie, { resultat: true })).join('');
+
+    elPanneauCorps.innerHTML = `<section class="carte-resultat">
+      <p class="carte-resultat-intro">Voici la carte complète de ta pratique. Les pourcentages indiquent la part des compétences que tu maîtrises dans chaque territoire.</p>
+      <div class="ciel-piste">${categories}</div>
+      <div class="niveaux-accueil">${contenuNiveauxAccueil(true)}</div>
+      <div class="carte-resultat-actions">
+        ${prioritesChoisies
+          ? '<button type="button" class="carte-resultat-cta" id="resultat-retour-carte">Revenir à mon sphérier</button>'
+          : '<button type="button" class="carte-resultat-cta" id="resultat-priorites">Choisir mes trois priorités</button>'}
+        <button type="button" class="carte-resultat-secondaire" id="resultat-lineaire">Ouvrir la vue d’ensemble linéaire</button>
+        ${prioritesChoisies ? '<button type="button" class="carte-resultat-secondaire" data-audit-rdv>Réserver un échange</button>' : ''}
+      </div>
+    </section>`;
+    elPanneauCorps.scrollTop = 0;
+    elPanneauCorps.querySelectorAll('[data-resultat-categorie]').forEach((bouton) => {
+      bouton.addEventListener('click', (event) => {
+        if (event.target.closest('[data-ouvrir]')) return;
+        fermerPanneau();
+        ouvrirCategorie(bouton.dataset.resultatCategorie);
+      });
+    });
+    elPanneauCorps.querySelectorAll('[data-ouvrir]').forEach((bouton) => {
+      bouton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        fermerPanneau();
+        ouvrirDimensionDepuisCiel(bouton.dataset.ouvrir);
+      });
+    });
+    elPanneauCorps.querySelectorAll('[data-niveau-accueil]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        synScope = { type: 'difficulte', id: bouton.dataset.niveauAccueil };
+        synVoirMaitrisees = false;
+        ouvrirSynthese(true);
+      });
+    });
+    const priorites = document.getElementById('resultat-priorites');
+    if (priorites) priorites.addEventListener('click', ouvrirSelectionAudit);
+    const retourCarte = document.getElementById('resultat-retour-carte');
+    if (retourCarte) retourCarte.addEventListener('click', () => { fermerPanneau(); allerAuCiel(); });
+    document.getElementById('resultat-lineaire').addEventListener('click', () => ouvrirSynthese(true));
+    elPanneauCorps.querySelectorAll('[data-audit-rdv]').forEach((bouton) => bouton.addEventListener('click', ouvrirReservation));
+    afficherPanneau();
+    document.body.dataset.panneau = 'resultat-audit';
   }
 
   // ============================================================
@@ -4038,6 +4267,10 @@
       majAuditInitial();
       majBoutonMois();
       redessinerConstellations();
+      if (etat.vue === 'ciel') {
+        rendreCiel();
+        rendreNiveauxAccueil();
+      }
       if (competenceAffichee) rafraichirPanneau(competenceAffichee.code);
 
       bandeau('Ton sphérier est enregistré.',
@@ -4125,34 +4358,49 @@
     });
   }
 
-  function rendreCiel() {
-    // Sur mobile, l'accueil par catégories est remplacé par les dimensions en accordéon.
-    // Il sera redessiné si l'écran s'élargit, voir l'écoute de `requeteMobile`.
-    if (surMobile()) return;
+  function categorieCielHtml(categorie, { resultat = false } = {}) {
+    const dimensions = etat.referentiel.dimensions.filter((dimension) => dimension.category === categorie.id || categorie.id === 'TOUT');
+    const codes = codesDeCategorie(categorie.id);
+    const progression = progressionCodes(codes);
+    const evaluees = codes.filter((code) => (brouillon.levels[code] ?? 0) > 0).length;
+    const auditComplet = auditEstComplet();
+    const positions = dimensions.length === 2
+      ? [{ x: 28, y: 53 }, { x: 72, y: 53 }]
+      : [{ x: 50, y: 29 }, { x: 24, y: 72 }, { x: 76, y: 72 }];
+    const dimensionsHtml = dimensions.map((dimension, dimensionIndex) => {
+      const codesDimension = codesDeDimension(dimension);
+      const progressionDimension = progressionCodes(codesDimension);
+      const evalueesDimension = codesDimension.filter((code) => (brouillon.levels[code] ?? 0) > 0).length;
+      const themes = etat.referentiel.themes.filter((theme) => theme.dimension === dimension.name);
+      const satellites = themes.map((theme, index) => {
+        const codesTheme = etat.referentiel.competencies.filter((competence) => competence.theme === theme.id).map((competence) => competence.id);
+        const themeEvalue = codesTheme.some((code) => (brouillon.levels[code] ?? 0) > 0);
+        return `<i class="ciel-mini-theme" style="--angle:${Math.round((index / themes.length) * 360)}deg;--opacite:${themeEvalue ? 1 : .28}"></i>`;
+      }).join('');
+      const position = positions[dimensionIndex] || { x: 50, y: 50 };
+      return `<button type="button" class="ciel-dimension" data-ouvrir="${echapper(dimension.id)}" style="--h:${TEINTES_HEX[dimension.id]};--x:${position.x}%;--y:${position.y}%">
+        <span class="ciel-dimension-astre"><i class="ciel-dimension-core"></i>${satellites}</span>
+        <span class="ciel-dimension-nom">${echapper(dimension.name)}</span><span class="ciel-dimension-compte">${auditComplet ? `<b class="ciel-score">${progressionDimension.pourcentage} %</b> maîtrisées · ` : ''}${evalueesDimension}/${codesDimension.length} évaluées</span>
+      </button>`;
+    }).join('');
+    const liens = positions.slice(1, dimensions.length).map((position) => `<line class="ciel-lien" x1="${positions[0].x}" y1="${positions[0].y}" x2="${position.x}" y2="${position.y}"/>`).join('');
+    const prioriteDansCategorie = resultat && brouillon.current.some((code) => codes.includes(code));
+    const attribut = resultat ? 'data-resultat-categorie' : 'data-categorie';
+    return `<section class="ciel-categorie" ${attribut}="${echapper(categorie.id)}" role="button" tabindex="0" style="--sphere-color:${categorie.couleur || '#c9a661'}">
+      ${prioriteDansCategorie ? '<span class="priorite-marque">Priorité choisie</span>' : ''}
+      <h2 class="ciel-categorie-titre">${echapper(categorie.name)}</h2>
+      ${categorie.definition && !resultat ? `<p class="ciel-categorie-def">${echapper(categorie.definition)}</p>` : ''}
+      <div class="ciel-categorie-dims"><svg class="ciel-liens" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${liens}</svg>${dimensionsHtml}</div>
+      <p class="ciel-categorie-meta">${auditComplet ? `<b class="ciel-score">${progression.pourcentage} %</b> maîtrisées · ` : ''}${evaluees}/${codes.length} évaluées</p>
+      <button type="button" class="ciel-categorie-cta" data-explorer-categorie="${echapper(categorie.id)}">Explorer cette catégorie →</button>
+    </section>`;
+  }
 
+  function rendreCiel() {
     const categories = CATEGORIES.length
       ? CATEGORIES
       : [{ id: 'TOUT', name: 'Mes dimensions', definition: '' }];
-    elCielPiste.innerHTML = categories.map((categorie) => {
-      const dimensions = etat.referentiel.dimensions.filter((d) => d.category === categorie.id || categorie.id === 'TOUT');
-      const codes = codesDeCategorie(categorie.id);
-      const progression = progressionCodes(codes);
-      const evaluees = codes.filter((code) => (brouillon.levels[code] ?? 0) > 0).length;
-      const dimensionsHtml = dimensions.map((dimension) => {
-        const codesDimension = codesDeDimension(dimension);
-        const progressionDimension = progressionCodes(codesDimension);
-        return `<button type="button" class="ciel-dimension" data-ouvrir="${echapper(dimension.id)}" style="--h:${TEINTES_HEX[dimension.id]}">
-          <i></i><span class="ciel-dimension-nom">${echapper(dimension.name)}</span><span class="ciel-dimension-compte">${progressionDimension.pourcentage} % · ${codesDimension.length} compétences</span>
-        </button>`;
-      }).join('');
-      return `<section class="ciel-categorie" data-categorie="${echapper(categorie.id)}" role="button" tabindex="0" style="--sphere-color:${categorie.couleur || '#c9a661'}">
-        <h2 class="ciel-categorie-titre">${echapper(categorie.name)}</h2>
-        ${categorie.definition ? `<p class="ciel-categorie-def">${echapper(categorie.definition)}</p>` : ''}
-        <div class="ciel-categorie-dims">${dimensionsHtml}</div>
-        <p class="ciel-categorie-meta">${progression.pourcentage} % maîtrisées · ${evaluees}/${codes.length} évaluées</p>
-        <button type="button" class="ciel-categorie-cta" data-explorer-categorie="${echapper(categorie.id)}">Explorer cette catégorie →</button>
-      </section>`;
-    }).join('');
+    elCielPiste.innerHTML = categories.map((categorie) => categorieCielHtml(categorie)).join('');
 
     elCielPiste.querySelectorAll('.ciel-categorie[data-categorie]').forEach((bloc) => {
       const ouvrir = (event) => {
@@ -4165,9 +4413,18 @@
       });
     });
     elCielPiste.querySelectorAll('[data-ouvrir]').forEach((bouton) => {
-      bouton.addEventListener('click', (event) => { event.stopPropagation(); ouvrirDetail(bouton.dataset.ouvrir); });
+      bouton.addEventListener('click', (event) => { event.stopPropagation(); ouvrirDimensionDepuisCiel(bouton.dataset.ouvrir); });
     });
-    brancherMouvementSpheres();
+  }
+
+  function ouvrirDimensionDepuisCiel(idDimension) {
+    const dimension = etat.referentiel.dimensions.find((item) => item.id === idDimension);
+    if (!dimension) return;
+    ouvrirCategorie(dimension.category);
+    requestAnimationFrame(() => {
+      const section = elDimensions.querySelector(`[data-dimension="${idDimension}"]`);
+      if (section) section.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
   }
 
   // ============================================================
@@ -4188,18 +4445,10 @@
     etat.categorieOuverte = null;
     document.body.dataset.vue = 'ciel';
     elPresentation.hidden = false;
+    rendreNiveauxAccueil();
+    elAuditDepart.hidden = false;
     document.getElementById('detail-retour').hidden = true;
     rendreDimensions();
-
-    if (surMobile()) {
-      elCiel.hidden = true;
-      elDetail.hidden = false;
-      // Replier ce qui était ouvert : l'accueil, c'est le choix encore entier.
-      if (etat.dimensionOuverte) basculerDimension(etat.dimensionOuverte);
-      window.scrollTo({ top: 0, behavior: 'auto' });
-      return;
-    }
-
     elDetail.hidden = true;
     elCiel.hidden = false;
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -4212,6 +4461,8 @@
     etat.categorieOuverte = categorieId;
     etat.dimensionOuverte = null;
     elPresentation.hidden = true;
+    elNiveauxAccueil.hidden = true;
+    elAuditDepart.hidden = true;
     elCiel.hidden = true;
     elDetail.hidden = false;
     document.body.dataset.vue = 'categorie';
@@ -4238,6 +4489,8 @@
     }
     etat.vue = 'detail';
     elPresentation.hidden = true;
+    elNiveauxAccueil.hidden = true;
+    elAuditDepart.hidden = true;
     elCiel.hidden = true;
     elDetail.hidden = false;
     document.body.dataset.vue = 'detail';
@@ -4257,12 +4510,22 @@
     else allerAuCiel();
   });
 
+  document.getElementById('comprendre-spherier').addEventListener('click', (event) => {
+    const contenu = document.getElementById('presentation-details');
+    const ouverte = contenu.classList.toggle('ouverte');
+    event.currentTarget.setAttribute('aria-expanded', String(ouverte));
+    event.currentTarget.textContent = ouverte
+      ? 'Refermer le mode d’emploi'
+      : 'Comprendre comment fonctionne le sphérier';
+    if (ouverte) contenu.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  });
+
   document.getElementById('audit-rdv-accueil').addEventListener('click', ouvrirReservation);
 
   elAuditCta.addEventListener('click', () => {
     const codes = ordreDeLecture(etat.referentiel.competencies).map((competence) => competence.id);
     if (codes.every((code) => (brouillon.levels[code] ?? 0) > 0)) {
-      ouvrirSelectionAudit();
+      ouvrirResultatAudit(brouillon.current.length === MAX_MAINTENANT);
       return;
     }
     ouvrirMeSituer({

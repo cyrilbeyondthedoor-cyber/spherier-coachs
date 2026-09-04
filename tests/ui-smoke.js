@@ -11,6 +11,7 @@ const {
   NIVEAU_ACQUIS,
   MAX_CIBLES_MAINTENANT,
   BOOKING_URL,
+  LEXIQUE,
 } = require('../club.config.js');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'spherier-v2.html'));
@@ -48,6 +49,7 @@ const referential = {
   scale: ECHELLE,
   limites: { maxCiblesMaintenant: MAX_CIBLES_MAINTENANT, niveauAcquis: NIVEAU_ACQUIS },
   bookingUrl: BOOKING_URL,
+  lexique: LEXIQUE,
   themes,
   competencies,
   resources: [],
@@ -105,6 +107,13 @@ const serveur = http.createServer((requete, reponse) => {
   reponse.end(html);
 });
 
+async function capturer(page, dossier, nom, options = {}) {
+  if (!dossier) return;
+  await page.addStyleTag({ content: '#bar:not(.visible) { display: none !important; }' });
+  await page.waitForTimeout(350);
+  await page.screenshot({ path: path.join(dossier, nom), ...options });
+}
+
 async function principal() {
   await new Promise((resolve) => serveur.listen(0, '127.0.0.1', resolve));
   const adresse = serveur.address();
@@ -112,28 +121,31 @@ async function principal() {
   const navigateur = await chromium.launch({ headless: true });
 
   try {
+    const screenshotDir = process.env.SCREENSHOT_DIR || null;
+    if (screenshotDir) fs.mkdirSync(screenshotDir, { recursive: true });
     const page = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
     await page.goto(url);
     await page.locator('#ciel:not([hidden])').waitFor();
 
     await page.getByRole('heading', { name: 'Le sphérier de compétences de coach' }).waitFor();
+    const comprendre = page.getByRole('button', { name: 'Comprendre comment fonctionne le sphérier' });
+    await comprendre.waitFor();
+    assert.equal(await page.locator('#presentation-details').isVisible(), false);
+    await comprendre.click();
+    await page.getByRole('heading', { name: 'À quoi sert le sphérier ?' }).waitFor();
     await page.getByRole('heading', { name: 'Comment utiliser le sphérier ?' }).waitFor();
+    await page.getByRole('button', { name: 'Consulter le lexique' }).click();
+    await page.getByRole('heading', { name: "Lexique de l'approche des Sommets" }).waitFor();
+    await page.getByText('Niveau Professionnel établi', { exact: true }).waitFor();
+    assert.equal(await page.getByText('Niveau TTC', { exact: true }).count(), 0);
+    await page.locator('#panneau-fermer').click();
+    await page.getByRole('button', { name: 'Refermer le mode d’emploi' }).click();
     await page.getByText('marque une pause toutes les 30 compétences.').waitFor();
     await page.getByRole('button', { name: 'Réserver un échange', exact: true }).waitFor();
-    const sphereAnimee = page.locator('.ciel-categorie').first();
-    await sphereAnimee.evaluate((element) => {
-      const rect = element.getBoundingClientRect();
-      element.dispatchEvent(new PointerEvent('pointermove', {
-        bubbles: true,
-        pointerType: 'mouse',
-        clientX: rect.left + rect.width * .78,
-        clientY: rect.top + rect.height * .22,
-      }));
-    });
-    await page.waitForTimeout(50);
-    assert.match(await sphereAnimee.evaluate((element) => element.style.transform), /rotateX\(.+deg\) rotateY\(.+deg\)/);
-    await sphereAnimee.dispatchEvent('pointerleave');
-    await page.waitForTimeout(50);
+    assert.equal(await page.locator('.niveau-accueil').count(), 3);
+    assert.equal(await page.getByText('Finis ton audit pour afficher ton score', { exact: true }).count(), 3);
+    assert.equal(await page.locator('#bar.visible').count(), 0);
+    await capturer(page, screenshotDir, 'accueil-desktop.png', { fullPage: true });
     await page.getByRole('button', { name: 'Commencer mon audit initial' }).dispatchEvent('click');
     const compteurAudit = page.locator('.situer-compte');
     await compteurAudit.waitFor();
@@ -142,6 +154,11 @@ async function principal() {
     await page.getByText('Je ne maîtrise pas du tout', { exact: true }).waitFor();
     await page.getByText("Je dois m'améliorer", { exact: true }).waitFor();
     await page.getByText('Je maîtrise', { exact: true }).waitFor();
+    assert.equal(await page.locator('.situer-layout .audit-mini-sphere').count(), 3);
+    await capturer(page, screenshotDir, 'audit-mini-carte-desktop.png');
+    await page.getByRole('button', { name: 'Agrandir la carte' }).click();
+    assert.equal(await page.locator('#audit-carte-overlay').isVisible(), true);
+    await page.getByRole('button', { name: 'Revenir à la question' }).click();
     await page.locator('#panneau-fermer').dispatchEvent('click');
 
     assert.equal(await page.locator('.ciel-categorie').count(), 3);
@@ -151,7 +168,7 @@ async function principal() {
       'Moi et mon activité',
     ]);
     assert.equal(await page.locator('.ciel-dimension').count(), 7);
-    const cercles = await page.locator('.ciel-categorie').evaluateAll((elements) => elements.map((element) => {
+    const territoires = await page.locator('.ciel-categorie').evaluateAll((elements) => elements.map((element) => {
       const rect = element.getBoundingClientRect();
       return {
         width: rect.width,
@@ -160,17 +177,27 @@ async function principal() {
         overflowY: element.scrollHeight - element.clientHeight,
       };
     }));
-    assert.ok(cercles.every((cercle) => Math.abs(cercle.width - cercle.height) <= 1));
-    assert.ok(cercles.every((cercle) => cercle.overflowX === 0 && cercle.overflowY === 0));
+    assert.ok(territoires.every((territoire) => territoire.height >= 380));
+    assert.ok(territoires.every((territoire) => territoire.overflowX === 0 && territoire.overflowY === 0));
+    assert.equal(await page.locator('.ciel-dimension-astre').count(), 7);
     assert.equal(await page.locator('.ciel-guide').count(), 0);
-    if (process.env.SCREENSHOT_DIR) {
-      fs.mkdirSync(process.env.SCREENSHOT_DIR, { recursive: true });
-      await page.screenshot({ path: path.join(process.env.SCREENSHOT_DIR, 'accueil-desktop.png'), fullPage: true });
-    }
-
+    await page.locator('[data-ouvrir="FON"]').dispatchEvent('click');
+    await page.locator('body[data-vue="categorie"]').waitFor({ state: 'attached' });
+    assert.equal(await page.locator('.dimension.ouverte').count(), 2);
+    assert.equal(await page.locator('.constellation').count(), 2);
+    await page.locator('#detail-retour').dispatchEvent('click');
+    await page.locator('#ciel:not([hidden])').waitFor();
     await page.locator('[data-categorie="COACH"]').dispatchEvent('click');
     await page.getByRole('heading', { name: 'Moi en tant que coach' }).waitFor();
     assert.equal(await page.locator('.dimension').count(), 2);
+    assert.equal(await page.locator('.dimension.ouverte').count(), 2);
+    assert.equal(await page.locator('.constellation').count(), 2);
+    const espacementsProgression = await page.locator('.theme-nom').evaluateAll((noms) => noms.map((nom) => {
+      const progression = nom.parentElement.querySelector('.theme-progression');
+      return progression.getBoundingClientRect().top - nom.getBoundingClientRect().bottom;
+    }));
+    assert.ok(espacementsProgression.every((espace) => espace >= 4));
+    await capturer(page, screenshotDir, 'zoom-categorie-desktop.png', { fullPage: true });
     await page.locator('[data-tab-categorie="CLIENTS"]').dispatchEvent('click');
     assert.equal(await page.locator('.dimension').count(), 3);
     await page.locator('[data-tab-categorie="COACH"]').dispatchEvent('click');
@@ -186,6 +213,11 @@ async function principal() {
     const scrollApresTheme = await page.evaluate(() => window.scrollY);
     assert.ok(Math.abs(scrollAvantTheme - scrollApresTheme) <= 1);
     await page.locator('#panneau-fermer').dispatchEvent('click');
+    assert.equal(await page.locator('.etoile[data-competence="FON-01-01"] title').textContent(), 'Je sais mobiliser la compétence FON.');
+    await page.locator('.etoile[data-competence="FON-01-01"]').dispatchEvent('pointerenter', { pointerType: 'mouse', clientX: 300, clientY: 300 });
+    await page.locator('#etoile-tooltip:not([hidden])').waitFor();
+    assert.equal(await page.locator('#etoile-tooltip').textContent(), 'Je sais mobiliser la compétence FON.');
+    await page.locator('.etoile[data-competence="FON-01-01"]').dispatchEvent('pointerleave');
     await page.locator('.etoile[data-competence="FON-01-01"]').dispatchEvent('click');
     await page.getByText('Un exemple observable pour FON.').waitFor();
     assert.equal(await page.locator('.marche[data-niveau]').count(), 3);
@@ -223,6 +255,11 @@ async function principal() {
     const resultatPage = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
     await resultatPage.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000002`);
     await resultatPage.locator('#audit-cta').dispatchEvent('click');
+    await resultatPage.getByRole('heading', { name: 'Ton sphérier en un regard' }).waitFor();
+    assert.equal(await resultatPage.locator('.carte-resultat .ciel-categorie').count(), 3);
+    assert.equal(await resultatPage.locator('.carte-resultat .niveau-accueil').count(), 3);
+    await capturer(resultatPage, screenshotDir, 'resultat-avant-priorites-desktop.png');
+    await resultatPage.getByRole('button', { name: 'Choisir mes trois priorités' }).click();
     await resultatPage.getByRole('heading', { name: 'Sélectionne tes principales zones de progression' }).waitFor();
     assert.equal(await resultatPage.locator('.audit-zone').count(), 5);
     const options = resultatPage.locator('.audit-competence');
@@ -231,16 +268,19 @@ async function principal() {
     await options.nth(2).dispatchEvent('click');
     await resultatPage.locator('#audit-suite').dispatchEvent('click');
     await resultatPage.getByRole('heading', { name: 'Ton sphérier en un regard' }).waitFor();
+    assert.equal(await resultatPage.locator('.priorite-marque').count() > 0, true);
+    await resultatPage.getByRole('button', { name: 'Ouvrir la vue d’ensemble linéaire' }).click();
     assert.equal(await resultatPage.locator('.syn-categorie-item').count(), 3);
     assert.equal(await resultatPage.locator('.syn-maitrise-item').count(), 3);
     assert.equal(await resultatPage.locator('.syn-dim').count(), 7);
     assert.equal(await resultatPage.locator('.syn-theme').count(), 7);
     assert.equal(await resultatPage.locator('.audit-priorite').count(), 3);
     assert.equal(await resultatPage.locator('[data-audit-rdv]').count(), 2);
-    await resultatPage.locator('#panneau-plein-ecran').dispatchEvent('click');
     assert.equal(await resultatPage.locator('#panneau.plein-ecran').count(), 1);
     await resultatPage.locator('#panneau-plein-ecran').dispatchEvent('click');
     assert.equal(await resultatPage.locator('#panneau.plein-ecran').count(), 0);
+    await resultatPage.locator('#panneau-plein-ecran').dispatchEvent('click');
+    assert.equal(await resultatPage.locator('#panneau.plein-ecran').count(), 1);
     assert.equal(await resultatPage.locator('#bar.visible').count(), 0);
 
     await resultatPage.locator('[data-scope-categorie="CLIENTS"]').dispatchEvent('click');
@@ -263,24 +303,26 @@ async function principal() {
     const resultatMobile = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
     await resultatMobile.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000002`);
     await resultatMobile.locator('#audit-cta').dispatchEvent('click');
-    await resultatMobile.getByRole('heading', { name: 'Sélectionne tes principales zones de progression' }).waitFor();
+    await resultatMobile.getByRole('heading', { name: 'Ton sphérier en un regard' }).waitFor();
+    await resultatMobile.getByRole('button', { name: 'Choisir mes trois priorités' }).waitFor();
     assert.ok(await resultatMobile.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
 
     const mobile = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
     await mobile.goto(url);
-    await mobile.locator('#detail:not([hidden])').waitFor();
-    await mobile.getByRole('heading', { name: 'À quoi sert le sphérier ?' }).waitFor();
-    assert.equal(await mobile.locator('.categorie-navigation').count(), 3);
-    assert.equal(await mobile.locator('.dimension').count(), 0);
-    await mobile.locator('[data-choisir-categorie="COACH"]').dispatchEvent('click');
+    await mobile.locator('#ciel:not([hidden])').waitFor();
+    await mobile.getByRole('button', { name: 'Comprendre comment fonctionne le sphérier' }).waitFor();
+    assert.equal(await mobile.getByRole('heading', { name: 'À quoi sert le sphérier ?' }).isVisible(), false);
+    assert.equal(await mobile.locator('.ciel-categorie').count(), 3);
+    assert.equal(await mobile.locator('#bar.visible').count(), 0);
+    await capturer(mobile, screenshotDir, 'accueil-mobile.png', { fullPage: true });
+    await mobile.locator('[data-categorie="COACH"]').dispatchEvent('click');
     assert.equal(await mobile.locator('.dimension').count(), 2);
+    assert.equal(await mobile.locator('.amas-mobile-piste').count(), 2);
     await mobile.locator('[data-toggle="FON"]').dispatchEvent('click');
-    await mobile.locator('.amas-mobile-piste').waitFor();
-    assert.equal(await mobile.locator('.amas-mobile').count(), 1);
+    await mobile.locator('[data-dimension="FON"].ouverte .amas-mobile-piste').waitFor();
+    assert.equal(await mobile.locator('[data-dimension="FON"].ouverte .amas-mobile').count(), 1);
     assert.equal(await mobile.locator('#ciel').isVisible(), false);
-    if (process.env.SCREENSHOT_DIR) {
-      await mobile.screenshot({ path: path.join(process.env.SCREENSHOT_DIR, 'accueil-mobile.png') });
-    }
+    await capturer(mobile, screenshotDir, 'detail-mobile.png');
 
     console.log('UI desktop, mobile et sauvegarde simulée : OK');
   } finally {
