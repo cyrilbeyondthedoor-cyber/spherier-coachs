@@ -765,6 +765,20 @@ async function principal() {
     assert.equal(await resultatPage.locator('.syn-dim').count(), 7);
     assert.equal(await resultatPage.locator('.syn-theme').count(), 8);
     assert.equal(await resultatPage.locator('.audit-priorite').count(), 3);
+    // Les cartes de la synthèse gardent leur typographie : rien du lot 7 ne les atteint.
+    const carte = await resultatPage.locator('.audit-priorite').first().evaluate((el) => {
+      const nom = el.querySelector('.audit-priorite-nom');
+      return {
+        tailleNom: getComputedStyle(nom).fontSize,
+        policeNom: getComputedStyle(nom).fontFamily,
+        paddingCarte: getComputedStyle(el).padding,
+        bordureNiveau: getComputedStyle(el.querySelector('.audit-priorite-niveau')).borderTopWidth,
+      };
+    });
+    assert.equal(carte.tailleNom, '17px', 'le titre de la carte garde sa taille');
+    assert.ok(carte.policeNom.includes('Cormorant'), 'et sa police');
+    assert.equal(carte.paddingCarte, '13px 15px');
+    assert.equal(carte.bordureNiveau, '0px', 'la ligne de niveau n\'est pas une pastille bordée');
     assert.equal(await resultatPage.locator('[data-audit-rdv]').count(), 2);
     assert.equal(await resultatPage.locator('#panneau.plein-ecran').count(), 1);
     await resultatPage.locator('#panneau-plein-ecran').dispatchEvent('click');
