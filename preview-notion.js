@@ -90,10 +90,15 @@ async function principal() {
         // navigateur renvoie toujours l'état complet.
         levels = { ...levels, ...blob.levels };
         selections = blob.selections;
+        // Mêmes noms de champs que la ligne renvoyée par Supabase en production
+        // (`id, client_id, libelle, cree_le, blob`, voir `snapshot-v2.js`). Avec
+        // `created_at` et `label`, le navigateur lisait `snapshot.cree_le` indéfini et
+        // l'accueil affichait « Dernier point enregistré : Point du Invalid Date ».
         snapshot = {
           id: `preview-${Date.now()}`,
-          created_at: new Date().toISOString(),
-          label: libelle,
+          client_id: CLIENT_ID,
+          libelle,
+          cree_le: new Date().toISOString(),
           blob: { ...blob, levels, selections },
         };
         return json(reponse, composerEtat({ referentiel, snapshot }), 201);
