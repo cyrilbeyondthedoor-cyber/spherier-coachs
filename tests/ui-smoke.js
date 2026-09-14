@@ -1379,8 +1379,9 @@ async function principal() {
     // --- « M'évaluer sur cette dimension » depuis le zoom de catégorie ----------
     // Ce bouton ouvrait les compétences de la dimension d'un bloc, hors du parcours
     // modulaire : aucune frontière de thématique, donc aucun enregistrement, et l'écran
-    // « Rien n'est encore enregistré » au bout. Il passe maintenant par
-    // `evaluerDimension`, comme « Évaluer toute la dimension ».
+    // « Rien n'est encore enregistré » au bout. Il ouvre maintenant le mode « dimension
+    // d'un coup » : une seule liste pour toute la dimension, un enregistrement silencieux
+    // à chaque frontière de thématique, et le résultat de dimension au bout.
     const avantZoom = nbSnapshots;
     const zoom = await navigateur.newPage({ viewport: { width: 1280, height: 700 } });
     await zoom.goto(url);
@@ -1395,23 +1396,41 @@ async function principal() {
     await zoom.locator(`#ciel [data-explorer-categorie="${DIM_MULTI.category}"]`).dispatchEvent('click');
     await zoom.locator(`[data-situer="${DIM_MULTI.id}"]:visible`).first().dispatchEvent('click');
     await zoom.locator('body[data-panneau="situer"]').waitFor({ state: 'attached' });
-    // Le contexte de thématique est là : sous-compteur présent et compteur borné à la
-    // thématique, pas à la dimension entière.
+    // Le compteur couvre la dimension entière, et le sous-compteur dit dans quelle
+    // thématique on se trouve. La première compétence porte son intertitre de chapitre.
     await zoom.locator('.audit-sous-compteur', { hasText: /^Thématique 1 \/ 2 de / }).waitFor();
-    for (const rang of [1, 2, 3, 4]) {
-      await zoom.locator('.situer-compte', { hasText: `${rang} / 4` }).waitFor();
+    await zoom.locator('.situer-compte', { hasText: '1 / 6' }).waitFor();
+    assert.match(await zoom.locator('.situer-chapitre').textContent(),
+      new RegExp(`^Thématique 1 / 2 · Thématique ${DIM_MULTI.id}$`));
+    for (const rang of [1, 2, 3, 4, 5, 6]) {
+      await zoom.locator('.situer-compte', { hasText: `${rang} / 6` }).waitFor();
+      // Au passage d'une thématique à la suivante, l'intertitre annonce le chapitre.
+      if (rang === 5) {
+        await zoom.locator('.audit-sous-compteur', { hasText: /^Thématique 2 \/ 2 de / }).waitFor();
+        assert.match(await zoom.locator('.situer-chapitre').textContent(),
+          new RegExp(`^Thématique 2 / 2 · Seconde thématique ${DIM_MULTI.id}$`));
+      }
+      // Ailleurs, aucun intertitre : le chapitre ne se répète pas à chaque compétence.
+      if (rang === 2 || rang === 6) assert.equal(await zoom.locator('.situer-chapitre').count(), 0);
       await zoom.locator('.marche[data-niveau="2"]').dispatchEvent('click');
     }
-    await zoom.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
-    assert.equal(nbSnapshots - avantZoom, 1,
-      'la fin de thématique lancée depuis le zoom de catégorie doit enregistrer');
+    // Pas d'écran de résultat de thématique en chemin : la dimension va au bout d'un
+    // trait, puis s'ouvre sur son résultat.
+    await zoom.getByRole('heading', { name: 'Résultat de la dimension' }).waitFor();
+    assert.equal(nbSnapshots - avantZoom, 2,
+      'un enregistrement à la frontière de thématique, un à la fin de la dimension');
+    // La section priorités est alimentée par les compétences les plus faibles : aucune
+    // priorité de thématique n'a pu être cochée, elles arrivent donc toutes « proposée ».
+    await zoom.locator('#priorites-dimension').waitFor();
+    assert.equal(await zoom.locator('#priorites-dimension .prio-proposee').count(), 3);
+    assert.equal(await zoom.locator('#priorites-dimension .prio-case:checked').count(), 3,
+      'trois propositions, donc trois cases déjà cochées à confirmer');
 
     // Le bandeau de confirmation se pose sous l'en-tête du panneau : il recouvrait le
-    // titre « Résultat de la thématique », le fil d'Ariane et la croix de fermeture
-    // pendant ses quatre secondes. Et il annonce la thématique, pas la fin de la visite.
+    // titre, le fil d'Ariane et la croix de fermeture pendant ses quatre secondes.
     await zoom.locator('.bandeau.visible').waitFor();
     assert.match(await zoom.locator('.bandeau.visible b').textContent(),
-      /^Thématique enregistrée · \d+ % de maîtrise$/);
+      /^Dimension enregistrée · \d+ % de maîtrise$/);
     const bandeauVsTete = await zoom.evaluate(() => {
       const b = document.getElementById('bandeau').getBoundingClientRect();
       const t = document.getElementById('panneau-tete').getBoundingClientRect();
