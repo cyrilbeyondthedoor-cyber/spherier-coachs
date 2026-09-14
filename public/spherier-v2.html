@@ -2076,6 +2076,29 @@
     .encourage-boutons { flex-direction: column; align-items: stretch; }
     .tinder-clavier { display: none; }
   }
+  /* --- 6.3 Encouragement à finir la dimension ---------------------------------
+     Le score d'une thématique ne dit rien de la dimension : la barre segmentée replace
+     ce score dans sa carte et nomme ce qui manque. */
+  .encourage-dimension {
+    display: grid; gap: 7px; padding: 13px 15px;
+    border: 1px solid color-mix(in srgb, var(--h) 28%, transparent); border-radius: 12px;
+    background: color-mix(in srgb, var(--h) 6%, transparent);
+  }
+  .encourage-progression { color: var(--paper-dim); font-size: 13px; line-height: 1.45; }
+  .encourage-barre { display: flex; gap: 4px; }
+  .encourage-segment {
+    flex: 1; height: 5px; border-radius: 3px;
+    background: var(--line-faint); transition: background .22s ease;
+  }
+  .encourage-segment.faite { background: var(--h); }
+  .encourage-suite { color: var(--stone); font-size: 13px; line-height: 1.45; }
+
+  /* Le premier choix de Poursuivre prend la teinte de la dimension : c'est le geste
+     que le parcours recommande, il doit se voir avant les trois autres. */
+  .poursuivre-primaire.audit-suite-choix.principal {
+    border-color: var(--h); background: color-mix(in srgb, var(--h) 20%, transparent);
+  }
+  .poursuivre-primaire.audit-suite-choix.principal:hover { background: color-mix(in srgb, var(--h) 30%, transparent); }
 </style>
 </head>
 <body>
@@ -4403,6 +4426,14 @@
 
   const themesComplets = () => etat.referentiel.themes.filter((theme) => etatTheme(theme).complete);
 
+  // Ce qu'il reste à faire dans une thématique, en compétences et en minutes. 20 s par
+  // compétence, arrondi à la minute : annoncer « 2 min 40 » promettrait une précision
+  // que personne ne tient. Une passée compte comme restante, elle est encore à situer.
+  function resteDeTheme(theme) {
+    const restants = codesDeTheme(theme.id).filter((code) => !estEvaluee(code)).length;
+    return { restants, minutes: Math.max(1, Math.round((restants * 20) / 60)) };
+  }
+
   // Mention de score d'un territoire de la carte : la part maîtrisée de ce qui a été
   // évalué, et sur combien de thématiques elle repose. Rapportée au total des
   // compétences, une dimension à peine entamée afficherait un score d'échec ; attendre
@@ -4752,6 +4783,12 @@
       // clic avait fait quelque chose.
       attendreEnregistrement(theme);
       enregistrement = (await enregistrer(libelleAuto)) ? 'ok' : 'echec';
+      // Le bandeau posé par `enregistrer` est générique : on le réécrit avec le score,
+      // pour que la maîtrise se lise à l'instant où la thématique se referme.
+      if (enregistrement === 'ok' && theme) {
+        bandeau(`Thématique enregistrée · ${etatTheme(theme).score} % de maîtrise`,
+          'Tes réponses sont en sécurité. Tu peux continuer ou t\'arrêter là.', 'succes');
+      }
     }
     ouvrirResultatTheme({ dimensionId, themeId, suite, enregistrement, libelleAuto });
   }
@@ -4805,7 +4842,10 @@
 
     const choix = [
       suivante
-        ? `<button type="button" class="audit-suite-choix principal" data-suite="continuer">Continuer avec la suite de cette dimension<small>${echapper(suivante.name)}</small></button>`
+        ? (() => {
+          const reste = resteDeTheme(suivante);
+          return `<button type="button" class="audit-suite-choix principal poursuivre-primaire" data-suite="continuer" style="--h:${echapper(TEINTES_HEX[dimension.id] || '#c9a661')}">Continuer avec la suite de cette dimension<small>${echapper(suivante.name)} · ~${reste.restants} compétence${reste.restants > 1 ? 's' : ''}, environ ${reste.minutes} min</small></button>`;
+        })()
         : '',
       suiteCategorie
         ? `<button type="button" class="audit-suite-choix${suivante ? '' : ' principal'}" data-suite="categorie">Continuer avec la suite de cette catégorie<small>${echapper(suiteCategorie.dimension.name)} · ${suiteCategorie.reste} dimension${suiteCategorie.reste > 1 ? 's' : ''} restante${suiteCategorie.reste > 1 ? 's' : ''}</small></button>`
@@ -4841,6 +4881,24 @@
         else { majAuditInitial(); fermerPanneau(); }
       });
     });
+  }
+
+  // Une thématique finie ne dit rien de la dimension : ce bloc replace le score dans sa
+  // carte, un segment par thématique, et nomme ce qui manque encore pour la compléter.
+  function progressionDimensionHtml(dimension, teinte) {
+    const info = etatDimension(dimension);
+    const complets = info.themes.filter((item) => item.complete).length;
+    const total = info.themes.length;
+    const restants = total - complets;
+    const segments = info.themes.map((item) => `<i class="encourage-segment${item.complete ? ' faite' : ''}"></i>`).join('');
+    const phrase = restants === 0
+      ? 'Dimension complète ! Tu peux voir ton résultat de dimension.'
+      : `Encore ${restants} thématique${restants > 1 ? 's' : ''} et tu auras ta carte complète de ${echapper(dimension.name)}.`;
+    return `<div class="encourage-dimension" style="--h:${echapper(teinte)}">
+      <p class="encourage-progression">${echapper(dimension.name)} : ${complets} thématique${complets > 1 ? 's' : ''} sur ${total} évaluée${complets > 1 ? 's' : ''}</p>
+      <span class="encourage-barre" aria-hidden="true">${segments}</span>
+      <p class="encourage-suite">${phrase}</p>
+    </div>`;
   }
 
   // --- Écran « Résultat de la thématique » --------------------------------------
@@ -4882,6 +4940,7 @@
         <h3 class="audit-bilan-nom">${echapper(theme.name)}</h3>
         <p class="audit-bilan-score">${pctHtml(info.score)} de maîtrise</p>
       </div>
+      ${progressionDimensionHtml(dimension, teinte)}
       ${repartition(info.codes, teinte)}
       <dl class="audit-bilan-chiffres">
         <div class="audit-bilan-chiffre"><dt>Compétences</dt><dd>${info.codes.length}</dd></div>
@@ -4908,7 +4967,7 @@
       <aside class="audit-bilan-suite">${dimensionBouclee
         ? `<div class="audit-poursuivre">
             <p class="audit-poursuivre-titre">Dimension terminée</p>
-            <div class="audit-suites"><button type="button" class="audit-suite-choix principal" id="audit-voir-dimension">Voir le résultat de ${echapper(dimension.name)}<small>Toutes ses thématiques sont complètes</small></button></div>
+            <div class="audit-suites"><button type="button" class="audit-suite-choix principal poursuivre-primaire" id="audit-voir-dimension" style="--h:${echapper(teinte)}">Voir mon résultat de dimension<small>${echapper(dimension.name)} · toutes ses thématiques sont complètes</small></button></div>
           </div>`
         : blocPoursuivreHtml(dimension, suite)}</aside>
     </div></div>`);

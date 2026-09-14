@@ -373,6 +373,20 @@ async function principal() {
     await page.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
     await page.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
     assert.equal((await page.locator('.audit-bilan-score .syn-pct').textContent()).trim(), '50 %');
+
+    // --- Lot 6.3 : la thématique finie replace le score dans sa dimension -------
+    assert.equal((await page.locator('.encourage-progression').textContent()).trim(),
+      `${DIM_MULTI.name} : 1 thématique sur 2 évaluée`);
+    assert.equal(await page.locator('.encourage-segment').count(), 2);
+    assert.equal(await page.locator('.encourage-segment.faite').count(), 1);
+    assert.equal((await page.locator('.encourage-suite').textContent()).trim(),
+      `Encore 1 thématique et tu auras ta carte complète de ${DIM_MULTI.name}.`);
+    // Le premier choix de Poursuivre nomme la thématique suivante et son coût.
+    const primaire = page.locator('.audit-suite-choix.principal');
+    assert.equal(await primaire.count(), 1);
+    assert.match(await primaire.textContent(), /^Continuer avec la suite de cette dimension/);
+    assert.equal((await primaire.locator('small').textContent()).trim(),
+      `Seconde thématique ${DIM_MULTI.id} · ~2 compétences, environ 1 min`);
     assert.deepEqual(dernierSnapshot.audit.passees, [`${DIM_MULTI.id}-01-04`],
       'la compétence passée part bien dans le payload');
     assert.match(dernierSnapshot.label, /^Thématique FON, \d+ \S+ \d{4}$/,
@@ -851,7 +865,7 @@ async function principal() {
 
     // Les deux thématiques sont complètes : le résultat de la dimension s'intercale
     // avant l'écran de suite.
-    await mobile.getByRole('button', { name: /^Voir le résultat de/ }).click();
+    await mobile.getByRole('button', { name: /^Voir mon résultat de dimension/ }).click();
     await mobile.locator('body[data-panneau="resultat-dimension"]').waitFor({ state: 'attached' });
     await mobile.getByRole('heading', { name: 'Résultat de la dimension' }).waitFor();
     assert.equal(await mobile.locator('.audit-classement-ligne').count(), 2);
@@ -943,7 +957,12 @@ async function principal() {
     await annulation.locator('.situer-compte', { hasText: '2 / 2' }).waitFor();
     await annulation.locator('.marche[data-niveau="2"]').dispatchEvent('click');
     await annulation.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
-    await annulation.getByRole('button', { name: /^Voir le résultat de/ }).click();
+    assert.equal((await annulation.locator('.encourage-progression').textContent()).trim(),
+      `${DIM_MULTI.name} : 2 thématiques sur 2 évaluées`);
+    assert.equal((await annulation.locator('.encourage-suite').textContent()).trim(),
+      'Dimension complète ! Tu peux voir ton résultat de dimension.');
+    assert.equal(await annulation.locator('.encourage-segment.faite').count(), 2);
+    await annulation.getByRole('button', { name: /^Voir mon résultat de dimension/ }).click();
     await annulation.locator('body[data-panneau="resultat-dimension"]').waitFor({ state: 'attached' });
     await annulation.getByRole('heading', { name: 'Résultat de la dimension' }).waitFor();
 
@@ -1058,7 +1077,8 @@ async function principal() {
     // titre « Résultat de la thématique », le fil d'Ariane et la croix de fermeture
     // pendant ses quatre secondes. Et il annonce la thématique, pas la fin de la visite.
     await zoom.locator('.bandeau.visible').waitFor();
-    assert.match(await zoom.locator('.bandeau.visible b').textContent(), /Thématique enregistrée/);
+    assert.match(await zoom.locator('.bandeau.visible b').textContent(),
+      /^Thématique enregistrée · \d+ % de maîtrise$/);
     const bandeauVsTete = await zoom.evaluate(() => {
       const b = document.getElementById('bandeau').getBoundingClientRect();
       const t = document.getElementById('panneau-tete').getBoundingClientRect();
@@ -1300,7 +1320,7 @@ async function principal() {
       await categorie.locator('.marche[data-niveau="3"]').dispatchEvent('click');
     }
     await categorie.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
-    await categorie.getByRole('button', { name: /^Voir le résultat de/ }).click();
+    await categorie.getByRole('button', { name: /^Voir mon résultat de dimension/ }).click();
     await categorie.locator('body[data-panneau="resultat-dimension"]').waitFor({ state: 'attached' });
     const suiteCategorie = categorie.locator('[data-suite="categorie"]');
     await suiteCategorie.waitFor();
