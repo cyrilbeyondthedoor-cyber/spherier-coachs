@@ -2194,8 +2194,10 @@
   function majAvancements() {
     etat.referentiel.dimensions.forEach((d) => {
       const codes = codesDeDimension(d);
-      const situees = codes.filter((c) => (brouillon.levels[c] ?? 0) > 0).length;
-      const progression = progressionCodes(codes);
+      const situees = codes.filter(estEvaluee).length;
+      // Ces libellés sont écrits deux fois, ici et dans `rendreDimensions` : ils doivent
+      // dire la même chose, sinon un simple clic les fait diverger sous les yeux du membre.
+      const mention = mentionScoreCiel(codes, themesDeDimension(d));
       // Même règle que dans le ciel : au premier jour, un « 0 / 51 » fait constat là
       // où il faut une invitation. C'est aussi l'accueil du mobile, donc le premier
       // écran d'un membre qui vient de payer — l'en-tête dit déjà le nombre total.
@@ -2203,9 +2205,9 @@
       elDimensions.querySelectorAll(`[data-entree="${d.id}"]`)
         .forEach((el) => { el.textContent = libelle; });
       elDimensions.querySelectorAll(`[data-avancement="${d.id}"]`)
-        .forEach((el) => { el.textContent = `${progression.pourcentage} % maîtrisées · ${situees} / ${codes.length} évaluées`; });
+        .forEach((el) => { el.textContent = `${mention.texte} · ${mention.comptes}`; });
       elDimensions.querySelectorAll(`[data-progression-dim="${d.id}"]`)
-        .forEach((el) => { el.textContent = `${progression.pourcentage} % maîtrisées`; });
+        .forEach((el) => { el.textContent = mention.texte; });
     });
   }
 
@@ -2229,13 +2231,12 @@
     if (!categorieId) {
       elDimensions.innerHTML = `<div class="categories-navigation">${CATEGORIES.map((categorie) => {
         const codes = codesDeCategorie(categorie.id);
-        const progression = progressionCodes(codes);
-        const evaluees = codes.filter((code) => (brouillon.levels[code] ?? 0) > 0).length;
+        const mention = mentionScoreCiel(codes, themesDeCategorie(categorie.id));
         const nombreDimensions = etat.referentiel.dimensions.filter((dimension) => dimension.category === categorie.id).length;
         return `<button type="button" class="categorie-navigation" data-choisir-categorie="${echapper(categorie.id)}" style="--cc:${categorie.couleur || '#c9a661'}">
           <h2>${echapper(categorie.name)}</h2>
           <p>${echapper(categorie.definition || '')}</p>
-          <small>${progression.pourcentage} % maîtrisées · ${evaluees}/${codes.length} évaluées · ${nombreDimensions} dimensions</small>
+          <small>${echapper(mention.texte)} · ${mention.comptes} · ${nombreDimensions} dimensions</small>
         </button>`;
       }).join('')}</div>`;
       elDimensions.querySelectorAll('[data-choisir-categorie]').forEach((bouton) => {
@@ -2247,21 +2248,21 @@
     const categorie = CATEGORIES.find((item) => item.id === categorieId);
     const dimensionsCategorie = etat.referentiel.dimensions.filter((dimension) => dimension.category === categorieId);
     const codesCategorie = codesDeCategorie(categorieId);
-    const progressionCategorie = progressionCodes(codesCategorie);
-    const evalueesCategorie = codesCategorie.filter((code) => (brouillon.levels[code] ?? 0) > 0).length;
-    const auditComplet = auditEstComplet();
+    // Même règle que la carte de synthèse : le score paraît dès qu'une thématique est
+    // complète, calculé sur ce qui a été évalué. Le zoom gardait l'ancien verrou et
+    // n'affichait aucun pourcentage là où l'écran précédent en montrait.
+    const mentionCategorie = mentionScoreCiel(codesCategorie, themesDeCategorie(categorieId));
     const carteDimension = (d) => {
       const themes = etat.referentiel.themes.filter((t) => t.dimension === d.name);
       const competences = competencesDeDimension(d);
-      const progression = progressionCodes(competences.map((competence) => competence.id));
-      const evaluees = competences.filter((competence) => (brouillon.levels[competence.id] ?? 0) > 0).length;
+      const mention = mentionScoreCiel(competences.map((competence) => competence.id), themes);
       return `
         <section class="dimension ouverte" data-dimension="${echapper(d.id)}" style="--teinte: ${TEINTES[d.id] || 'var(--paper)'}">
           <button type="button" class="dimension-entete" aria-expanded="true" data-toggle="${echapper(d.id)}">
             <span class="dimension-astre">${astreDimension(d.id)}</span>
             <span>
               <span class="dimension-nom">${echapper(d.name)}</span>
-              <span class="dimension-compte"><span data-progression-dim="${echapper(d.id)}">${progression.pourcentage} % maîtrisées</span> · ${evaluees}/${competences.length} évaluées · ${themes.length} thématiques</span>
+              <span class="dimension-compte"><span data-progression-dim="${echapper(d.id)}">${echapper(mention.texte)}</span> · ${mention.comptes}</span>
             </span>
             <span class="dimension-chevron">▾</span>
           </button>
@@ -2284,12 +2285,15 @@
     };
 
     elDimensions.innerHTML = `<nav class="categorie-tabs" aria-label="Macro-catégories">
-      ${CATEGORIES.map((item) => `<button type="button" class="categorie-tab${item.id === categorieId ? ' active' : ''}" data-tab-categorie="${echapper(item.id)}" style="--cc:${item.couleur || '#c9a661'}">${echapper(item.name)}${auditComplet ? pctHtml(progressionCodes(codesDeCategorie(item.id)).pourcentage) : ''}</button>`).join('')}
+      ${CATEGORIES.map((item) => `<button type="button" class="categorie-tab${item.id === categorieId ? ' active' : ''}" data-tab-categorie="${echapper(item.id)}" style="--cc:${item.couleur || '#c9a661'}">${echapper(item.name)}${(() => {
+        const pct = mentionScoreCiel(codesDeCategorie(item.id), themesDeCategorie(item.id)).pct;
+        return pct === null ? '' : pctHtml(pct);
+      })()}</button>`).join('')}
     </nav><section class="categorie-dimensions">
       <div class="categorie-detail-entete">
         <h2>${echapper(categorie?.name || '')}</h2>
         <p>${echapper(categorie?.definition || '')}</p>
-        <small>${auditComplet ? `${progressionCategorie.pourcentage} % maîtrisées · ` : ''}${evalueesCategorie}/${codesCategorie.length} évaluées · ${dimensionsCategorie.length} dimensions</small>
+        <small>${echapper(mentionCategorie.texte)} · ${mentionCategorie.comptes} · ${dimensionsCategorie.length} dimensions</small>
       </div>
       <div class="categorie-dimensions-liste">${dimensionsCategorie.map(carteDimension).join('')}</div>
     </section>`;
@@ -3754,12 +3758,31 @@
   function mentionScoreCiel(codes, themes) {
     const evaluees = codes.filter(estEvaluee);
     const complets = themes.filter((theme) => etatTheme(theme).complete).length;
-    if (evaluees.length === 0) return { compte: 'Pas encore évalué', score: '' };
-    const compte = `${evaluees.length}/${codes.length} évaluées`;
-    if (complets === 0) return { compte, score: '' };
+    const comptes = `${evaluees.length}/${codes.length} évaluées`;
+    if (evaluees.length === 0) {
+      return { pct: null, texte: 'Pas encore évalué', comptes, compte: 'Pas encore évalué', score: '' };
+    }
+    if (complets === 0) {
+      return { pct: null, texte: 'Score à la fin de la thématique', comptes, compte: comptes, score: '' };
+    }
     const maitrisees = evaluees.filter((code) => brouillon.levels[code] >= NIVEAU_ACQUIS).length;
     const pct = Math.round((maitrisees / evaluees.length) * 100);
-    return { compte, score: `<b class="ciel-score">${pct} %</b> maîtrisées sur ${complets}/${themes.length} thématiques · ` };
+    const suite = `maîtrisées sur ${complets}/${themes.length} thématiques`;
+    return {
+      pct,
+      texte: `${pct} % ${suite}`,
+      comptes,
+      compte: comptes,
+      score: `<b class="ciel-score">${pct} %</b> ${suite} · `,
+    };
+  }
+
+  // Thématiques d'une catégorie, pour compter celles qui sont complètes.
+  function themesDeCategorie(categorieId) {
+    const noms = new Set(etat.referentiel.dimensions
+      .filter((dimension) => dimension.category === categorieId)
+      .map((dimension) => dimension.name));
+    return etat.referentiel.themes.filter((theme) => noms.has(theme.dimension));
   }
 
   function dimensionParId(dimensionId) {

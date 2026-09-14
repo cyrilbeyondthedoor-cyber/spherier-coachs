@@ -134,7 +134,7 @@ const serveur = http.createServer((requete, reponse) => {
         maj: new Date().toISOString(),
       };
       return json(reponse, {
-        snapshot: { id: 'snapshot-relu', created_at: new Date().toISOString(), label: null,
+        snapshot: { id: 'snapshot-relu', cree_le: new Date().toISOString(), libelle: dernierSnapshot.label || null,
           blob: { levels: dernierSnapshot.levels, selections: dernierSnapshot.selections, audit } },
         audit,
         computed: { levels: { ...niveauxVides, ...dernierSnapshot.levels }, themes: etatThemes },
@@ -176,8 +176,8 @@ const serveur = http.createServer((requete, reponse) => {
       const repondre = () => json(reponse, {
         snapshot: {
           id: 'snapshot-test',
-          created_at: new Date().toISOString(),
-          label: null,
+          cree_le: new Date().toISOString(),
+          libelle: dernierSnapshot.label || null,
           blob: {
             levels: dernierSnapshot.levels,
             selections: dernierSnapshot.selections,
@@ -477,7 +477,26 @@ async function principal() {
     // Un territoire dont rien n'est évalué le dit, au lieu d'afficher 0 %.
     assert.ok(await page.locator('.carte-resultat .ciel-dimension-compte', { hasText: 'Pas encore évalué' }).count() >= 1);
     await capturer(page, screenshotDir, 'synthese-partielle-desktop.png');
+
+    // Le zoom de catégorie doit dire exactement la même chose que la carte : deux
+    // écrans qui s'enchaînent et se contredisaient sur un audit partiel, l'un annonçant
+    // un score et l'autre rien.
+    const scoreCarte = (await page.locator('.carte-resultat [data-ouvrir="FON"] .ciel-dimension-compte')
+      .textContent()).trim();
+    assert.match(scoreCarte, /^\d+ % maîtrisées sur 1\/2 thématiques · \d+\/6 évaluées$/);
     await page.locator('#panneau-fermer').dispatchEvent('click');
+    await page.locator('#ciel [data-explorer-categorie="COACH"]').dispatchEvent('click');
+    await page.locator('[data-dimension="FON"]').waitFor();
+    const scoreZoom = (await page.locator('.dimension[data-dimension="FON"] .dimension-compte')
+      .textContent()).trim();
+    assert.equal(scoreZoom, scoreCarte,
+      'le zoom de catégorie et la carte affichent le même score');
+    // Le pourcentage remonte aussi sur l'onglet de la catégorie et sur son en-tête.
+    assert.equal(await page.locator('[data-tab-categorie="COACH"] .syn-pct').count(), 1);
+    await page.locator('.categorie-detail-entete small', { hasText: 'maîtrisées sur 1/3 thématiques' }).waitFor();
+    await capturer(page, screenshotDir, 'zoom-categorie-partiel-desktop.png');
+    await page.locator('#detail-retour').dispatchEvent('click');
+    await page.locator('#ciel:not([hidden])').waitFor();
 
     const publicPage = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
     await publicPage.goto(`http://127.0.0.1:${adresse.port}/`);
