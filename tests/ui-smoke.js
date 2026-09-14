@@ -204,7 +204,7 @@ async function principal() {
     await page.getByRole('button', { name: 'Réserver un échange', exact: true }).waitFor();
     assert.equal(await page.locator('#audit-synthese').isVisible(), false, 'pas de synthèse tant qu\'aucune thématique n\'est complète');
     assert.equal(await page.locator('.niveau-accueil').count(), 3);
-    assert.equal(await page.getByText('Finis ton audit pour afficher ton score', { exact: true }).count(), 3);
+    assert.equal(await page.getByText('Évalue au moins une thématique pour voir ton score', { exact: true }).count(), 3);
     assert.equal(await page.locator('#bar.visible').count(), 0);
     await capturer(page, screenshotDir, 'accueil-desktop.png', { fullPage: true });
 
@@ -393,6 +393,9 @@ async function principal() {
     await page.locator('#detail-retour').dispatchEvent('click');
     await page.locator('#detail-retour').dispatchEvent('click');
     await page.locator('#audit-synthese:not([hidden])').waitFor();
+    assert.equal(await page.getByText('Évalue au moins une thématique pour voir ton score').count(), 0,
+      'le score des niveaux ne dépend plus d\'un audit terminé');
+    await page.getByText('maîtrisées sur 1 thématique évaluée sur 8', { exact: false }).first().waitFor();
     await page.locator('#audit-synthese').dispatchEvent('click');
     await page.getByRole('heading', { name: 'Ton sphérier en un regard' }).waitFor();
     await page.getByText('sur 8 évaluée', { exact: false }).waitFor();

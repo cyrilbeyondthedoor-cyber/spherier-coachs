@@ -2127,15 +2127,27 @@
 
   function contenuNiveauxAccueil(interactif = true) {
     const complet = auditEstComplet();
+    // Le score apparaît dès qu'une thématique est complète, comme la synthèse. Il se
+    // lit sur ce qui a été évalué et non sur les 192 compétences : rapporté au total,
+    // un audit à moitié fait ressemblerait à une pratique à moitié maîtrisée.
+    const complets = themesComplets().length;
+    const totalThemes = etat.referentiel.themes.length;
+    const lisible = complet || complets > 0;
     const contenu = DIFFICULTES_ORDRE.map((d) => {
       const comps = etat.referentiel.competencies.filter((competence) => competence.difficulty === d.nom);
       const evaluees = comps.filter((competence) => (brouillon.levels[competence.id] ?? 0) > 0).length;
       const maitrisees = comps.filter((competence) => (brouillon.levels[competence.id] ?? 0) >= NIVEAU_ACQUIS).length;
-      const pct = comps.length ? Math.round((maitrisees / comps.length) * 100) : 0;
+      // Sur un audit terminé, les deux dénominateurs se rejoignent : le chiffre ne
+      // saute donc pas au moment où la dernière thématique se ferme.
+      const pct = evaluees ? Math.round((maitrisees / evaluees) * 100) : 0;
+      let score = 'Évalue au moins une thématique pour voir ton score';
+      if (lisible && evaluees === 0) score = 'Rien d\'évalué encore à ce niveau';
+      else if (complet) score = `${pct} % maîtrisées`;
+      else if (lisible) score = `${pct} % maîtrisées sur ${complets} thématique${complets > 1 ? 's' : ''} évaluée${complets > 1 ? 's' : ''} sur ${totalThemes}`;
       return `<button type="button" class="niveau-accueil" data-niveau-accueil="${echapper(d.nom)}" style="--dc:${echapper(d.couleur)}"${interactif ? '' : ' tabindex="-1"'}>
         <span class="niveau-accueil-nom">${echapper(d.nom)}</span>
-        <span class="niveau-accueil-score">${complet ? `${pct} % maîtrisées` : 'Finis ton audit pour afficher ton score'}</span>
-        <span class="niveau-accueil-meta">${evaluees}/${comps.length} évaluées${complet ? ' · ouvrir le détail' : ''}</span>
+        <span class="niveau-accueil-score">${score}</span>
+        <span class="niveau-accueil-meta">${evaluees}/${comps.length} évaluées${lisible ? ' · ouvrir le détail' : ''}</span>
       </button>`;
     }).join('');
     return `<p class="niveaux-accueil-repere">Progression par niveau de compétence</p><div class="niveaux-accueil-grille">${contenu}</div>`;
