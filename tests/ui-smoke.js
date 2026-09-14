@@ -36,7 +36,7 @@ const competencies = DIMENSIONS.map((dimension, index) => ({
   // Un mot du lexique dans l'énoncé et un autre dans les marqueurs : le renvoi au
   // lexique doit fonctionner aux deux endroits où le membre lit du texte.
   statement: `Je sais provoquer la bascule* sur la compétence ${dimension.id}.`,
-  markers: `Un exemple observable pour ${dimension.id}. Tu sais suivre les fils*.`,
+  markers: `Un exemple observable pour ${dimension.id}. Tu sais suivre les fils* et tenir l'ancrage*.`,
   difficulty: DIFFICULTES[index % DIFFICULTES.length].nom,
   order: 1,
   resources: [],
@@ -236,8 +236,11 @@ async function principal() {
     // Renvois au lexique : le mot astérisqué devient un bouton, son clic ouvre la
     // définition sur place, et l'infobulle mène au lexique complet.
     assert.equal(await page.locator('.panneau-def .lex-mot').textContent(), 'bascule*');
-    const motFils = page.locator('.marche-enonce .lex-mot');
+    const motFils = page.locator('.marche-enonce .lex-mot').first();
     assert.equal(await motFils.textContent(), 'fils*');
+    // Élision : seul « ancrage » est souligné, l'article reste du texte courant.
+    assert.deepEqual(await page.locator('.marche-enonce .lex-mot').allTextContents(), ['fils*', 'ancrage*']);
+    assert.match(await page.locator('.marche-enonce').textContent(), /tenir l'ancrage\*\.$/);
     await motFils.click();
     await page.locator('.lex-bulle[role="dialog"]').waitFor();
     assert.equal(await page.locator('.lex-bulle-terme').textContent(), 'Fils');
