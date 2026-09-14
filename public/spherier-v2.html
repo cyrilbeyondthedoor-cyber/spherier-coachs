@@ -2261,6 +2261,18 @@
   @media (prefers-reduced-motion: reduce) {
     .audit-chevron, .audit-classement-bloc { transition: none; }
   }
+  /* --- 8.1 La touche du clavier, sur la marche ---------------------------------
+     L'astuce du pied disait le raccourci, elle ne disait pas quel chiffre va où. La
+     touche se lit sur la marche, discrète, en relief léger. */
+  .marche-clavier { grid-template-columns: 30px 1fr auto; }
+  .marche-touche {
+    align-self: center; min-width: 22px; padding: 1px 6px 2px;
+    border: 1px solid var(--line-faint); border-bottom-width: 2px; border-radius: 5px;
+    background: rgba(240, 235, 224, .045); color: var(--stone);
+    font-family: 'Inter Tight', sans-serif; font-size: 11px; font-style: normal;
+    line-height: 1.5; text-align: center;
+  }
+  .marche-actuelle .marche-touche { border-color: color-mix(in srgb, var(--teinte-p) 45%, transparent); color: var(--paper-dim); }
 </style>
 </head>
 <body>
@@ -3945,17 +3957,23 @@
     // tout ». Un escalier se monte, et son sommet se lit en premier. Le rang des
     // touches ne bouge pas : 1 reste le bas, 3 reste le haut, et la sélection passe
     // toujours par `data-niveau`, jamais par une position.
+    // La touche du clavier se montre là où elle sert : pendant l'évaluation, sur un
+    // écran large. Sur la fiche ouverte depuis la carte, le raccourci n'existe pas — y
+    // dessiner une touche promettrait un geste qui ne répond pas.
+    const clavierVisible = Boolean(situer) && situer.codes.includes(competence.id) && !surMobile();
     const marches = [3, 2, 1].map((n) => {
       const classes = ['marche', 'marche-' + n];
+      if (clavierVisible) classes.push('marche-clavier');
       if (n === niveau) classes.push('marche-actuelle');
       else if (n < niveau) classes.push('marche-atteinte');
       return `<button type="button" class="${classes.join(' ')}" data-niveau="${n}"
-                aria-pressed="${n === niveau}">
+                aria-pressed="${n === niveau}"${clavierVisible ? ` aria-keyshortcuts="${n}"` : ''}>
         <div class="marche-astre">${astreCran(n, teinte)}</div>
         <div>
           <p class="marche-palier">${echapper(etat.referentiel.scale[n])}
             ${n === niveau ? '<span class="marche-vous">Ton niveau</span>' : ''}</p>
         </div>
+        ${clavierVisible ? `<kbd class="marche-touche" aria-hidden="true">${n}</kbd>` : ''}
       </button>`;
     }).join('');
 
@@ -4468,7 +4486,7 @@
     elPanneauPied.innerHTML = `
       <div class="situer-pied">
         <button type="button" class="situer-btn" id="situer-precedent" ${situer.index === 0 ? 'disabled' : ''}>← Précédente</button>
-        <p class="situer-astuce" id="situer-astuce">${surMobile() ? astuceCourte : `${astuceLongue}<span class="tinder-clavier">1 · 2 · 3 au clavier, du plus bas au plus haut</span>`}</p>
+        <p class="situer-astuce" id="situer-astuce">${surMobile() ? astuceCourte : `${astuceLongue}<span class="tinder-clavier">Tape 1, 2 ou 3 au clavier</span>`}</p>
         <button type="button" class="situer-btn situer-passer" id="situer-passer">Suivante →</button>
       </div>`;
     elPanneauCorps.scrollTop = 0;

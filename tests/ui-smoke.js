@@ -553,6 +553,8 @@ async function principal() {
     await page.locator('.etoile[data-competence="FON-02-02"]').dispatchEvent('click');
     await page.getByText('Un exemple observable pour FON-02-02.').waitFor();
     assert.equal(await page.locator('.marche[data-niveau]').count(), 3);
+    // Lot 8.1 : hors évaluation le raccourci n'existe pas, la touche ne s'affiche donc pas.
+    assert.equal(await page.locator('.marche-touche').count(), 0);
     // La fiche ouverte depuis la carte garde sa pastille de difficulté.
     assert.equal(await page.locator('#panneau .pastille-diff.panneau-diff').count(), 1);
 
@@ -1171,6 +1173,9 @@ async function principal() {
     await capturer(mobile, screenshotDir, 'choix-theme-mobile.png');
     await mobile.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}"]`).dispatchEvent('click');
     await mobile.locator('.situer-compte', { hasText: '1 / 4' }).waitFor();
+    // Lot 8.1 : pas de touche sur téléphone, il n'y a pas de clavier à annoncer.
+    assert.equal(await mobile.locator('.marche-touche').count(), 0);
+    assert.equal(await mobile.locator('.tinder-clavier').count(), 0);
     await capturer(mobile, screenshotDir, 'evaluation-mobile.png');
     await mobile.locator('.marche[data-niveau="3"]').dispatchEvent('click');
     await mobile.locator('.situer-compte', { hasText: '2 / 4' }).waitFor();
@@ -1285,7 +1290,12 @@ async function principal() {
       /^Coche une marche, ou passe pour l'instant : tu pourras y revenir\./);
     // L'astuce clavier accompagne l'invitation sur desktop.
     assert.equal((await annulation.locator('.tinder-clavier').textContent()).trim(),
-      '1 · 2 · 3 au clavier, du plus bas au plus haut');
+      'Tape 1, 2 ou 3 au clavier');
+    // La touche se lit aussi sur chaque marche, dans le bon ordre.
+    assert.deepEqual(await annulation.locator('.marche-touche').allTextContents(), ['3', '2', '1']);
+    assert.deepEqual(
+      await annulation.locator('.marche[data-niveau]').evaluateAll((m) => m.map((x) => x.getAttribute('aria-keyshortcuts'))),
+      ['3', '2', '1']);
     // Lot 8.1 : l'escalier se lit du plus haut niveau au plus bas, et la marche la plus
     // exigeante reste la plus à droite.
     const ordreMarches = await annulation.locator('.marche[data-niveau]').evaluateAll((marches) => marches.map((m) => ({
@@ -1879,7 +1889,8 @@ async function principal() {
     // --- Lot 8.2 et 8.3 : déplier, modifier, et voir le score suivre --------------
     const retouches = await navigateur.newPage({ viewport: { width: 1280, height: 700 } });
     await retouches.bringToFront();
-    await retouches.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000011`);
+    // Identifiant propre à ce bloc : 0011 sert déjà au scénario des anciennes cibles.
+    await retouches.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000012`);
     await retouches.locator('#ciel:not([hidden])').waitFor();
     await retouches.getByRole('button', { name: 'Commencer mon audit' }).dispatchEvent('click');
     await retouches.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
