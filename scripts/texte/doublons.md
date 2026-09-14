@@ -203,7 +203,7 @@ L’impertinence fait l’objet de deux compétences aux énoncés très proches
 
 *Accompagner une transformation verticale*
 
-**Énoncé.** Je sais faire preuve d'impertinence* à toutes les étapes de la conversation : je sais questionner et travailler en dehors du champ de pertinence de mon client.
+**Énoncé.** Je sais faire preuve d’impertinence* et travailler en dehors du champ de pertinence de mon client.
 
 **Marqueurs.**
 

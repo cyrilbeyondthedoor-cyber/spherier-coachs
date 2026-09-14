@@ -149,6 +149,24 @@ const DIFFICULTES_REVUES = {
   'FON-02-01': 'A-player',
 };
 
+// Énoncés réécrits en version courte et validés par le propriétaire. Ils remplacent
+// `Name`, `Énoncé N1` et `Description`, qui portent le même texte sur les 192
+// compétences. Le texte validé fait référence : les corrections de fautes ne
+// s'appliquent plus à ces énoncés, seules les règles arbitrées plus tôt continuent
+// (anglicismes traduits, astérisque après le mot entier, typographie des puces).
+const ENONCES_COURTS = Object.fromEntries(
+  require('./enonces-courts.json').map((e) => [e.code, e.enonce]),
+);
+
+// Retouches sur les énoncés validés, listées ici pour être relues d'un coup d'œil et
+// annulées d'une ligne. Rien d'autre n'est modifié dans le texte validé.
+const RETOUCHES_ENONCES_COURTS = [
+  // « cadre multi-partite » revient deux fois dans la même phrase, et le reste du
+  // référentiel écrit « multipartite » sans trait d'union.
+  [/dans un cadre multi-partite, et traiter les conflits d’intérêts et enjeux de pouvoir en cadre multi-partite\./g,
+    'dans un cadre multipartite, et traiter les conflits d’intérêts et les enjeux de pouvoir.'],
+];
+
 // L'astérisque de renvoi au lexique se place après le mot entier : « basculer* », jamais
 // « bascule*r », sans quoi le mot se coupe en deux à l'écran et le renvoi tombe à côté.
 function normaliserAsterisques(texte) {
@@ -197,9 +215,14 @@ function normaliserPonctuation(texte) {
     .replace(/\n{3,}/g, '\n\n');
 }
 
-function motifs({ champ, avant, apres, tutoye }) {
+function motifs({ champ, avant, apres, tutoye, enonceCourt }) {
   const liste = [];
   if (champ === 'difficulte') return ['difficulte'];
+  if (enonceCourt) {
+    liste.push('enonce-court');
+    if (tableTouche(avant, SUBSTITUTIONS)) liste.push('substitution');
+    return liste;
+  }
   if (tableTouche(avant, FAUTES_SIGNALEES)) liste.push('faute');
   if (tableTouche(avant, FAUTES_HORS_LISTE)) liste.push('faute-hors-liste');
   if (tableTouche(avant, SUBSTITUTIONS)) liste.push('substitution');
@@ -213,7 +236,11 @@ function motifs({ champ, avant, apres, tutoye }) {
 // Texte proposé pour un champ. Les marqueurs passent d'abord par leur version tutoyée
 // quand elle existe, puis par les mêmes tables que les autres champs : une faute que la
 // réécriture aurait laissée passer est ainsi rattrapée.
-function proposerChamp(champ, valeur, tutoiement) {
+function proposerChamp(champ, valeur, tutoiement, enonceCourt) {
+  if (enonceCourt && champ !== 'markers') {
+    const retouche = appliquerTable(enonceCourt, RETOUCHES_ENONCES_COURTS);
+    return normaliserAsterisques(appliquerTable(retouche, SUBSTITUTIONS)).trim();
+  }
   const base = champ === 'markers' && tutoiement ? tutoiement : valeur;
   const corrige = corrigerTexte(base);
   return champ === 'markers' ? normaliserPonctuation(corrige) : corrige.trim();
@@ -226,9 +253,15 @@ function construirePropositions(competences, tutoiements) {
       const avant = competence[champ] || '';
       if (!avant) continue;
       const tutoye = champ === 'markers' ? tutoiements[competence.code] : null;
+      // Une Description qui divergerait de Name ne serait pas remplacée par l'énoncé
+      // court : le texte validé ne vaut que là où les trois champs disaient la même
+      // chose. Sur les 192 compétences, ils sont aujourd'hui identiques.
+      const enonceCourt = champ !== 'markers' && avant === competence.name
+        ? ENONCES_COURTS[competence.code]
+        : null;
       const apres = champ === 'difficulte'
         ? (DIFFICULTES_REVUES[competence.code] || avant)
-        : proposerChamp(champ, avant, tutoye);
+        : proposerChamp(champ, avant, tutoye, enonceCourt);
       if (apres === avant) continue;
       propositions.push({
         code: competence.code,
@@ -237,7 +270,9 @@ function construirePropositions(competences, tutoiements) {
         champ,
         avant,
         apres,
-        motifs: motifs({ champ, avant, apres, tutoye: Boolean(tutoye) && tutoye !== avant }),
+        motifs: motifs({
+          champ, avant, apres, tutoye: Boolean(tutoye) && tutoye !== avant, enonceCourt: Boolean(enonceCourt),
+        }),
       });
     }
   }

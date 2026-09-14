@@ -119,4 +119,15 @@ assert.equal(
   '• En réécoutant une séance, tu reprends les mots du client.',
 );
 
+// 8. Énoncé court validé : il remplace le texte des trois champs d'énoncé et laisse
+// les marqueurs intacts.
+assert.equal(
+  proposerChamp('name', 'Un ancien énoncé très long, avec une faute : marcé.', null, 'Un énoncé court validé.'),
+  'Un énoncé court validé.',
+);
+assert.equal(
+  proposerChamp('markers', '• Tu sais interroger ton marcé.', null, 'Un énoncé court validé.'),
+  '• Tu sais interroger ton marché.',
+);
+
 console.log('Corrections de texte du référentiel : OK');

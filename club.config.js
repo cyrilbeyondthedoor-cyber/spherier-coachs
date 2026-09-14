@@ -252,7 +252,7 @@ const LEXIQUE = {
     { terme: "Structure d’interprétation", alias: ["interprétation"], definition: "Ensemble de croyances et de valeurs à travers lesquelles une personne comprend les situations et choisit ses actions." },
     { terme: "Fils", alias: ["fil"], definition: "Éléments repérés pendant une conversation de coaching, en particulier durant la phase d’exploration. Le coach suit ces fils pour dépasser le sujet apparent et identifier l’enjeu profond qui aidera le client à avancer sur son enjeu de surface. Un fil peut être un mot récurrent, une émotion, une contradiction, une croyance, une règle formulée par « je dois » ou « il faut », une généralisation, un besoin, une valeur ou un motif qui se répète." },
     { terme: "Domino", definition: "Formulation concise de l’enjeu profond qui produit un effet de levier lorsqu’il est travaillé." },
-    { terme: "Bascule", definition: "Changement de perspective qui redonne au client de l’espace, du choix et du pouvoir d’action." },
+    { terme: "Bascule", alias: ["basculer"], definition: "Changement de perspective qui redonne au client de l’espace, du choix et du pouvoir d’action." },
     { terme: "Ancrage", alias: ["ancrer", "ancre", "ancres", "ancré"], definition: "Intégration d’une prise de conscience dans la tête, le cœur et le corps afin de la rendre durable." },
     { terme: "Nouveaux possibles", alias: ["possibles"], definition: "Phase où le client ouvre plusieurs options après la bascule, avant de choisir ses actions." },
     { terme: "Programme de coaching", definition: "Parcours d’accompagnement structuré qui permet au client de travailler sur une transformation personnelle profonde." },
@@ -270,7 +270,7 @@ const LEXIQUE = {
     { terme: "Dilemme", definition: "Tension entre deux options porteuses de besoins importants, explorée en cherchant un « ET » ou une priorité temporelle." },
     { terme: "Self", definition: "Dans l’IFS, centre stable associé à la clarté, au calme, à la confiance et à la compassion." },
     { terme: "Schéma narratif", alias: ["narratif"], definition: "Récit récurrent par lequel le client donne du sens à son identité, à ses expériences et à son enjeu. Le coaching l’aide à en reconnaître les limites et à faire émerger un récit plus profond, plus ouvert et plus cohérent avec la manière d’être qu’il souhaite incarner." },
-    { terme: "Métacommunication", definition: "Action de nommer ce qui se joue dans l’échange ou dans la relation de coaching, en parlant depuis le « je », puis d’en vérifier la résonance et l’utilité avec le client." },
+    { terme: "Métacommunication", alias: ["métacommuniquer", "méta-communiquer"], definition: "Action de nommer ce qui se joue dans l’échange ou dans la relation de coaching, en parlant depuis le « je », puis d’en vérifier la résonance et l’utilité avec le client." },
     { terme: "Impertinence", alias: ["impertinent"], definition: "Capacité à questionner en dehors du champ de pertinence habituel du client afin d’ouvrir des angles qu’il n’avait pas envisagés. Elle s’appuie sur une alliance solide et une intervention ajustée." },
     { terme: "Miroir de l’enjeu", definition: "Phénomène par lequel ce qui se joue dans la séance reproduit l’enjeu rencontré par le client dans sa vie. Le coach peut utiliser cette dynamique comme terrain d’observation et de pratique en direct." },
     // Anglicismes conservés dans le référentiel parce qu'ils sont le mot employé sur
