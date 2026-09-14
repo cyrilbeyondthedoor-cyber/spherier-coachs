@@ -1930,6 +1930,53 @@
   .audit-classement-nom { font-size: 14px; }
   .audit-classement-ligne .choix-jauge { grid-column: 1 / -1; }
 
+  .recap-scores { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+  .recap-score {
+    display: grid; gap: 5px; padding: 12px 14px;
+    border: 1px solid var(--line-faint); border-radius: 11px; background: rgba(240, 235, 224, .02);
+  }
+  .recap-score-label { color: var(--stone); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; }
+
+  .rangs { display: grid; gap: 7px; list-style: none; }
+  .rang {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 6px 12px; align-items: center;
+    padding: 9px 13px; border: 1px solid var(--line-faint); border-radius: 11px;
+    background: rgba(240, 235, 224, .02);
+  }
+  .rang.rang-mois { border-color: var(--gold); background: rgba(201, 166, 97, .12); }
+  .rang.rang-porte { opacity: .45; }
+  .rang.rang-cible { border-color: var(--gold-bright); }
+  .rang-numero {
+    display: grid; place-items: center; width: 28px; height: 28px; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--paper-dim);
+    font-family: 'Cormorant Garamond', serif; font-size: 16px;
+  }
+  .rang-mois .rang-numero { border-color: var(--gold); color: var(--paper); }
+  .rang-corps { display: grid; gap: 5px; justify-items: start; min-width: 0; }
+  .rang-nom { font-size: 14px; line-height: 1.4; }
+  .rang-marque {
+    padding: 2px 9px; border-radius: 999px; background: rgba(201, 166, 97, .22);
+    color: var(--gold-bright); font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  }
+  .rang-actions { display: flex; align-items: center; gap: 6px; }
+  .rang-fleche {
+    width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 999px;
+    background: transparent; color: var(--paper); font: inherit; font-size: 15px; cursor: pointer;
+  }
+  .rang-fleche:hover:not(:disabled) { border-color: var(--gold); }
+  .rang-fleche:disabled { opacity: .3; cursor: not-allowed; }
+  .rang-retirer {
+    min-height: 44px; padding: 8px 15px; border: 1px solid var(--line); border-radius: 999px;
+    background: transparent; color: var(--paper-dim); font: inherit; font-size: 13px; cursor: pointer;
+  }
+  .rang-retirer:hover { border-color: #e07a6a; color: var(--paper); }
+  .rang-poignee { color: var(--stone); font-size: 17px; cursor: grab; }
+
+  @media (max-width: 720px) {
+    .rang { grid-template-columns: auto minmax(0, 1fr); }
+    .rang-actions { grid-column: 1 / -1; justify-content: flex-start; }
+  }
+
   .audit-echec {
     display: grid; gap: 9px; justify-items: start; padding: 13px 15px;
     border: 1px solid color-mix(in srgb, #e07a6a 45%, transparent); border-radius: 11px;
@@ -3397,6 +3444,9 @@
       niveaux,
       cibles: !memeListe(reference.current, brouillon.current),
       plusTard: !memeListe(reference.later, brouillon.later),
+      // Réordonner le classement ne change ni l'ensemble des cibles ni celui de la
+      // liste d'attente : sans ce drapeau, la barre annonçait « Modifié : . ».
+      priorites: signaturePriorites(reference.priorites) !== signaturePriorites(brouillon.priorites),
     };
   }
 
@@ -5541,7 +5591,7 @@
       clearTimeout(minuteurPriorites);
       minuteurPriorites = null;
       await enregistrer();
-      ouvrirResultatDimension(dimensionId);
+      ouvrirRecapDimension(dimensionId);
     });
   }
 
@@ -5590,6 +5640,217 @@
 
     afficherPanneau();
     document.body.dataset.panneau = 'resultat-dimension';
+  }
+
+  // --- Écran de récap : le classement des priorités ------------------------------
+  // Il tombe à la fin de chaque dimension, et c'est le seul endroit où l'ordre se
+  // décide. Les trois premières lignes alimentent Mon mois, la suite attend.
+
+  function scoreGlobalPartiel() {
+    const total = etat.referentiel.competencies.length;
+    const evaluees = etat.referentiel.competencies.filter((competence) => estEvaluee(competence.id));
+    const maitrisees = evaluees.filter((competence) => brouillon.levels[competence.id] >= NIVEAU_ACQUIS).length;
+    return {
+      total,
+      evaluees: evaluees.length,
+      pct: evaluees.length ? Math.round((maitrisees / evaluees.length) * 100) : 0,
+    };
+  }
+
+  function origineDe(code) {
+    const competence = competenceParCode(code);
+    if (!competence) return '';
+    const theme = themeParId(competence.theme);
+    const dimension = dimensionDe(competence);
+    return `${dimension ? dimension.name : ''}${dimension && theme ? ' › ' : ''}${theme ? theme.name : ''}`;
+  }
+
+  // Le glisser-déposer s'ajoute aux flèches, il ne les remplace pas : sur un téléphone
+  // il n'existe pas, et au clavier il n'a jamais existé.
+  function ligneClassement(code, index, total) {
+    const competence = competenceParCode(code);
+    if (!competence) return '';
+    const ceMois = index < MAX_MAINTENANT;
+    const glissable = !surMobile();
+    return `<li class="rang${ceMois ? ' rang-mois' : ''}" data-rang="${echapper(code)}"${glissable ? ' draggable="true"' : ''}>
+      <span class="rang-numero" aria-hidden="true">${index + 1}</span>
+      <span class="rang-corps">
+        <span class="rang-nom">${echapper(competence.name)}</span>
+        <span class="audit-priorite-meta">
+          ${pastilleNiveau(code)}
+          <span class="audit-priorite-origine">${echapper(origineDe(code))}</span>
+          ${ceMois ? '<span class="rang-marque">ce mois-ci</span>' : ''}
+        </span>
+      </span>
+      <span class="rang-actions">
+        <button type="button" class="rang-fleche" data-monter="${echapper(code)}" ${index === 0 ? 'disabled' : ''}
+          aria-label="Monter ${echapper(competence.name)} d'un rang">↑</button>
+        <button type="button" class="rang-fleche" data-descendre="${echapper(code)}" ${index === total - 1 ? 'disabled' : ''}
+          aria-label="Descendre ${echapper(competence.name)} d'un rang">↓</button>
+        <button type="button" class="rang-retirer" data-retirer-rang="${echapper(code)}">Retirer</button>
+      </span>
+      ${glissable ? '<span class="rang-poignee" aria-hidden="true" title="Glisser pour réordonner">⠿</span>' : ''}
+    </li>`;
+  }
+
+  function listeClassementHtml() {
+    const classement = etatPriorites().classement;
+    if (classement.length === 0) {
+      return `<p class="audit-bilan-aide" id="recap-classement">Tu n'as encore retenu aucune priorité. Elles apparaîtront ici au fur et à mesure des dimensions que tu boucles.</p>`;
+    }
+    return `<ol class="rangs" id="recap-classement">${classement.map((code, index) => ligneClassement(code, index, classement.length)).join('')}</ol>`;
+  }
+
+  function deplacerRangDe(code, pas) {
+    const p = etatPriorites();
+    const index = p.classement.indexOf(code);
+    if (index < 0) return;
+    deplacerDansClassement(code, Math.max(0, Math.min(index + pas, p.classement.length - 1)));
+    memoriserPriorites();
+  }
+
+  let rangPorte = null;
+
+  function rafraichirClassement(focusSur = null) {
+    const liste = document.getElementById('recap-classement');
+    if (!liste) return;
+    liste.outerHTML = listeClassementHtml();
+    brancherClassement();
+    const cible = focusSur && document.querySelector(`[data-rang="${CSS.escape(focusSur.code)}"] [data-${focusSur.sens}]`);
+    if (cible && !cible.disabled) cible.focus();
+    const total = document.getElementById('recap-compte');
+    if (total) total.textContent = texteCompteClassement();
+  }
+
+  function texteCompteClassement() {
+    const n = etatPriorites().classement.length;
+    const mois = Math.min(n, MAX_MAINTENANT);
+    return `${n} priorité${n > 1 ? 's' : ''} retenue${n > 1 ? 's' : ''}, dont ${mois} pour ce mois-ci.`;
+  }
+
+  function brancherClassement() {
+    const liste = document.getElementById('recap-classement');
+    if (!liste) return;
+
+    liste.querySelectorAll('[data-monter]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        deplacerRangDe(bouton.dataset.monter, -1);
+        rafraichirClassement({ code: bouton.dataset.monter, sens: 'monter' });
+      });
+    });
+    liste.querySelectorAll('[data-descendre]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        deplacerRangDe(bouton.dataset.descendre, 1);
+        rafraichirClassement({ code: bouton.dataset.descendre, sens: 'descendre' });
+      });
+    });
+    liste.querySelectorAll('[data-retirer-rang]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        retirerDuClassement(bouton.dataset.retirerRang);
+        rafraichirClassement();
+      });
+    });
+
+    liste.querySelectorAll('.rang[draggable="true"]').forEach((ligne) => {
+      const code = ligne.dataset.rang;
+      ligne.addEventListener('dragstart', (evenement) => {
+        rangPorte = code;
+        ligne.classList.add('rang-porte');
+        if (evenement.dataTransfer) {
+          evenement.dataTransfer.effectAllowed = 'move';
+          evenement.dataTransfer.setData('text/plain', code);
+        }
+      });
+      ligne.addEventListener('dragend', () => { rangPorte = null; ligne.classList.remove('rang-porte'); });
+      ligne.addEventListener('dragover', (evenement) => {
+        if (!rangPorte || rangPorte === code) return;
+        evenement.preventDefault();
+        ligne.classList.add('rang-cible');
+      });
+      ligne.addEventListener('dragleave', () => ligne.classList.remove('rang-cible'));
+      ligne.addEventListener('drop', (evenement) => {
+        evenement.preventDefault();
+        ligne.classList.remove('rang-cible');
+        const porte = rangPorte;
+        rangPorte = null;
+        if (!porte || porte === code) return;
+        deplacerDansClassement(porte, etatPriorites().classement.indexOf(code));
+        memoriserPriorites();
+        rafraichirClassement();
+      });
+    });
+  }
+
+  // `dimensionId` nul : mode global, ouvert depuis la synthèse ou depuis Mon mois quand
+  // aucune dimension n'a encore été bouclée.
+  function ouvrirRecapDimension(dimensionId = null, suite = 'theme') {
+    const dimension = dimensionId ? dimensionParId(dimensionId) : null;
+    const teinte = dimension ? (TEINTES_HEX[dimension.id] || '#c9a661') : '#c9a661';
+    preparerEcranAudit(teinte, { plein: true });
+    const global = scoreGlobalPartiel();
+
+    elPanneauTete.innerHTML = `
+      <p class="panneau-fil audit-fil">M'évaluer <span>›</span> <b>${dimension ? echapper(dimension.name) : 'Mon classement'}</b></p>
+      <h2 class="panneau-titre" id="panneau-titre">${dimension ? `Récap après ${echapper(dimension.name)}` : 'Ton classement'}</h2>
+      <p class="audit-sous-compteur" id="recap-compte" role="status">${texteCompteClassement()}</p>`;
+
+    const infoDim = dimension ? etatDimension(dimension) : null;
+
+    ecrireCorps(`<div class="audit-cadre"><div class="audit-bilan audit-bilan-large">
+      <div class="audit-bilan-colonne">
+      <div class="recap-scores">
+        ${infoDim ? `<div class="recap-score">
+          <p class="recap-score-label">${echapper(dimension.name)}</p>
+          <p class="audit-bilan-score">${pctHtml(infoDim.score)} de maîtrise</p>
+        </div>` : ''}
+        <div class="recap-score">
+          <p class="recap-score-label">Ton sphérier</p>
+          <p class="audit-bilan-score">${pctHtml(global.pct)} maîtrisées sur ${global.evaluees} compétence${global.evaluees > 1 ? 's' : ''} évaluée${global.evaluees > 1 ? 's' : ''} sur ${global.total}</p>
+        </div>
+      </div>
+      <section class="audit-bilan-section">
+        <p class="audit-bilan-label">Ton classement</p>
+        <p class="audit-bilan-aide">Les trois premières sont ce que tu travailles ce mois-ci. Monte, descends ou retire une ligne pour changer l'ordre.</p>
+        ${listeClassementHtml()}
+        <div class="audit-priorites-actions">
+          <button type="button" class="audit-priorites-valider" id="recap-enregistrer">Enregistrer mon classement</button>
+        </div>
+      </section>
+      </div>
+      <aside class="audit-bilan-suite">${dimension
+        ? blocPoursuivreHtml(dimension, suite)
+        : `<div class="audit-poursuivre">
+            <p class="audit-poursuivre-titre">Poursuivre</p>
+            <div class="audit-suites">
+              <button type="button" class="audit-suite-choix principal" data-recap-suite="dimension">Choisir une autre dimension<small>Les ${etat.referentiel.dimensions.length} dimensions du sphérier</small></button>
+              <button type="button" class="audit-suite-choix" data-recap-suite="arreter">M'arrêter là<small>Tes réponses sont enregistrées, tu reprendras ici</small></button>
+            </div>
+          </div>`}</aside>
+    </div></div>`);
+    elPanneauCorps.scrollTop = 0;
+
+    brancherClassement();
+    const enregistrerClassement = document.getElementById('recap-enregistrer');
+    enregistrerClassement.addEventListener('click', async () => {
+      enregistrerClassement.disabled = true;
+      enregistrerClassement.textContent = 'Enregistrement…';
+      clearTimeout(minuteurPriorites);
+      minuteurPriorites = null;
+      await enregistrer();
+      enregistrerClassement.disabled = false;
+      enregistrerClassement.textContent = 'Enregistrer mon classement';
+    });
+
+    if (dimension) brancherPoursuivre(dimension);
+    else elPanneauCorps.querySelectorAll('[data-recap-suite]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        if (bouton.dataset.recapSuite === 'dimension') ouvrirChoixDimension();
+        else { majAuditInitial(); fermerPanneau(); }
+      });
+    });
+
+    afficherPanneau();
+    document.body.dataset.panneau = 'recap-dimension';
   }
 
   let auditToutesThemes = false;
@@ -6599,6 +6860,7 @@
     if (c.niveaux.length) bouts.push(`<b>${c.niveaux.length}</b> positionnement${c.niveaux.length > 1 ? 's' : ''}`);
     if (c.cibles) bouts.push('tes cibles du mois');
     if (c.plusTard) bouts.push('ta liste « plus tard »');
+    if (c.priorites && bouts.length === 0) bouts.push('tes priorités');
     texteBarre(
       `Modifié : ${bouts.join(', ')}. Rien n'est encore enregistré.`,
       `Modifié : ${bouts.join(', ')}`

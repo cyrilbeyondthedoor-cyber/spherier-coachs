@@ -810,6 +810,18 @@ async function principal() {
     assert.equal(await casesTheme.nth(3).isChecked(), false, 'la quatrième coche est refusée');
     await prioTheme.getByText('Trois priorités au maximum.', { exact: false }).waitFor();
     assert.match(await prioTheme.locator('#priorites-theme-compteur').textContent(), /^3 \/ 3/);
+
+    // Enregistrement différé : deux secondes après le dernier geste, les priorités
+    // sont parties sans que le membre ait rien cliqué d'autre.
+    await prioTheme.waitForTimeout(2400);
+    assert.equal(dernierSnapshot.priorites.themes[`theme-${DIM_MULTI.id}`].length, 3,
+      'les priorités cochées partent toutes seules après deux secondes');
+    assert.deepEqual(dernierSnapshot.priorites.classement.slice().sort(),
+      dernierSnapshot.priorites.themes[`theme-${DIM_MULTI.id}`].slice().sort(),
+      'le classement reprend les priorités de thématique tant qu\'aucune dimension n\'est consolidée');
+    assert.deepEqual(dernierSnapshot.selections.current.slice().sort(),
+      dernierSnapshot.priorites.classement.slice().sort(),
+      'les trois du classement deviennent les trois cibles du mois');
     // La fiche se déplie sur place, sans quitter l'écran de résultat.
     await prioTheme.locator('#priorites-theme summary').first().click();
     await prioTheme.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
@@ -821,18 +833,8 @@ async function principal() {
     await prioTheme.getByRole('button', { name: 'Choisir maintenant' }).click();
     assert.equal(await prioTheme.locator('#priorites-theme .audit-priorite-case:checked').count(), 3);
 
-    // Poursuivre déclenche l'enregistrement sans attendre le délai de deux secondes.
-    const avantPriorites = nbSnapshots;
     await prioTheme.locator('[data-suite="theme"]').dispatchEvent('click');
-    await prioTheme.waitForTimeout(500);
-    assert.ok(nbSnapshots > avantPriorites, 'poursuivre enregistre les priorités cochées');
-    assert.equal(dernierSnapshot.priorites.themes[`theme-${DIM_MULTI.id}`].length, 3);
-    assert.deepEqual(dernierSnapshot.priorites.classement.slice().sort(),
-      dernierSnapshot.priorites.themes[`theme-${DIM_MULTI.id}`].slice().sort(),
-      'le classement reprend les priorités de thématique tant qu\'aucune dimension n\'est consolidée');
-    assert.deepEqual(dernierSnapshot.selections.current.slice().sort(),
-      dernierSnapshot.priorites.classement.slice().sort(),
-      'les trois du classement deviennent les trois cibles du mois');
+    await prioTheme.locator('body[data-panneau="choix-theme"]').waitFor({ state: 'attached' });
 
     // --- Lot 7 : consolidation par dimension -----------------------------------
     // Seconde thématique de la dimension : il y reste une compétence à situer. Une fois
@@ -875,6 +877,43 @@ async function principal() {
       dernierSnapshot.priorites.dimensions[DIM_MULTI.id].slice().sort());
     assert.equal(dernierSnapshot.selections.later.length, 1,
       'la priorité non retenue reste pour plus tard');
+
+    // --- Lot 7 : écran de récap et classement réordonnable ---------------------
+    await prioTheme.getByRole('heading', { name: `Récap après ${DIM_MULTI.name}` }).waitFor();
+    assert.equal(await prioTheme.locator('#recap-classement .rang').count(), 3);
+    assert.equal(await prioTheme.locator('#recap-classement .rang.rang-mois').count(), 3,
+      'les trois premières sont marquées « ce mois-ci »');
+    assert.equal(await prioTheme.locator('.rang-marque').count(), 3);
+    // Score de la dimension et score global partiel, tous deux affichés.
+    assert.equal(await prioTheme.locator('.recap-score').count(), 2);
+    assert.match(await prioTheme.locator('.recap-score').last().textContent(),
+      /maîtrisées sur 6 compétences évaluées sur 12/);
+    // Chaque ligne porte son origine : dimension puis thématique.
+    assert.ok((await prioTheme.locator('#recap-classement .audit-priorite-origine').first().textContent())
+      .includes(DIM_MULTI.name));
+    // La première flèche « monter » est désactivée, la dernière « descendre » aussi.
+    assert.equal(await prioTheme.locator('#recap-classement .rang').first().locator('[data-monter]').isDisabled(), true);
+    assert.equal(await prioTheme.locator('#recap-classement .rang').last().locator('[data-descendre]').isDisabled(), true);
+    await capturer(prioTheme, screenshotDir, 'recap-dimension-desktop.png', { fullPage: true });
+
+    const ordreAvant = await prioTheme.locator('#recap-classement .rang').evaluateAll((lignes) => lignes.map((l) => l.dataset.rang));
+    await prioTheme.locator(`[data-rang="${ordreAvant[0]}"] [data-descendre]`).click();
+    const ordreApres = await prioTheme.locator('#recap-classement .rang').evaluateAll((lignes) => lignes.map((l) => l.dataset.rang));
+    assert.deepEqual(ordreApres, [ordreAvant[1], ordreAvant[0], ordreAvant[2]],
+      'la flèche bas échange la ligne avec la suivante');
+
+    const avantClassement = nbSnapshots;
+    await prioTheme.getByRole('button', { name: 'Enregistrer mon classement' }).click();
+    await prioTheme.waitForTimeout(600);
+    assert.ok(nbSnapshots > avantClassement);
+    assert.deepEqual(dernierSnapshot.priorites.classement, ordreApres,
+      'le classement part dans le snapshot dans l\'ordre affiché');
+    assert.deepEqual(dernierSnapshot.selections.current, ordreApres,
+      'les trois premières du classement sont les trois cibles du mois');
+
+    // Retirer une ligne la sort du classement et de « ce mois-ci ».
+    await prioTheme.locator(`[data-rang="${ordreApres[2]}"] [data-retirer-rang]`).click();
+    assert.equal(await prioTheme.locator('#recap-classement .rang').count(), 2);
 
     const publicMobile = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
     await publicMobile.goto(`http://127.0.0.1:${adresse.port}/`);
