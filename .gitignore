@@ -14,15 +14,12 @@ deno.lock
 .DS_Store
 .claude/
 
-# Captures de vérification, régénérables
+# Captures de vérification et de recette locale, régénérables
 screenshot-*.png
 .captures/
 
 # Généré au build Netlify
 public/version.txt
-
-# Captures de recette locales, régénérables
-.captures/
 
 # Extractions de travail du référentiel, régénérables
 scripts/texte/competences.json
