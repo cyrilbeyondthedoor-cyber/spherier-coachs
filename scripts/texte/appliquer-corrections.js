@@ -78,29 +78,79 @@ async function principal() {
     return;
   }
 
+  // Une écriture qui échoue ne doit pas arrêter la passe : les 191 autres pages sont
+  // indépendantes. On note l'échec et on rejoue les pages fautives à la fin.
   const ecrites = [];
-  for (const [pageId, entree] of parPage) {
+  const echecs = [];
+
+  async function ecrire(pageId, entree) {
     const properties = {};
     for (const [champ, texte] of Object.entries(entree.champs)) {
       properties[NOMS_NOTION[champ]] = proprieteNotion(champ, texte);
     }
-    await notion.pages.update({ page_id: pageId, properties });
-    ecrites.push([pageId, entree]);
+    try {
+      await notion.pages.update({ page_id: pageId, properties });
+      ecrites.push([pageId, entree]);
+      return true;
+    } catch (erreur) {
+      echecs.push({ pageId, entree, message: erreur.message });
+      console.error(`  échec ${entree.code} (${Object.keys(entree.champs).join(', ')}) : ${erreur.message}`);
+      return false;
+    }
+  }
+
+  for (const [pageId, entree] of parPage) {
+    await ecrire(pageId, entree);
     await attendre(350);
   }
-  console.log(`${ecrites.length} compétences écrites. Relecture de contrôle…`);
+
+  if (echecs.length) {
+    console.log(`Reprise de ${echecs.length} page(s) en échec…`);
+    const aReprendre = echecs.splice(0, echecs.length);
+    for (const { pageId, entree } of aReprendre) {
+      await ecrire(pageId, entree);
+      await attendre(700);
+    }
+  }
+  console.log(`${ecrites.length} compétences écrites, ${echecs.length} en échec. Relecture de contrôle…`);
 
   const ecarts = [];
+  let conformes = 0;
+  let totalChamps = 0;
   for (const [pageId, entree] of ecrites) {
     const page = await notion.pages.retrieve({ page_id: pageId });
     for (const [champ, attendu] of Object.entries(entree.champs)) {
+      totalChamps += 1;
       const obtenu = lire(page, NOMS_NOTION[champ]);
-      if (obtenu !== attendu.trim()) ecarts.push(`${entree.code} · ${champ}`);
+      if (obtenu === attendu.trim()) conformes += 1;
+      else ecarts.push(`${entree.code} · ${champ}`);
     }
     await attendre(350);
   }
-  if (ecarts.length) {
-    console.error(`ÉCARTS après relecture (${ecarts.length}) : ${ecarts.join(', ')}`);
+  // Rapport de contrôle : lisible par un humain, non versionné, régénéré à chaque passe.
+  const rapport = [
+    "# Contrôle d'écriture Notion",
+    '',
+    `Passe terminée le ${new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })} (heure de Paris).`,
+    '',
+    `- Pages écrites : **${ecrites.length}** sur ${parPage.size}`,
+    `- Champs conformes après relecture : **${conformes}** sur ${totalChamps}`,
+    `- Écarts : **${ecarts.length}**`,
+    `- Écritures en échec : **${echecs.length}**`,
+    '',
+    echecs.length
+      ? `## Écritures en échec\n\n${echecs.map((e) => `- ${e.entree.code} : ${e.message}`).join('\n')}`
+      : '## Écritures en échec\n\nAucune.',
+    '',
+    ecarts.length
+      ? `## Écarts entre le texte écrit et le texte proposé\n\n${ecarts.map((e) => `- ${e}`).join('\n')}`
+      : '## Écarts entre le texte écrit et le texte proposé\n\nAucun. Le texte lu dans Notion correspond au texte proposé, champ par champ.',
+    '',
+  ].join('\n');
+  fs.writeFileSync(path.join(__dirname, 'controle-ecriture.md'), rapport, 'utf8');
+
+  if (ecarts.length || echecs.length) {
+    console.error(`ÉCARTS ${ecarts.length}, ÉCHECS ${echecs.length}. Détail dans controle-ecriture.md`);
     process.exit(1);
   }
   console.log('Relecture de contrôle : le texte écrit correspond au texte proposé.');
