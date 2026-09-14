@@ -101,14 +101,6 @@ competencies.push(
   competence(`theme-${DIM_MULTI.id}-2`, `${DIM_MULTI.id}-02-02`, 1),
 );
 
-// Un terme du lexique dans un ÉNONCÉ, et pas seulement dans les marqueurs. Sur l'écran
-// de consolidation, la colonne au-dessus ne montre que des noms de thématiques : le
-// terme y apparaît donc pour la première fois, et il y est un vrai bouton posé à
-// l'intérieur du `<label>` d'une case à cocher. C'est le seul endroit où le conflit
-// entre « lire la définition » et « cocher la priorité » peut se produire.
-competencies.find((competence) => competence.id === `${DIM_MULTI.id}-01-03`).name =
-  `Je sais mobiliser la compétence ${DIM_MULTI.id}-01-03 en tenant l'ancrage*.`;
-
 const referential = {
   club: 'coachs',
   version: 1,
@@ -819,12 +811,12 @@ async function principal() {
     // La thématique est déjà complète : on arrive droit sur son résultat.
     await prioTheme.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
     await prioTheme.getByText('Tes priorités pour cette thématique', { exact: true }).waitFor();
-    const casesTheme = prioTheme.locator('#priorites-theme .audit-priorite-case');
+    const casesTheme = prioTheme.locator('#priorites-theme .prio-case');
     assert.equal(await casesTheme.count(), 4, 'les quatre compétences non maîtrisées sont proposées');
     // De la moins maîtrisée à la plus maîtrisée : les deux « Je ne maîtrise pas du
     // tout » passent devant les deux « Je dois m'améliorer ».
     assert.deepEqual(
-      (await prioTheme.locator('#priorites-theme .audit-priorite-niveau').allTextContents()).map((t) => t.trim()),
+      (await prioTheme.locator('#priorites-theme .prio-niveau').allTextContents()).map((t) => t.trim()),
       ['Je ne maîtrise pas du tout', 'Je ne maîtrise pas du tout', "Je dois m'améliorer", "Je dois m'améliorer"],
     );
     await casesTheme.nth(0).check();
@@ -855,13 +847,13 @@ async function principal() {
     // La fiche se déplie sur place, sans quitter l'écran de résultat.
     await prioTheme.locator('#priorites-theme summary').first().click();
     await prioTheme.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
-    assert.ok(await prioTheme.locator('#priorites-theme .audit-priorite-detail').first().isVisible());
+    assert.ok(await prioTheme.locator('#priorites-theme .prio-detail').first().isVisible());
     await capturer(prioTheme, screenshotDir, 'priorites-theme-desktop.png', { fullPage: true });
     // « Je choisirai plus tard » replie la section sans perdre les coches.
     await prioTheme.getByRole('button', { name: 'Je choisirai plus tard' }).click();
-    assert.equal(await prioTheme.locator('#priorites-theme .audit-priorite-case').count(), 0);
+    assert.equal(await prioTheme.locator('#priorites-theme .prio-case').count(), 0);
     await prioTheme.getByRole('button', { name: 'Choisir maintenant' }).click();
-    assert.equal(await prioTheme.locator('#priorites-theme .audit-priorite-case:checked').count(), 3);
+    assert.equal(await prioTheme.locator('#priorites-theme .prio-case:checked').count(), 3);
 
     await prioTheme.locator('[data-suite="theme"]').dispatchEvent('click');
     await prioTheme.locator('body[data-panneau="choix-theme"]').waitFor({ state: 'attached' });
@@ -873,29 +865,35 @@ async function principal() {
     await prioTheme.locator('.situer-compte', { hasText: '2 / 2' }).waitFor();
     await prioTheme.locator('.marche[data-niveau="1"]').dispatchEvent('click');
     await prioTheme.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
-    await prioTheme.locator('#priorites-theme .audit-priorite-case').first().check();
+    await prioTheme.locator('#priorites-theme .prio-case').first().check();
     await prioTheme.locator('#audit-voir-dimension').click();
     await prioTheme.getByRole('heading', { name: 'Résultat de la dimension' }).waitFor();
 
     await prioTheme.getByText('Tes 3 priorités pour cette dimension', { exact: true }).waitFor();
-    const casesDim = prioTheme.locator('#priorites-dimension .audit-priorite-case');
+    const casesDim = prioTheme.locator('#priorites-dimension .prio-case');
     // Quatre priorités de thématique : rien à compléter, et rien de pré-coché puisqu'il
     // y en a plus de trois. Elles restent groupées par thématique.
     assert.equal(await casesDim.count(), 4);
-    assert.equal(await prioTheme.locator('#priorites-dimension .audit-priorites-groupe').count(), 2);
-    assert.equal(await prioTheme.locator('#priorites-dimension .audit-priorite-proposee').count(), 0);
+    assert.equal(await prioTheme.locator('#priorites-dimension .prio-groupe').count(), 2);
+    assert.equal(await prioTheme.locator('#priorites-dimension .prio-proposee').count(), 0);
     assert.match(await prioTheme.locator('#priorites-dimension-compteur').textContent(), /^0 \/ 3/);
 
     // Lire une définition ne coche pas la priorité : le mot est dans le label de la case,
     // et c'est le comportement natif du label qu'il faut désamorcer, pas un gestionnaire.
-    const motLexique = prioTheme.locator('#priorites-dimension .audit-priorite-nom .lex-mot').first();
-    await motLexique.waitFor();
-    const ligneLexique = prioTheme.locator('#priorites-dimension .audit-priorite')
-      .filter({ has: prioTheme.locator('.lex-mot') }).first();
-    assert.equal(await ligneLexique.locator('.audit-priorite-case').isChecked(), false);
-    await motLexique.click();
+    // Un mot du lexique dans un énoncé de priorité vit à l'intérieur du `<label>` qui
+    // porte la case : cliquer dessus pour lire la définition cocherait la priorité par
+    // le comportement natif du label. Le référentiel de test n'étoile aucun NOM de
+    // compétence, et sur cet écran le terme est de toute façon déjà consommé par la
+    // fiche de la ligne précédente : on pose donc le cas à la main.
+    await prioTheme.evaluate(() => {
+      const nom = document.querySelector('#priorites-dimension .prio-nom');
+      nom.innerHTML = '<span class="lex-mot" data-terme="ancrage">ancrage<sup>*</sup></span>';
+    });
+    const ligneLexique = prioTheme.locator('#priorites-dimension .prio-ligne').first();
+    assert.equal(await ligneLexique.locator('.prio-case').isChecked(), false);
+    await ligneLexique.locator('.prio-nom .lex-mot').click();
     await prioTheme.locator('.lex-bulle').waitFor();
-    assert.equal(await ligneLexique.locator('.audit-priorite-case').isChecked(), false,
+    assert.equal(await ligneLexique.locator('.prio-case').isChecked(), false,
       'lire une définition ne coche pas la priorité');
     await prioTheme.keyboard.press('Escape');
     await prioTheme.locator('.lex-bulle').waitFor({ state: 'detached' });
@@ -934,7 +932,7 @@ async function principal() {
     assert.match(await prioTheme.locator('.recap-score').last().textContent(),
       /maîtrisées sur 6 compétences évaluées sur 12/);
     // Chaque ligne porte son origine : dimension puis thématique.
-    assert.ok((await prioTheme.locator('#recap-classement .audit-priorite-origine').first().textContent())
+    assert.ok((await prioTheme.locator('#recap-classement .prio-origine').first().textContent())
       .includes(DIM_MULTI.name));
     // La première flèche « monter » est désactivée, la dernière « descendre » aussi.
     assert.equal(await prioTheme.locator('#recap-classement .rang').first().locator('[data-monter]').isDisabled(), true);
