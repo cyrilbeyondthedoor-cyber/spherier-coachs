@@ -443,6 +443,14 @@ async function principal() {
     await page.locator('#audit-synthese').dispatchEvent('click');
     await page.getByRole('heading', { name: 'Ton sphérier en un regard' }).waitFor();
     await page.getByText('sur 8 évaluée', { exact: false }).waitFor();
+    // Le texte promet des pourcentages : la carte doit en porter, même sur un audit
+    // partiel, et dire sur combien de thématiques ils reposent.
+    assert.ok(await page.locator('.carte-resultat .ciel-score').count() >= 2,
+      'la carte de la synthèse partielle affiche des pourcentages');
+    await page.locator('.carte-resultat .ciel-dimension-compte', { hasText: 'maîtrisées sur 1/2 thématiques' }).waitFor();
+    await page.locator('.carte-resultat .ciel-categorie-meta', { hasText: 'maîtrisées sur 1/3 thématiques' }).waitFor();
+    // Un territoire dont rien n'est évalué le dit, au lieu d'afficher 0 %.
+    assert.ok(await page.locator('.carte-resultat .ciel-dimension-compte', { hasText: 'Pas encore évalué' }).count() >= 1);
     await capturer(page, screenshotDir, 'synthese-partielle-desktop.png');
     await page.locator('#panneau-fermer').dispatchEvent('click');
 

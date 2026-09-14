@@ -3735,6 +3735,22 @@
 
   const themesComplets = () => etat.referentiel.themes.filter((theme) => etatTheme(theme).complete);
 
+  // Mention de score d'un territoire de la carte : la part maîtrisée de ce qui a été
+  // évalué, et sur combien de thématiques elle repose. Rapportée au total des
+  // compétences, une dimension à peine entamée afficherait un score d'échec ; attendre
+  // l'audit complet, comme avant, laissait la carte sans le moindre pourcentage alors
+  // que la synthèse s'ouvre désormais sur un audit partiel.
+  function mentionScoreCiel(codes, themes) {
+    const evaluees = codes.filter(estEvaluee);
+    const complets = themes.filter((theme) => etatTheme(theme).complete).length;
+    if (evaluees.length === 0) return { compte: 'Pas encore évalué', score: '' };
+    const compte = `${evaluees.length}/${codes.length} évaluées`;
+    if (complets === 0) return { compte, score: '' };
+    const maitrisees = evaluees.filter((code) => brouillon.levels[code] >= NIVEAU_ACQUIS).length;
+    const pct = Math.round((maitrisees / evaluees.length) * 100);
+    return { compte, score: `<b class="ciel-score">${pct} %</b> maîtrisées sur ${complets}/${themes.length} thématiques · ` };
+  }
+
   function dimensionParId(dimensionId) {
     return etat.referentiel.dimensions.find((dimension) => dimension.id === dimensionId);
   }
@@ -4272,7 +4288,7 @@
     const prioritesPossibles = aAmeliorer >= 5;
 
     elPanneauCorps.innerHTML = `<section class="carte-resultat">
-      <p class="carte-resultat-intro">Voici la carte de ta pratique. Les pourcentages indiquent la part des compétences que tu maîtrises dans chaque territoire.${
+      <p class="carte-resultat-intro">Voici la carte de ta pratique. Les pourcentages portent sur ce que tu as déjà évalué, et chaque territoire dit sur combien de ses thématiques il repose.${
         complets < totalThemes
           ? ` ${complets} thématique${complets > 1 ? 's' : ''} sur ${totalThemes} évaluée${complets > 1 ? 's' : ''} : le reste s'ajoutera au fur et à mesure.`
           : ''}</p>
@@ -5171,17 +5187,16 @@
   function categorieCielHtml(categorie, { resultat = false } = {}) {
     const dimensions = etat.referentiel.dimensions.filter((dimension) => dimension.category === categorie.id || categorie.id === 'TOUT');
     const codes = codesDeCategorie(categorie.id);
-    const progression = progressionCodes(codes);
-    const evaluees = codes.filter((code) => (brouillon.levels[code] ?? 0) > 0).length;
-    const auditComplet = auditEstComplet();
+    const themesCategorie = etat.referentiel.themes.filter((theme) =>
+      dimensions.some((dimension) => dimension.name === theme.dimension));
+    const mentionCategorie = mentionScoreCiel(codes, themesCategorie);
     const positions = dimensions.length === 2
       ? [{ x: 28, y: 53 }, { x: 72, y: 53 }]
       : [{ x: 50, y: 29 }, { x: 24, y: 72 }, { x: 76, y: 72 }];
     const dimensionsHtml = dimensions.map((dimension, dimensionIndex) => {
       const codesDimension = codesDeDimension(dimension);
-      const progressionDimension = progressionCodes(codesDimension);
-      const evalueesDimension = codesDimension.filter((code) => (brouillon.levels[code] ?? 0) > 0).length;
       const themes = etat.referentiel.themes.filter((theme) => theme.dimension === dimension.name);
+      const mentionDimension = mentionScoreCiel(codesDimension, themes);
       const satellites = themes.map((theme, index) => {
         const codesTheme = etat.referentiel.competencies.filter((competence) => competence.theme === theme.id).map((competence) => competence.id);
         const themeEvalue = codesTheme.some((code) => (brouillon.levels[code] ?? 0) > 0);
@@ -5190,7 +5205,7 @@
       const position = positions[dimensionIndex] || { x: 50, y: 50 };
       return `<button type="button" class="ciel-dimension" data-ouvrir="${echapper(dimension.id)}" style="--h:${TEINTES_HEX[dimension.id]};--x:${position.x}%;--y:${position.y}%">
         <span class="ciel-dimension-astre"><i class="ciel-dimension-core"></i>${satellites}</span>
-        <span class="ciel-dimension-nom">${echapper(dimension.name)}</span><span class="ciel-dimension-compte">${auditComplet ? `<b class="ciel-score">${progressionDimension.pourcentage} %</b> maîtrisées · ` : ''}${evalueesDimension}/${codesDimension.length} évaluées</span>
+        <span class="ciel-dimension-nom">${echapper(dimension.name)}</span><span class="ciel-dimension-compte">${mentionDimension.score}${mentionDimension.compte}</span>
       </button>`;
     }).join('');
     const liens = positions.slice(1, dimensions.length).map((position) => `<line class="ciel-lien" x1="${positions[0].x}" y1="${positions[0].y}" x2="${position.x}" y2="${position.y}"/>`).join('');
@@ -5201,7 +5216,7 @@
       <h2 class="ciel-categorie-titre">${echapper(categorie.name)}</h2>
       ${categorie.definition && !resultat ? `<p class="ciel-categorie-def">${echapper(categorie.definition)}</p>` : ''}
       <div class="ciel-categorie-dims"><svg class="ciel-liens" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${liens}</svg>${dimensionsHtml}</div>
-      <p class="ciel-categorie-meta">${auditComplet ? `<b class="ciel-score">${progression.pourcentage} %</b> maîtrisées · ` : ''}${evaluees}/${codes.length} évaluées</p>
+      <p class="ciel-categorie-meta">${mentionCategorie.score}${mentionCategorie.compte}</p>
       <button type="button" class="ciel-categorie-cta" data-explorer-categorie="${echapper(categorie.id)}">Explorer cette catégorie →</button>
     </section>`;
   }
