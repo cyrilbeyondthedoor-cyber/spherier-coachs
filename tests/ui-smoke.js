@@ -120,6 +120,11 @@ const referential = {
 // dans la file d'attente après l'arrivée d'un classement.
 const ANCIENNES_CIBLES = [DIMENSIONS[1], DIMENSIONS[2], DIMENSIONS[3]].map((d) => `${d.id}-01-01`);
 
+// La compétence laissée de côté pour éprouver la fin complète de l'audit, et la priorité
+// déjà classée qui doit rester le bouton primaire de la synthèse.
+const DERNIERE_COMPETENCE = `${DIMENSIONS[DIMENSIONS.length - 1].id}-01-01`;
+const CLASSEMENT_EXISTANT = `${DIMENSIONS[1].id}-01-01`;
+
 const niveauxVides = Object.fromEntries(competencies.map((competence) => [competence.id, 0]));
 const etatThemes = Object.fromEntries(themes.map((theme) => [theme.id, { status: 'open', unlock_hint: '' }]));
 let dernierSnapshot = null;
@@ -168,6 +173,21 @@ const serveur = http.createServer((requete, reponse) => {
         snapshot: null,
         audit: { passees: [], derniere: null, maj: null },
         computed: { levels: partiels, themes: etatThemes },
+        notes: {},
+      });
+    }
+    // Membre 0012 : tout est évalué sauf UNE compétence, et un classement existe déjà.
+    // Évaluer la dernière ferme l'audit entier.
+    if (requete.url.includes('00000000-0000-4000-8000-000000000012')) {
+      const presque = Object.fromEntries(competencies.map((competence, index) =>
+        [competence.id, competence.id === DERNIERE_COMPETENCE ? 0 : (index % 3) + 1]));
+      const priorites = { themes: {}, dimensions: {}, classement: [CLASSEMENT_EXISTANT] };
+      return json(reponse, {
+        snapshot: { id: 'snapshot-presque', cree_le: new Date().toISOString(), libelle: null,
+          blob: { levels: presque, selections: { current: [CLASSEMENT_EXISTANT], later: [] }, priorites } },
+        audit: { passees: [], derniere: null, maj: null },
+        priorites,
+        computed: { levels: presque, themes: etatThemes },
         notes: {},
       });
     }
@@ -1100,6 +1120,29 @@ async function principal() {
     assert.deepEqual(dernierSnapshot.selections.later.slice(0, 3), ANCIENNES_CIBLES,
       'les anciennes cibles passent en tête de la file d\'attente au lieu de disparaître');
     await ancien.close();
+
+    // --- Lot 8.6 : la fin complète de l'audit ouvre la synthèse ------------------
+    const fin = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
+    await fin.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000012`);
+    await fin.locator('#ciel:not([hidden])').waitFor();
+    const derniereDim = DIMENSIONS[DIMENSIONS.length - 1];
+    await fin.locator('#audit-cta').dispatchEvent('click');
+    await fin.locator(`[data-choix-dimension="${derniereDim.id}"]`).dispatchEvent('click');
+    await fin.locator(`[data-evaluer-theme="theme-${derniereDim.id}"]`).dispatchEvent('click');
+    await fin.locator('.situer-compte', { hasText: '1 / 1' }).waitFor();
+    await fin.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    // Plus de résultat de thématique : la dernière thématique du référentiel ouvre la
+    // carte entière.
+    await fin.getByRole('heading', { name: 'Ton sphérier en un regard' }).waitFor();
+    assert.equal(await fin.getByRole('heading', { name: 'Résultat de la thématique' }).count(), 0);
+    assert.match(await fin.locator('.carte-resultat-complet').textContent(),
+      /^Audit complet · \d+ % de maîtrise$/);
+    // Le classement existe : c'est lui que le bouton primaire ouvre.
+    await fin.getByRole('button', { name: 'Voir mon classement' }).click();
+    await fin.getByRole('heading', { name: 'Ton classement', exact: true }).waitFor();
+    assert.equal(await fin.locator('#recap-classement .rang').count(), 1);
+    await capturer(fin, screenshotDir, 'audit-complet-desktop.png', { fullPage: true });
+    await fin.close();
 
     const publicMobile = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
     await publicMobile.goto(`http://127.0.0.1:${adresse.port}/`);

@@ -1840,6 +1840,13 @@
   }
   .situer-chapitre span { opacity: .55; }
 
+  .carte-resultat-complet {
+    margin-bottom: 14px; padding: 11px 16px; border: 1px solid var(--gold); border-radius: 999px;
+    justify-self: start; display: inline-block;
+    background: rgba(201, 166, 97, .16); color: var(--paper); font-size: 14px;
+  }
+  .carte-resultat-complet span { opacity: .55; }
+
   .audit-attente { padding: 46px 0; text-align: center; }
   .audit-attente .mark { display: block; margin-bottom: 14px; font-size: 34px; color: var(--gold); opacity: .55; }
   .audit-attente-titre { font-family: 'Cormorant Garamond', serif; font-size: 21px; }
@@ -4819,6 +4826,12 @@
 
   const themesComplets = () => etat.referentiel.themes.filter((theme) => etatTheme(theme).complete);
 
+  // « Toutes les thématiques complètes », et non « toutes les compétences évaluées » :
+  // passer une compétence est une décision, elle ne doit pas retenir le membre au seuil
+  // de sa synthèse pour l'éternité.
+  const auditModulaireComplet = () => etat.referentiel.themes.length > 0
+    && themesComplets().length === etat.referentiel.themes.length;
+
   // Ce qu'il reste à faire dans une thématique, en compétences et en minutes. 20 s par
   // compétence, arrondi à la minute : annoncer « 2 min 40 » promettrait une précision
   // que personne ne tient. Une passée compte comme restante, elle est encore à situer.
@@ -5224,6 +5237,9 @@
           'Tes réponses sont en sécurité. Tu peux continuer ou t\'arrêter là.', 'succes');
       }
     }
+    // Dernière thématique du référentiel : le parcours ne renvoie pas vers un résultat
+    // de thématique de plus, il s'ouvre sur la carte entière.
+    if (auditModulaireComplet()) { ouvrirResultatAudit(true); return; }
     ouvrirResultatTheme({ dimensionId, themeId, suite, enregistrement, libelleAuto });
   }
 
@@ -5245,6 +5261,7 @@
           'Tes réponses sont en sécurité.', 'succes');
       }
     }
+    if (auditModulaireComplet()) { ouvrirResultatAudit(true); return; }
     ouvrirResultatDimension(contexte.dimensionId, 'dimension');
   }
 
@@ -6207,6 +6224,9 @@
     const aClassement = etatPriorites().classement.length > 0;
 
     ecrireCorps(`<section class="carte-resultat">
+      ${auditModulaireComplet()
+        ? `<p class="carte-resultat-complet">Audit complet <span>·</span> ${scoreGlobalPartiel().pct} % de maîtrise</p>`
+        : ''}
       <p class="carte-resultat-intro">Voici la carte de ta pratique. Les pourcentages portent sur ce que tu as déjà évalué, et chaque territoire dit sur combien de ses thématiques il repose.${
         complets < totalThemes
           ? ` ${complets} thématique${complets > 1 ? 's' : ''} sur ${totalThemes} évaluée${complets > 1 ? 's' : ''} : le reste s'ajoutera au fur et à mesure.`
