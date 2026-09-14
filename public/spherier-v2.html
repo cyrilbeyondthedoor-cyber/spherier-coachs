@@ -1915,6 +1915,38 @@
     return index;
   }
 
+  // --- Typographie française -------------------------------------------------
+  // Une espace ordinaire avant « : » autorise un retour à la ligne : l'énoncé finit par
+  // afficher le deux-points seul en début de ligne. On la remplace par une espace
+  // insécable, et on la pose aussi là où elle manque.
+  const INSECABLE = '\u00a0';
+  const FINE_INSECABLE = '\u202f';
+  // Une entité HTML se termine par « ; ». Traiter la chaîne échappée d'un seul tenant
+  // casserait « &#39; » en « &#39<fine>; » : on ne touche qu'aux segments hors entités.
+  const ENTITE_HTML = /&(?:#\d{1,6}|[a-zA-Z]{2,8});/g;
+
+  function typoFrSegment(t) {
+    return t
+      .replace(/[ \u00a0\u202f]*([;?!])/g, `${FINE_INSECABLE}$1`)
+      .replace(/[ \u00a0\u202f]*:/g, `${INSECABLE}:`)
+      .replace(/[ \u00a0\u202f]*»/g, `${INSECABLE}»`)
+      .replace(/«[ \u00a0\u202f]*/g, `«${INSECABLE}`);
+  }
+
+  function typoFr(texteEchappe) {
+    const texte = String(texteEchappe);
+    let sortie = '';
+    let curseur = 0;
+    ENTITE_HTML.lastIndex = 0;
+    let trouve = ENTITE_HTML.exec(texte);
+    while (trouve !== null) {
+      sortie += typoFrSegment(texte.slice(curseur, trouve.index)) + trouve[0];
+      curseur = trouve.index + trouve[0].length;
+      trouve = ENTITE_HTML.exec(texte);
+    }
+    return sortie + typoFrSegment(texte.slice(curseur));
+  }
+
   // Transforme « bascule* » en bouton cliquable lorsque le mot est défini au lexique.
   // Reçoit du texte DÉJÀ échappé et n'ajoute que du balisage écrit ici : aucun contenu
   // du référentiel ne peut ainsi devenir du HTML actif.
@@ -3002,7 +3034,7 @@
 
     return `<section class="panneau-section">
       ${competence.markers ? `<p class="panneau-label">Marqueurs observables</p>
-        <p class="marche-enonce" style="white-space:pre-line;margin-bottom:18px">${lierLexique(echapper(competence.markers))}</p>` : ''}
+        <p class="marche-enonce" style="white-space:pre-line;margin-bottom:18px">${lierLexique(typoFr(echapper(competence.markers)))}</p>` : ''}
       <p class="panneau-label">Où tu en es</p>
       <div class="escalier">${marches}</div>
       <p class="escalier-note">${note}</p>
@@ -3366,9 +3398,9 @@
       <div class="situer-layout"><div class="situer">
         <p class="situer-fil">${echapper(theme ? theme.name : '')}</p>
         <p class="situer-difficulte">Niveau de la compétence : ${pastilleDifficulte(c)}</p>
-        <h2 class="situer-nom" id="panneau-titre">${lierLexique(echapper(c.name))}</h2>
+        <h2 class="situer-nom" id="panneau-titre">${lierLexique(typoFr(echapper(c.name)))}</h2>
         ${(c.statement || c.definition) && (c.statement || c.definition) !== c.name
-          ? `<p class="situer-def">${lierLexique(echapper(c.statement || c.definition))}</p>` : ''}
+          ? `<p class="situer-def">${lierLexique(typoFr(echapper(c.statement || c.definition)))}</p>` : ''}
         <div style="margin-top:18px">${escalier(c, niveau, situer.teinte)}</div>
         <div class="situer-pied">
           <button type="button" class="situer-btn" id="situer-precedent" ${situer.index === 0 ? 'disabled' : ''}>← Précédente</button>
@@ -4092,9 +4124,9 @@
     elPanneauTete.innerHTML = `
       ${retour ? `<button type="button" class="panneau-retour" id="panneau-retour">← ${echapper(theme ? theme.name : '')}</button>` : ''}
       <p class="panneau-fil">${echapper(dimension ? dimension.name : '')} <span>›</span> <b>${echapper(theme ? theme.name : '')}</b></p>
-      <h2 class="panneau-titre" id="panneau-titre">${lierLexique(echapper(competence.name))}</h2>
+      <h2 class="panneau-titre" id="panneau-titre">${lierLexique(typoFr(echapper(competence.name)))}</h2>
       ${(competence.statement || competence.definition) && (competence.statement || competence.definition) !== competence.name
-        ? `<p class="panneau-def">${lierLexique(echapper(competence.statement || competence.definition))}</p>` : ''}
+        ? `<p class="panneau-def">${lierLexique(typoFr(echapper(competence.statement || competence.definition)))}</p>` : ''}
       ${pastilleDifficulte(competence, 'panneau-diff')}
     `;
     elPanneauCorps.innerHTML = escalier(competence, niveau, teinte)

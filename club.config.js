@@ -273,6 +273,12 @@ const LEXIQUE = {
     { terme: "Métacommunication", definition: "Action de nommer ce qui se joue dans l’échange ou dans la relation de coaching, en parlant depuis le « je », puis d’en vérifier la résonance et l’utilité avec le client." },
     { terme: "Impertinence", alias: ["impertinent"], definition: "Capacité à questionner en dehors du champ de pertinence habituel du client afin d’ouvrir des angles qu’il n’avait pas envisagés. Elle s’appuie sur une alliance solide et une intervention ajustée." },
     { terme: "Miroir de l’enjeu", definition: "Phénomène par lequel ce qui se joue dans la séance reproduit l’enjeu rencontré par le client dans sa vie. Le coach peut utiliser cette dynamique comme terrain d’observation et de pratique en direct." },
+    // Anglicismes conservés dans le référentiel parce qu'ils sont le mot employé sur
+    // le terrain. Définis ici pour qu'ils ne restent pas opaques à la lecture.
+    { terme: "Call découverte", alias: ["call"], definition: "Premier échange avec un prospect, sans engagement, qui sert à qualifier sa demande et à lui faire vivre un moment de coaching." },
+    { terme: "Hook", definition: "Phrase ou question qui donne envie à une personne rencontrée dans la vie courante de poursuivre par un call découverte." },
+    { terme: "Farming", definition: "Développement d'une mission existante chez un client déjà acquis, par extension à d'autres équipes ou à d'autres sujets." },
+    { terme: "Lead magnet", definition: "Ressource gratuite offerte en échange d'un contact, qui donne un aperçu fidèle de la valeur de l'offre principale." },
     { terme: "Paradoxe", definition: "Formulation synthétique d’une caractéristique qui sert le client dans certaines situations et le limite face à son enjeu actuel." },
   ],
 };

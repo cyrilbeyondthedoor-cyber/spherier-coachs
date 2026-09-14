@@ -35,7 +35,7 @@ const competencies = DIMENSIONS.map((dimension, index) => ({
   definition: `Je sais mobiliser la compétence ${dimension.id}.`,
   // Un mot du lexique dans l'énoncé et un autre dans les marqueurs : le renvoi au
   // lexique doit fonctionner aux deux endroits où le membre lit du texte.
-  statement: `Je sais provoquer la bascule* sur la compétence ${dimension.id}.`,
+  statement: `Je sais provoquer la bascule* : agir sur la compétence ${dimension.id}.`,
   markers: `Un exemple observable pour ${dimension.id}. Tu sais suivre les fils* et tenir l'ancrage*.`,
   difficulty: DIFFICULTES[index % DIFFICULTES.length].nom,
   order: 1,
@@ -224,10 +224,10 @@ async function principal() {
     const scrollApresTheme = await page.evaluate(() => window.scrollY);
     assert.ok(Math.abs(scrollAvantTheme - scrollApresTheme) <= 1);
     await page.locator('#panneau-fermer').dispatchEvent('click');
-    assert.equal(await page.locator('.etoile[data-competence="FON-01-01"] title').textContent(), 'Je sais provoquer la bascule* sur la compétence FON.');
+    assert.equal(await page.locator('.etoile[data-competence="FON-01-01"] title').textContent(), 'Je sais provoquer la bascule* : agir sur la compétence FON.');
     await page.locator('.etoile[data-competence="FON-01-01"]').dispatchEvent('pointerenter', { pointerType: 'mouse', clientX: 300, clientY: 300 });
     await page.locator('#etoile-tooltip:not([hidden])').waitFor();
-    assert.equal(await page.locator('#etoile-tooltip').textContent(), 'Je sais provoquer la bascule* sur la compétence FON.');
+    assert.equal(await page.locator('#etoile-tooltip').textContent(), 'Je sais provoquer la bascule* : agir sur la compétence FON.');
     await page.locator('.etoile[data-competence="FON-01-01"]').dispatchEvent('pointerleave');
     await page.locator('.etoile[data-competence="FON-01-01"]').dispatchEvent('click');
     await page.getByText('Un exemple observable pour FON.').waitFor();
@@ -236,6 +236,10 @@ async function principal() {
     // Renvois au lexique : le mot astérisqué devient un bouton, son clic ouvre la
     // définition sur place, et l'infobulle mène au lexique complet.
     assert.equal(await page.locator('.panneau-def .lex-mot').textContent(), 'bascule*');
+    // Typographie : une espace insécable tient le deux-points sur la ligne du mot.
+    const definitionAffichee = await page.locator('.panneau-def').textContent();
+    assert.equal(/ :/.test(definitionAffichee), false);
+    assert.ok(/\u00a0:/.test(definitionAffichee));
     const motFils = page.locator('.marche-enonce .lex-mot').first();
     assert.equal(await motFils.textContent(), 'fils*');
     // Élision : seul « ancrage » est souligné, l'article reste du texte courant.
