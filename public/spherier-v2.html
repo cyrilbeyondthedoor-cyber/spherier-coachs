@@ -3384,15 +3384,16 @@
   // mois en séance. L'appelant décide ce qu'il y met.
   //
   // En audit modulaire, l'unité est la thématique : l'enregistrement se fait à sa fin,
-  // et c'est là que le parcours propose une suite. En exploration libre (mode
-  // standard, depuis la carte), le bilan reste une simple proposition d'enregistrer.
+  // et c'est là que le parcours propose une suite. En exploration libre, c'est-à-dire
+  // sans `contexte` — une liste ouverte depuis la carte ou depuis la vue d'ensemble —
+  // le bilan reste une simple proposition d'enregistrer.
   //
   // `contexte` porte la place de la liste dans le sphérier : `{ dimensionId, themeId,
   // suite }`. Sans lui, l'écran ne sait pas dire « Thématique 2 / 5 de Alliance » ni
   // vers quoi enchaîner.
   let situer = null;
 
-  function ouvrirMeSituer({ codes, titre, teinte = '#c9a661', depart = null, mode = 'standard', contexte = null }) {
+  function ouvrirMeSituer({ codes, titre, teinte = '#c9a661', depart = null, contexte = null }) {
     const liste = codes.filter((c) => etat.referentiel.competencies.some((x) => x.id === c));
     if (liste.length === 0) return;
     configurerPleinEcran(false);
@@ -3401,7 +3402,6 @@
       codes: liste,
       titre,
       teinte,
-      mode,
       contexte,
       // Sans position imposée, on entre là où il reste quelque chose à faire : c'est la
       // règle de reprise, et elle vaut aussi pour une première ouverture.
@@ -3683,7 +3683,6 @@
       passees,
       aFaire,
       complete: aFaire.length === 0,
-      entierementEvaluee: aFaire.length === 0 && passees.length === 0,
       // Même formule que `scoreThemeAudit` : le score se lit sur TOUTES les
       // compétences de la thématique, une passée pèse donc comme un zéro.
       score: codes.length ? Math.round((somme / (codes.length * 3)) * 100) : 0,
@@ -3726,7 +3725,6 @@
       codes: codesDeTheme(theme.id),
       titre: theme.name,
       teinte: TEINTES_HEX[dimension.id] || '#c9a661',
-      mode: 'audit',
       contexte: { dimensionId: dimension.id, themeId: theme.id, suite },
     });
   }
@@ -4034,7 +4032,6 @@
         codes: info.passees,
         titre: theme.name,
         teinte,
-        mode: 'audit',
         depart: info.passees.indexOf(bouton.dataset.evaluerPassee),
         contexte: { dimensionId: dimension.id, themeId: theme.id, suite },
       }));
