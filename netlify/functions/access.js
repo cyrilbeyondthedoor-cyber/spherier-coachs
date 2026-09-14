@@ -8,7 +8,7 @@ const HEADERS = {
   'Cache-Control': 'no-store',
 };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const limiteur = creerLimiteur({ max: 8 });
+const limiteur = creerLimiteur({ max: 15 });
 
 function reponse(statusCode, payload) {
   return { statusCode, headers: HEADERS, body: JSON.stringify(payload) };
