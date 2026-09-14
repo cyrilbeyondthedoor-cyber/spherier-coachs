@@ -100,6 +100,23 @@ const serveur = http.createServer((requete, reponse) => {
   if (requete.url.startsWith('/api/referential')) return json(reponse, referential);
   if (requete.url.startsWith('/api/state')) {
     const auditComplet = requete.url.includes('00000000-0000-4000-8000-000000000002');
+    // Le membre 0003 relit ce qui a été enregistré : c'est le seul moyen d'éprouver le
+    // contexte de reprise après un rechargement complet de la page.
+    const relecture = requete.url.includes('00000000-0000-4000-8000-000000000003') && dernierSnapshot;
+    if (relecture) {
+      const audit = {
+        passees: dernierSnapshot.audit?.passees ?? [],
+        derniere: dernierSnapshot.audit?.derniere ?? null,
+        maj: new Date().toISOString(),
+      };
+      return json(reponse, {
+        snapshot: { id: 'snapshot-relu', created_at: new Date().toISOString(), label: null,
+          blob: { levels: dernierSnapshot.levels, selections: dernierSnapshot.selections, audit } },
+        audit,
+        computed: { levels: { ...niveauxVides, ...dernierSnapshot.levels }, themes: etatThemes },
+        notes: {},
+      });
+    }
     const levels = auditComplet
       ? Object.fromEntries(competencies.map((competence, index) => [competence.id, (index % 3) + 1]))
       : niveauxVides;
@@ -495,6 +512,28 @@ async function principal() {
     await mobile.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
     assert.deepEqual(dernierSnapshot.audit.passees.slice().sort(),
       [`${DIM_MULTI.id}-01-04`, `${DIM_MULTI.id}-02-01`, `${DIM_MULTI.id}-02-02`].sort());
+
+    // --- Reprise après un rechargement complet -------------------------------
+    // Même parcours, nouvel onglet, aucun brouillon local : le contexte doit venir
+    // du snapshot relu. C'est le cas qui ramenait les testeurs à la mauvaise question.
+    const reprise = await navigateur.newPage({ viewport: { width: 1280, height: 700 } });
+    await reprise.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000003`);
+    await reprise.locator('#ciel:not([hidden])').waitFor();
+    await reprise.getByRole('button', { name: 'Reprendre mon audit' }).waitFor();
+    assert.match(await reprise.locator('#audit-reprise').textContent(), /dernière thématique : Seconde thématique/);
+    await reprise.getByRole('button', { name: 'Reprendre mon audit' }).dispatchEvent('click');
+    // La dernière thématique n'a plus rien « à faire » : plutôt qu'un point de reprise
+    // arbitraire, on repose la question du départ.
+    await reprise.locator('body[data-panneau="choix-dimension"]').waitFor({ state: 'attached' });
+    await reprise.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await reprise.getByText('2 passées', { exact: false }).waitFor();
+    // Entièrement passée : rouvrir la thématique démarre sur la première passée, pas
+    // au début de la liste, et le rappel dit pourquoi.
+    await reprise.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}-2"]`).dispatchEvent('click');
+    await reprise.locator('.situer-nom').waitFor();
+    assert.equal(await reprise.locator('.situer-nom').textContent(),
+      `Je sais mobiliser la compétence ${DIM_MULTI.id}-02-01.`);
+    await reprise.getByText('Tu avais passé cette compétence.', { exact: false }).waitFor();
 
     console.log('UI desktop, mobile et sauvegarde simulée : OK');
   } finally {
