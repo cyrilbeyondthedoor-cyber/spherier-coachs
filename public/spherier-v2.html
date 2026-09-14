@@ -613,7 +613,7 @@
   .etoile-corps[fill="#718ba6"] { stroke: var(--night-deep); stroke-width: 1.3; } /* Intervenir en entreprise */
 
   .theme-cadenas { font-size: 11px; text-anchor: middle; fill: var(--stone); }
-  .theme-progression { font-family: 'Inter Tight', sans-serif; font-size: 9px; text-anchor: middle; fill: var(--stone); }
+  .theme-progression { font-family: 'Inter Tight', sans-serif; font-size: 11px; text-anchor: middle; fill: var(--stone); }
 
   .etoile { pointer-events: none; }
   .etoile-tooltip {
@@ -1515,7 +1515,10 @@
   .ciel-dimension-core { position: absolute; inset: 22px; border: 1.5px solid var(--h); border-radius: 50%; background: var(--night-deep); box-shadow: 0 0 0 7px color-mix(in srgb, var(--h) 9%, transparent), 0 0 18px color-mix(in srgb, var(--h) 18%, transparent); }
   .ciel-mini-theme { position: absolute; left: 34px; top: 34px; width: 6px; height: 6px; border-radius: 50%; background: var(--h); opacity: var(--opacite); transform: rotate(var(--angle)) translateY(-31px); transform-origin: 3px 3px; box-shadow: 0 0 8px color-mix(in srgb, var(--h) 58%, transparent); }
   .ciel-dimension-nom { margin-top: 2px; font-family: 'Cormorant Garamond', serif; font-size: 15px; line-height: 1.05; }
-  .ciel-dimension-compte { margin-top: 4px; font-size: 9px; color: var(--stone); font-variant-numeric: tabular-nums; }
+  /* 11 px, pas 9 : « 33 % maîtrisées sur 1/4 thématiques · 3/11 évaluées » est du
+     texte qui se lit, sur le premier écran, et la même classe est à 12 px dans la
+     synthèse (principe 2.1). */
+  .ciel-dimension-compte { margin-top: 4px; font-size: 11px; color: var(--stone); font-variant-numeric: tabular-nums; }
 
   body[data-vue="categorie"] .categorie-dimensions-liste { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 34px 26px; }
   body[data-vue="categorie"] .dimension { border: 0; background: transparent; overflow: visible; }
@@ -1850,6 +1853,11 @@
     background: rgba(240, 235, 224, .02);
   }
   .audit-bilan-chiffre dt { color: var(--stone); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; }
+  /* « Compétences » demandait 97 px pour 81 px disponibles en 390 px de large :
+     l'interlettrage part en premier, le libellé reste sur une ligne. */
+  @media (max-width: 720px) {
+    .audit-bilan-chiffre dt { letter-spacing: .04em; }
+  }
   .audit-bilan-chiffre dd { margin-top: 3px; font-family: 'Cormorant Garamond', serif; font-size: 21px; }
   .audit-bilan-section { display: grid; gap: 8px; }
   .audit-bilan-label { color: var(--gold); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; }
@@ -4004,7 +4012,9 @@
         btn.classList.add('audit-marche-confirmee');
         const astuce = document.getElementById('situer-astuce');
         if (astuce) astuce.textContent = 'Enregistré, compétence suivante.';
-        setTimeout(() => {
+        clearTimeout(minuteurConfirmation);
+        minuteurConfirmation = setTimeout(() => {
+          minuteurConfirmation = null;
           if (!situer) return;
           situer.enAttente = false;
           avancerMeSituer();
@@ -4094,6 +4104,10 @@
   // Délai avant le passage automatique à la compétence suivante, le temps de voir la
   // marche se colorer.
   const DELAI_CONFIRMATION = 250;
+  // La référence du minuteur est gardée pour pouvoir l'annuler : `if (!situer) return`
+  // protégeait du panneau fermé, mais pas d'une AUTRE liste ouverte dans la fenêtre de
+  // 250 ms — le minuteur faisait alors avancer d'un cran la nouvelle liste.
+  let minuteurConfirmation = null;
 
   // Le brouillon local est effacé dès que rien ne diffère de la référence : les
   // compétences passées et le repère de reprise, eux, doivent survivre à ce cas —
@@ -4285,6 +4299,9 @@
     elPanneau.classList.toggle('plein-ecran', plein);
     bascule.textContent = plein ? 'Réduire' : 'Agrandir';
     bascule.setAttribute('aria-pressed', String(plein));
+    // Le passage automatique en attente appartenait à la liste qu'on quitte.
+    clearTimeout(minuteurConfirmation);
+    minuteurConfirmation = null;
     situer = null;
     competenceAffichee = null;
     themeAffiche = null;
@@ -5301,6 +5318,8 @@
   function fermerPanneau() {
     competenceAffichee = null;
     themeAffiche = null;
+    clearTimeout(minuteurConfirmation);
+    minuteurConfirmation = null;
     situer = null;
     configurerPleinEcran(false);
     elVoile.classList.remove('visible');
@@ -5632,6 +5651,17 @@
     elBandeau.innerHTML = `<b>${echapper(titre)}</b>${echapper(texte)}`
       + (action ? `<br><button type="button" id="bandeau-action">${echapper(action.libelle)}</button>` : '');
     elBandeau.className = 'bandeau visible ' + variante;
+    // Un panneau ouvert commence tout en haut de l'écran : posé à 14 px du bord, le
+    // bandeau recouvrait son titre, son fil d'Ariane et sa croix de fermeture pendant
+    // ses quatre secondes. Il se glisse donc sous l'en-tête du panneau, dont la hauteur
+    // varie d'un écran à l'autre et se mesure ici.
+    const panneauOuvert = !elVoile.hidden && document.body.dataset.panneau !== undefined;
+    // `bottom: auto` explicite : la règle qui rapproche le bandeau de la barre de
+    // sauvegarde pose un `bottom`, et le laisser avec un `top` étirerait la boîte.
+    elBandeau.style.top = panneauOuvert
+      ? `${Math.round(elPanneauTete.getBoundingClientRect().bottom) + 12}px`
+      : '';
+    elBandeau.style.bottom = panneauOuvert ? 'auto' : '';
     if (action) document.getElementById('bandeau-action').addEventListener('click', () => {
       elBandeau.classList.remove('visible'); action.faire();
     });
@@ -5686,8 +5716,11 @@
         levels: { ...reference.levels },
         current: [...reference.current],
         later: [...reference.later],
-        passees: [...(auditEnregistre.passees || [])],
-        derniere: auditEnregistre.derniere || null,
+        // `??` et non `||` : une réponse serveur sans `audit` retombe sur le brouillon
+        // local plutôt que d'effacer les compétences que le membre a décidé de passer.
+        // Un tableau vide renvoyé par le serveur, lui, reste une réponse à respecter.
+        passees: [...(auditEnregistre.passees ?? brouillon.passees ?? [])],
+        derniere: auditEnregistre.derniere ?? brouillon.derniere ?? null,
       };
 
       try { localStorage.removeItem(cleBrouillon()); } catch {}
@@ -5703,10 +5736,15 @@
       }
       if (competenceAffichee) rafraichirPanneau(competenceAffichee.code);
 
-      bandeau('Ton sphérier est enregistré.',
+      // « Tu peux fermer cette page. » tombait mal en fin de thématique, à l'instant
+      // précis où l'écran de résultat invite à poursuivre. Un libellé auto n'est posé
+      // que par la fin d'une thématique : il sert de repère pour choisir la phrase.
+      bandeau(repli !== '' ? 'Thématique enregistrée.' : 'Ton sphérier est enregistré.',
         retires > 0
           ? `${retires} cible${retires > 1 ? 's ont' : ' a'} été retirée${retires > 1 ? 's' : ''} : sa thématique s'est refermée.`
-          : 'Tu peux fermer cette page.',
+          : (repli !== ''
+            ? 'Tes réponses sont en sécurité. Tu peux continuer ou t\'arrêter là.'
+            : 'Tu peux fermer cette page.'),
         'succes');
       const evaluees = etat.referentiel.competencies
         .filter((competence) => (brouillon.levels[competence.id] ?? 0) > 0).length;
@@ -5834,7 +5872,7 @@
       ${categorie.definition && !resultat ? `<p class="ciel-categorie-def">${echapper(categorie.definition)}</p>` : ''}
       <div class="ciel-categorie-dims"><svg class="ciel-liens" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${liens}</svg>${dimensionsHtml}</div>
       <p class="ciel-categorie-meta">${mentionCategorie.score}${mentionCategorie.compte}</p>
-      <button type="button" class="ciel-categorie-cta" data-explorer-categorie="${echapper(categorie.id)}">Explorer cette catégorie →</button>
+      <button type="button" class="ciel-categorie-cta" data-explorer-categorie="${echapper(categorie.id)}" aria-label="Explorer la catégorie ${echapper(categorie.name)}">Explorer cette catégorie →</button>
     </section>`;
   }
 

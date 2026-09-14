@@ -1009,6 +1009,13 @@ async function principal() {
     const zoom = await navigateur.newPage({ viewport: { width: 1280, height: 700 } });
     await zoom.goto(url);
     await zoom.locator('#ciel:not([hidden])').waitFor();
+    // Les trois boutons « Explorer cette catégorie → » portaient le même nom
+    // accessible : un lecteur d'écran listait trois entrées identiques.
+    const nomsExplorer = await zoom.locator('#ciel [data-explorer-categorie]')
+      .evaluateAll((boutons) => boutons.map((b) => b.getAttribute('aria-label')));
+    assert.equal(nomsExplorer.length, CATEGORIES.length);
+    assert.equal(new Set(nomsExplorer).size, nomsExplorer.length,
+      `noms accessibles en double sur « Explorer cette catégorie » : ${JSON.stringify(nomsExplorer)}`);
     await zoom.locator(`#ciel [data-explorer-categorie="${DIM_MULTI.category}"]`).dispatchEvent('click');
     await zoom.locator(`[data-situer="${DIM_MULTI.id}"]:visible`).first().dispatchEvent('click');
     await zoom.locator('body[data-panneau="situer"]').waitFor({ state: 'attached' });
@@ -1022,6 +1029,19 @@ async function principal() {
     await zoom.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
     assert.equal(nbSnapshots - avantZoom, 1,
       'la fin de thématique lancée depuis le zoom de catégorie doit enregistrer');
+
+    // Le bandeau de confirmation se pose sous l'en-tête du panneau : il recouvrait le
+    // titre « Résultat de la thématique », le fil d'Ariane et la croix de fermeture
+    // pendant ses quatre secondes. Et il annonce la thématique, pas la fin de la visite.
+    await zoom.locator('.bandeau.visible').waitFor();
+    assert.match(await zoom.locator('.bandeau.visible b').textContent(), /Thématique enregistrée/);
+    const bandeauVsTete = await zoom.evaluate(() => {
+      const b = document.getElementById('bandeau').getBoundingClientRect();
+      const t = document.getElementById('panneau-tete').getBoundingClientRect();
+      return { recouvre: !(b.bottom <= t.top || b.top >= t.bottom), bandeauHaut: Math.round(b.top), teteBas: Math.round(t.bottom) };
+    });
+    assert.ok(!bandeauVsTete.recouvre,
+      `le bandeau recouvre l'en-tête du panneau (bandeau ${bandeauVsTete.bandeauHaut}, en-tête jusqu'à ${bandeauVsTete.teteBas})`);
     await zoom.close();
 
     // --- Écran d'attente pendant l'enregistrement de fin de thématique ----------
