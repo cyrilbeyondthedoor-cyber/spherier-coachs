@@ -248,6 +248,45 @@ async function testerPrioritesSnapshot() {
   assert.match(validerPriorites({ themes: [] }).erreurs.join(' '), /priorites.themes doit être un objet/);
   assert.match(validerPriorites({ classement: 'FON-01-01' }).erreurs.join(' '), /tableau de codes/);
 
+  // Un membre qui avait choisi trois « maintenant » avant que le classement n'existe :
+  // son premier classement ne doit pas les faire disparaître du modèle.
+  const avecAnciennes = validerEtNormaliser({
+    referentiel: referentielAudit,
+    corps: {
+      ...corpsDeBase,
+      selections: { current: ['FON-01-01', 'FON-01-02', 'FON-02-01'], later: ['ALL-01-01'] },
+      priorites: { themes: {}, dimensions: { ALL: ['ALL-01-01'] }, classement: ['ALL-01-01'] },
+    },
+  });
+  assert.deepEqual(avecAnciennes.erreurs, []);
+  assert.deepEqual(avecAnciennes.blob.selections.current, ['ALL-01-01'],
+    'le classement reste la seule source du mois');
+  assert.deepEqual(avecAnciennes.blob.selections.later, ['FON-01-01', 'FON-01-02', 'FON-02-01'],
+    'les anciens « maintenant » passent en tête de la file d\'attente');
+
+  // Même règle à la relecture d'un snapshot écrit avant que `priorites` n'existe.
+  const reluAnciennes = composerEtat({
+    referentiel: referentielAudit,
+    snapshot: { blob: {
+      levels: {},
+      selections: { current: ['FON-01-01', 'FON-01-02'], later: [] },
+      priorites: { themes: {}, dimensions: {}, classement: ['ALL-01-01'] },
+    } },
+  });
+  assert.deepEqual(reluAnciennes.snapshot.blob.selections.current, ['ALL-01-01']);
+  assert.deepEqual(reluAnciennes.snapshot.blob.selections.later, ['FON-01-01', 'FON-01-02']);
+
+  // Une clé inventée est refusée même sans un seul code pour la trahir.
+  assert.match(validerPriorites({ themes: { 'theme-inconnu': [] } }).erreurs.join(' '),
+    /identifiant absent du référentiel/);
+  assert.match(validerPriorites({ dimensions: { ZZZ: [] } }).erreurs.join(' '),
+    /identifiant absent du référentiel/);
+  // Une clé connue avec une liste vide reste acceptée : c'est le marqueur d'une
+  // dimension consolidée sans rien retenir.
+  const videAcceptee = validerPriorites({ dimensions: { FON: [] } });
+  assert.deepEqual(videAcceptee.erreurs, []);
+  assert.deepEqual(videAcceptee.blob.priorites.dimensions.FON, []);
+
   // Relecture : la même dérivation s'applique, pour qu'un snapshot ancien relu
   // aujourd'hui donne le même « maintenant » qu'un snapshot écrit aujourd'hui.
   const relu = composerEtat({ referentiel: referentielAudit, snapshot: { blob: accepte.blob } });

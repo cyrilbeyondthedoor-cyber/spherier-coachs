@@ -116,6 +116,10 @@ const referential = {
   resources: [],
 };
 
+// Trois cibles prises hors de la dimension du parcours : on les reconnaît sans ambiguïté
+// dans la file d'attente après l'arrivée d'un classement.
+const ANCIENNES_CIBLES = [DIMENSIONS[1], DIMENSIONS[2], DIMENSIONS[3]].map((d) => `${d.id}-01-01`);
+
 const niveauxVides = Object.fromEntries(competencies.map((competence) => [competence.id, 0]));
 const etatThemes = Object.fromEntries(themes.map((theme) => [theme.id, { status: 'open', unlock_hint: '' }]));
 let dernierSnapshot = null;
@@ -163,6 +167,27 @@ const serveur = http.createServer((requete, reponse) => {
       return json(reponse, {
         snapshot: null,
         audit: { passees: [], derniere: null, maj: null },
+        computed: { levels: partiels, themes: etatThemes },
+        notes: {},
+      });
+    }
+    // Membre 0011 : un snapshot écrit AVANT que le classement n'existe, avec trois
+    // « maintenant » déjà choisis par l'ancienne synthèse. Son premier classement ne doit
+    // pas les faire disparaître.
+    if (requete.url.includes('00000000-0000-4000-8000-000000000011')) {
+      const partiels = {
+        ...niveauxVides,
+        [`${DIM_MULTI.id}-01-01`]: 1,
+        [`${DIM_MULTI.id}-01-02`]: 2,
+        [`${DIM_MULTI.id}-01-03`]: 1,
+        [`${DIM_MULTI.id}-01-04`]: 2,
+      };
+      const anciennes = ANCIENNES_CIBLES;
+      return json(reponse, {
+        snapshot: { id: 'snapshot-ancien', cree_le: new Date().toISOString(), libelle: null,
+          blob: { levels: partiels, selections: { current: anciennes, later: [] } } },
+        audit: { passees: [], derniere: null, maj: null },
+        priorites: PRIORITES_VIDES,
         computed: { levels: partiels, themes: etatThemes },
         notes: {},
       });
@@ -1056,6 +1081,25 @@ async function principal() {
     assert.ok(hauteurs.every((h) => h >= 44), `cibles tactiles trop petites : ${hauteurs.join(', ')}`);
     await capturer(recapMobile, screenshotDir, 'recap-dimension-mobile.png', { fullPage: true });
     await recapMobile.close();
+
+    // --- Lot 7 : les « maintenant » d'avant le classement ne s'évaporent pas -----
+    const ancien = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
+    await ancien.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000011`);
+    await ancien.locator('#ciel:not([hidden])').waitFor();
+    await ancien.locator('#audit-cta').dispatchEvent('click');
+    await ancien.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await ancien.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await ancien.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
+    // Une seule priorité cochée : le classement ne tient qu'une ligne, les trois anciennes
+    // cibles doivent donc toutes se retrouver en attente, et dans leur ordre d'origine.
+    await ancien.locator('#priorites-theme .prio-case').first().check();
+    await ancien.waitForTimeout(2400);
+    assert.equal(dernierSnapshot.priorites.classement.length, 1);
+    assert.deepEqual(dernierSnapshot.selections.current, dernierSnapshot.priorites.classement,
+      'le classement reste la seule source du mois');
+    assert.deepEqual(dernierSnapshot.selections.later.slice(0, 3), ANCIENNES_CIBLES,
+      'les anciennes cibles passent en tête de la file d\'attente au lieu de disparaître');
+    await ancien.close();
 
     const publicMobile = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
     await publicMobile.goto(`http://127.0.0.1:${adresse.port}/`);
