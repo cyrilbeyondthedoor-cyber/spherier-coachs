@@ -2099,6 +2099,10 @@
     border-color: var(--h); background: color-mix(in srgb, var(--h) 20%, transparent);
   }
   .poursuivre-primaire.audit-suite-choix.principal:hover { background: color-mix(in srgb, var(--h) 30%, transparent); }
+  /* --- 6.5 La constellation lance le parcours --------------------------------
+     Le bouton primaire de l'écran de thématique : même parcours que l'écran
+     « Choisis une thématique », pour que la carte ne soit pas une impasse. */
+  .parcours-evaluer { margin-bottom: 4px; }
 </style>
 </head>
 <body>
@@ -3860,13 +3864,29 @@
         </div>
       </section>`;
 
-    ecrireCorps(horizon + `
+    // Une thématique ouverte depuis la constellation mène au MÊME parcours que l'écran
+    // « Choisis une thématique » : contexte complet, reprise à la première compétence à
+    // faire, enregistrement en fin de thématique, résultat puis écran Poursuivre. C'est
+    // le chemin naturel depuis la carte, et il s'arrêtait jusqu'ici sur une liste sans
+    // sortie. La liste, elle, reste consultable : c'est le mode exploration.
+    const aSituer = competences.filter((competence) => !estEvaluee(competence.id)).length;
+    const boutonEvaluer = dimension
+      ? `<section class="panneau-section">
+          <button type="button" class="choix-principal parcours-evaluer" id="theme-evaluer">Évaluer cette thématique · ${competences.length} compétence${competences.length > 1 ? 's' : ''}<small>${aSituer === 0
+            ? 'Toutes situées. Tu peux revoir tes positionnements.'
+            : `${aSituer} encore à situer · ton score arrive à la fin`}</small></button>
+        </section>`
+      : '';
+
+    ecrireCorps(horizon + boutonEvaluer + `
       <section class="panneau-section">
         <p class="panneau-label">${competences.length} compétence${competences.length > 1 ? 's' : ''}</p>
         <div class="liste-comp">${items}</div>
       </section>`);
     elPanneauCorps.scrollTop = 0;
 
+    const evaluer = document.getElementById('theme-evaluer');
+    if (evaluer) evaluer.addEventListener('click', () => evaluerTheme(idDimension, themeId, 'theme'));
     elPanneauCorps.querySelectorAll('.comp-item[data-competence]').forEach((btn) => {
       btn.addEventListener('click', () => ouvrirCompetence(btn.dataset.competence, idDimension));
     });
@@ -5563,6 +5583,9 @@
     elPanneauCorps.querySelectorAll('[data-audit-rdv]').forEach((bouton) => {
       bouton.addEventListener('click', ouvrirReservation);
     });
+    // Seule liste d'évaluation qui reste sans contexte : elle traverse plusieurs
+    // thématiques et parfois plusieurs dimensions, elle n'a donc ni score de thématique
+    // à afficher ni suite à proposer. Elle garde l'exploration libre et son bilan.
     const btnSituer = document.getElementById('syn-situer');
     if (btnSituer) btnSituer.addEventListener('click', () => ouvrirMeSituer({
       codes: codesRetenus, titre: 'Mes compétences non évaluées', teinte: '#c9a661',

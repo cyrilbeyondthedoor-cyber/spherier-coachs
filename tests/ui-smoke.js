@@ -1217,6 +1217,39 @@ async function principal() {
       await pageLisibilite.close();
     }
 
+    // --- Lot 6.5 : la constellation ouvre le parcours modulaire ---------------
+    // Depuis la carte : dimension → thématique → bouton primaire → évaluation avec
+    // contexte, enregistrement automatique, résultat et écran Poursuivre.
+    const constellation = await navigateur.newPage({ viewport: { width: 1280, height: 700 } });
+    await constellation.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000008`);
+    await constellation.locator('#ciel:not([hidden])').waitFor();
+    await constellation.locator(`[data-ouvrir="${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await constellation.locator('body[data-vue="categorie"]').waitFor({ state: 'attached' });
+    await constellation.locator(`[data-dimension="${DIM_MULTI.id}"] .theme[data-theme]`).first().dispatchEvent('click');
+    await constellation.locator('body[data-panneau^="theme:"]').waitFor({ state: 'attached' });
+    const lancer = constellation.locator('#theme-evaluer');
+    await lancer.waitFor();
+    assert.match((await lancer.textContent()).trim(), /^Évaluer cette thématique · 4 compétences/);
+    // La liste reste consultable à côté du bouton : c'est le mode exploration.
+    assert.equal(await constellation.locator('.comp-item[data-competence]').count(), 4);
+    const avantConstellation = nbSnapshots;
+    await lancer.dispatchEvent('click');
+    await constellation.locator('body[data-panneau="situer"]').waitFor({ state: 'attached' });
+    // Contexte complet : fil d'Ariane et sous-compteur du parcours modulaire.
+    await constellation.locator('.audit-sous-compteur', { hasText: `Thématique 1 / 2 de ${DIM_MULTI.name}` }).waitFor();
+    assert.match(await constellation.locator('.panneau-fil').textContent(), new RegExp(DIM_MULTI.name));
+    for (const rang of [1, 2, 3, 4]) {
+      await constellation.locator('.situer-compte', { hasText: `${rang} / 4` }).waitFor();
+      await constellation.locator('.marche[data-niveau="2"]').dispatchEvent('click');
+    }
+    await constellation.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
+    assert.equal(nbSnapshots - avantConstellation, 1,
+      'une thématique lancée depuis la constellation enregistre en fin de parcours');
+    await constellation.locator('.encourage-progression').waitFor();
+    await constellation.locator('[data-suite="continuer"]').waitFor();
+    await capturer(constellation, screenshotDir, 'resultat-depuis-constellation-desktop.png');
+    await constellation.close();
+
     // --- Lot 6.2 : clavier, compteur enrichi, transition ----------------------
     const tinder = await navigateur.newPage({ viewport: { width: 1280, height: 700 } });
     await tinder.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000006`);
