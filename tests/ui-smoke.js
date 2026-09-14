@@ -485,6 +485,17 @@ async function principal() {
     await mobile.locator('[data-suite="dimension"]').dispatchEvent('click');
     await mobile.locator('body[data-panneau="choix-dimension"]').waitFor({ state: 'attached' });
 
+    // Une thématique dont toutes les compétences sont passées part quand même vers le
+    // serveur : sans cela, la reprise sur un autre appareil les redemanderait toutes.
+    await mobile.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await mobile.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}-2"]`).dispatchEvent('click');
+    await mobile.getByRole('button', { name: 'Passer →' }).dispatchEvent('click');
+    await mobile.locator('.situer-compte', { hasText: '2 / 2' }).waitFor();
+    await mobile.getByRole('button', { name: 'Passer →' }).dispatchEvent('click');
+    await mobile.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
+    assert.deepEqual(dernierSnapshot.audit.passees.slice().sort(),
+      [`${DIM_MULTI.id}-01-04`, `${DIM_MULTI.id}-02-01`, `${DIM_MULTI.id}-02-02`].sort());
+
     console.log('UI desktop, mobile et sauvegarde simulée : OK');
   } finally {
     await Promise.race([

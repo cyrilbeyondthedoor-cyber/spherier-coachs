@@ -3871,8 +3871,17 @@
     const { dimensionId, themeId, suite } = contexte;
     const theme = themeParId(themeId);
 
+    // `estModifie()` ne regarde que les niveaux et les sélections : une thématique
+    // entièrement passée ne changerait rien à ses yeux, et ne partirait jamais vers le
+    // serveur. On compare donc aussi les compétences passées à celles du dernier
+    // snapshot, sinon la reprise sur un autre appareil les redemanderait toutes.
+    const passeesEnvoyees = etat.snapshot?.blob?.audit?.passees ?? [];
+    const passeesLocales = brouillon.passees || [];
+    const passeesChangees = passeesLocales.length !== passeesEnvoyees.length
+      || passeesLocales.some((code) => !passeesEnvoyees.includes(code));
+
     let enregistrement = 'inutile';
-    if (estModifie()) {
+    if (estModifie() || passeesChangees) {
       // Libellé automatique quand le membre n'en a pas saisi : un point d'étape sans
       // nom se retrouve mal dans l'historique.
       if (!elLibelle.value.trim()) {
