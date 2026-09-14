@@ -1665,7 +1665,9 @@
     display: flex; align-items: center; gap: 12px; padding: 10px 13px;
     border: 1px solid var(--line-faint); border-radius: 10px; background: rgba(240, 235, 224, .02);
   }
-  .audit-ligne-nom { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.4; }
+  .audit-ligne-corps { flex: 1; min-width: 0; display: grid; justify-items: start; gap: 5px; }
+  .audit-ligne-nom { font-size: 12.5px; line-height: 1.4; }
+  .audit-ligne .pastille-diff { font-size: 9px; padding: 2px 7px 2px 6px; }
   .audit-ligne-niveau { flex-shrink: 0; color: var(--stone); font-family: 'Cormorant Garamond', serif; font-size: 12px; font-style: italic; }
   .audit-ligne-action {
     flex-shrink: 0; min-height: 44px; padding: 8px 15px; border: 1px solid var(--line);
@@ -3486,7 +3488,6 @@
         ${dimension
           ? `<p class="audit-chapitre">${echapper(dimension.name)}</p><p class="situer-fil">${echapper(theme ? theme.name : '')}</p>`
           : `<p class="situer-fil">${echapper(theme ? theme.name : '')}</p>`}
-        <p class="situer-difficulte">Niveau de la compétence : ${pastilleDifficulte(c)}</p>
         <h2 class="situer-nom" id="panneau-titre">${echapper(c.name)}</h2>
         ${(c.statement || c.definition) && (c.statement || c.definition) !== c.name
           ? `<p class="situer-def">${echapper(c.statement || c.definition)}</p>` : ''}
@@ -3896,13 +3897,18 @@
   }
 
   // Liste de compétences avec leur niveau, et une action facultative par ligne.
+  // La difficulté est portée ici, et non pendant l'évaluation : lue avant de se
+  // positionner, elle oriente la réponse ; lue après, elle aide à situer le résultat.
   function listeCompetences(codes, action = null) {
     return `<div class="audit-liste">${codes.map((code) => {
       const competence = competenceParCode(code);
       if (!competence) return '';
       const niveau = brouillon.levels[code] ?? 0;
       return `<div class="audit-ligne">
-        <span class="audit-ligne-nom">${echapper(competence.name)}</span>
+        <span class="audit-ligne-corps">
+          <span class="audit-ligne-nom">${echapper(competence.name)}</span>
+          ${pastilleDifficulte(competence)}
+        </span>
         <span class="audit-ligne-niveau">${niveau ? echapper(etat.referentiel.scale[niveau]) : 'Passée'}</span>
         ${action ? `<button type="button" class="audit-ligne-action" data-${action.cle}="${echapper(code)}">${echapper(action.libelle)}</button>` : ''}
       </div>`;

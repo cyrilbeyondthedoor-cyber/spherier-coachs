@@ -226,7 +226,10 @@ async function principal() {
     assert.equal((await compteurAudit.textContent()).trim(), '1 / 4', 'compteur de section, pas de référentiel entier');
     assert.equal((await page.locator('.audit-sous-compteur').textContent()).trim(),
       `Thématique 1 / 2 de ${DIM_MULTI.name}`);
-    assert.match(await page.locator('.situer-difficulte').textContent(), /Niveau de la compétence :\s*Socle fondamental/);
+    // La difficulté n'est pas montrée pendant l'évaluation : la lire avant de se
+    // positionner oriente la réponse.
+    assert.equal(await page.locator('.situer-difficulte').count(), 0);
+    assert.equal(await page.locator('#panneau .pastille-diff').count(), 0);
     await page.getByText('Je ne maîtrise pas du tout', { exact: true }).waitFor();
     await page.getByText("Je dois m'améliorer", { exact: true }).waitFor();
     await page.getByText('Je maîtrise', { exact: true }).waitFor();
@@ -263,6 +266,11 @@ async function principal() {
       'la compétence passée part bien dans le payload');
     assert.equal(dernierSnapshot.audit.derniere.themeId, `theme-${DIM_MULTI.id}`);
     assert.equal(await page.getByRole('button', { name: 'Évaluer maintenant' }).count(), 1);
+    // Elle revient sur le résultat, une pastille par compétence listée : deux à
+    // travailler, plus la compétence passée.
+    assert.equal(await page.locator('.audit-ligne .pastille-diff').count(), 3);
+    assert.ok((await page.locator('.audit-ligne .pastille-diff').allTextContents())
+      .includes('Socle fondamental'));
     await capturer(page, screenshotDir, 'resultat-theme-desktop.png');
 
     // Le bouton principal de « Poursuivre » doit être atteignable sans défiler.
@@ -353,6 +361,8 @@ async function principal() {
     await page.locator('.etoile[data-competence="FON-02-02"]').dispatchEvent('click');
     await page.getByText('Un exemple observable pour FON-02-02.').waitFor();
     assert.equal(await page.locator('.marche[data-niveau]').count(), 3);
+    // La fiche ouverte depuis la carte garde sa pastille de difficulté.
+    assert.equal(await page.locator('#panneau .pastille-diff.panneau-diff').count(), 1);
 
     await page.locator('.marche[data-niveau="3"]').dispatchEvent('click');
     await page.locator('#panneau-fermer').dispatchEvent('click');
