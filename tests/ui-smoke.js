@@ -2079,6 +2079,13 @@ async function principal() {
     await lent.locator('body[data-panneau="situer"]').waitFor({ state: 'attached' });
     await lent.locator('.situer-compte', { hasText: '1 / 6' }).waitFor();
 
+    // Lot 9, second bloquant : le fil ne répète plus le nom de la dimension.
+    const filDebut = (await lent.locator('.panneau-fil').textContent()).replace(/\s+/g, ' ').trim();
+    assert.equal(filDebut, `M'évaluer › ${DIM_MULTI.name} › Thématique ${DIM_MULTI.id}`,
+      `fil d'Ariane inattendu : ${filDebut}`);
+    assert.equal(filDebut.split(DIM_MULTI.name).length - 1, 1,
+      `le nom de la dimension apparaît deux fois dans le fil : ${filDebut}`);
+
     // Les quatre premières : la frontière de thématique tombe entre la 4e et la 5e.
     const avantLent = nbSnapshots;
     for (const rang of [1, 2, 3, 4]) {
@@ -2087,6 +2094,9 @@ async function principal() {
     }
     // On est sur la 5e, le POST de la première thématique est en vol pour 1,5 s.
     await lent.locator('.situer-compte', { hasText: '5 / 6' }).waitFor();
+    const filApres = (await lent.locator('.panneau-fil').textContent()).replace(/\s+/g, ' ').trim();
+    assert.equal(filApres, `M'évaluer › ${DIM_MULTI.name} › Seconde thématique ${DIM_MULTI.id}`,
+      `le fil doit suivre la thématique courante : ${filApres}`);
 
     // Coché PENDANT le vol de la requête.
     await lent.locator('.marche[data-niveau="3"]').dispatchEvent('click');

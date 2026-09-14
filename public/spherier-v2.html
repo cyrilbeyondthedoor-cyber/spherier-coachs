@@ -4469,10 +4469,15 @@
     const dimension = contexte ? dimensionParId(contexte.dimensionId) : null;
     const themesDim = dimension ? themesDeDimension(dimension) : [];
     const rang = contexte ? themesDim.findIndex((item) => item.id === contexte.themeId) + 1 : 0;
+    // En mode enchaîné, `situer.titre` porte le nom de la DIMENSION, que le fil affiche
+    // déjà juste avant : « M'évaluer › Alliance › Alliance » ne disait rien. Le dernier
+    // segment nomme donc la thématique en cours, qui change au fil du parcours.
+    const themeCourant = contexte && contexte.enchaine ? themeParId(contexte.themeId) : null;
+    const dernierSegment = themeCourant ? themeCourant.name : situer.titre;
     noterDerniere(contexte, code);
 
     elPanneauTete.innerHTML = `
-      <p class="panneau-fil audit-fil-court">M'évaluer <span>›</span> ${dimension ? `${echapper(dimension.name)} <span>›</span> ` : ''}<b>${echapper(situer.titre)}</b></p>
+      <p class="panneau-fil audit-fil-court">M'évaluer <span>›</span> ${dimension ? `${echapper(dimension.name)} <span>›</span> ` : ''}<b>${echapper(dernierSegment)}</b></p>
       <div class="situer-progres">
         <span class="situer-jauge"><i style="width:${Math.round((situer.index / situer.codes.length) * 100)}%"></i></span>
         <span class="situer-compte">${situer.index + 1} / ${situer.codes.length}</span>
