@@ -1877,10 +1877,108 @@
     border-radius: 999px; background: transparent; color: var(--paper-dim); font: inherit; font-size: 13px; cursor: pointer;
   }
   .audit-ligne-action:hover { border-color: var(--teinte-p); color: var(--paper); }
+  /* Priorités : une case à cocher par compétence à travailler, et un compteur qui dit
+     combien il en reste. La case et son libellé forment une seule cible de 44 px. */
+  .audit-priorites { display: grid; gap: 10px; }
+  .audit-priorites-tete { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .audit-priorites-compteur { color: var(--paper-dim); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .audit-priorites-liste { display: grid; gap: 6px; }
+  .audit-priorite {
+    display: grid; gap: 4px; padding: 8px 13px;
+    border: 1px solid var(--line-faint); border-radius: 10px; background: rgba(240, 235, 224, .02);
+  }
+  .audit-priorite.retenue { border-color: var(--gold); background: rgba(201, 166, 97, .12); }
+  .audit-priorite-choix {
+    display: flex; align-items: center; gap: 12px; min-height: 44px; cursor: pointer;
+  }
+  .audit-priorite-case { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--gold); cursor: pointer; }
+  .audit-priorite-texte { display: grid; gap: 5px; justify-items: start; min-width: 0; }
+  .audit-priorite-nom { font-size: 14px; line-height: 1.4; }
+  .audit-priorite-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .audit-priorite-niveau {
+    padding: 2px 9px; border: 1px solid var(--line); border-radius: 999px;
+    color: var(--paper-dim); font-size: 11px; white-space: nowrap;
+  }
+  .audit-priorite-niveau.niveau-1 { border-color: color-mix(in srgb, #e07a6a 55%, transparent); }
+  .audit-priorite-niveau.niveau-2 { border-color: color-mix(in srgb, var(--gold) 55%, transparent); }
+  .audit-priorite-origine { color: var(--stone); font-size: 12px; }
+  .audit-priorite-proposee { color: var(--stone); font-size: 11px; font-style: italic; }
+  .audit-priorite-fiche > summary {
+    display: flex; align-items: center; min-height: 44px; padding: 4px 0 4px 32px;
+    color: var(--paper-dim); font-size: 13px; text-decoration: underline; cursor: pointer;
+  }
+  .audit-priorite-fiche > summary:hover { color: var(--paper); }
+  .audit-priorite-detail { padding: 4px 0 8px 32px; color: var(--paper-dim); font-size: 13px; line-height: 1.55; }
+  .audit-priorite-detail p + p, .audit-priorite-detail ul { margin-top: 7px; }
+  .audit-priorite-detail li { margin-left: 17px; }
+  .audit-priorites-groupe {
+    margin-top: 6px; color: var(--stone); font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+  }
+  .audit-priorites-groupe:first-child { margin-top: 0; }
+  .audit-priorites-alerte { color: var(--gold-bright); font-size: 13px; }
+  .audit-priorites-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .audit-priorites-valider {
+    min-height: 44px; padding: 11px 20px; border: 1px solid var(--gold); border-radius: 999px;
+    background: rgba(201, 166, 97, .16); color: var(--paper); font: inherit; font-size: 14px; cursor: pointer;
+  }
+  .audit-priorites-valider:hover { background: rgba(201, 166, 97, .26); }
+  .audit-priorites-valider:disabled { opacity: .45; cursor: not-allowed; }
+  .audit-priorites-repliee { color: var(--paper-dim); font-size: 14px; line-height: 1.55; }
+
   .audit-classement { display: grid; gap: 7px; }
   .audit-classement-ligne { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; align-items: baseline; }
   .audit-classement-nom { font-size: 14px; }
   .audit-classement-ligne .choix-jauge { grid-column: 1 / -1; }
+
+  .sel-entete { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .sel-dim-classement i { background: var(--gold); }
+
+  .recap-scores { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+  .recap-score {
+    display: grid; gap: 5px; padding: 12px 14px;
+    border: 1px solid var(--line-faint); border-radius: 11px; background: rgba(240, 235, 224, .02);
+  }
+  .recap-score-label { color: var(--stone); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; }
+
+  .rangs { display: grid; gap: 7px; list-style: none; }
+  .rang {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 6px 12px; align-items: center;
+    padding: 9px 13px; border: 1px solid var(--line-faint); border-radius: 11px;
+    background: rgba(240, 235, 224, .02);
+  }
+  .rang.rang-mois { border-color: var(--gold); background: rgba(201, 166, 97, .12); }
+  .rang.rang-porte { opacity: .45; }
+  .rang.rang-cible { border-color: var(--gold-bright); }
+  .rang-numero {
+    display: grid; place-items: center; width: 28px; height: 28px; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--paper-dim);
+    font-family: 'Cormorant Garamond', serif; font-size: 16px;
+  }
+  .rang-mois .rang-numero { border-color: var(--gold); color: var(--paper); }
+  .rang-corps { display: grid; gap: 5px; justify-items: start; min-width: 0; }
+  .rang-nom { font-size: 14px; line-height: 1.4; }
+  .rang-marque {
+    padding: 2px 9px; border-radius: 999px; background: rgba(201, 166, 97, .22);
+    color: var(--gold-bright); font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  }
+  .rang-actions { display: flex; align-items: center; gap: 6px; }
+  .rang-fleche {
+    width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 999px;
+    background: transparent; color: var(--paper); font: inherit; font-size: 15px; cursor: pointer;
+  }
+  .rang-fleche:hover:not(:disabled) { border-color: var(--gold); }
+  .rang-fleche:disabled { opacity: .3; cursor: not-allowed; }
+  .rang-retirer {
+    min-height: 44px; padding: 8px 15px; border: 1px solid var(--line); border-radius: 999px;
+    background: transparent; color: var(--paper-dim); font: inherit; font-size: 13px; cursor: pointer;
+  }
+  .rang-retirer:hover { border-color: #e07a6a; color: var(--paper); }
+  .rang-poignee { color: var(--stone); font-size: 17px; cursor: grab; }
+
+  @media (max-width: 720px) {
+    .rang { grid-template-columns: auto minmax(0, 1fr); }
+    .rang-actions { grid-column: 1 / -1; justify-content: flex-start; }
+  }
 
   .audit-echec {
     display: grid; gap: 9px; justify-items: start; padding: 13px 15px;
@@ -3308,8 +3406,8 @@
 
   // Travail en cours. `reference` est l'état tel que le serveur l'a renvoyé : il sert à
   // savoir ce qui a changé, et à revenir en arrière.
-  let reference = { levels: {}, current: [], later: [] };
-  let brouillon = { levels: {}, current: [], later: [] };
+  let reference = { levels: {}, current: [], later: [], priorites: { themes: {}, dimensions: {}, classement: [] } };
+  let brouillon = { levels: {}, current: [], later: [], priorites: { themes: {}, dimensions: {}, classement: [] } };
 
   const cleBrouillon = () => `spherier-v2-brouillon-${CLIENT_ID}`;
 
@@ -3335,6 +3433,7 @@
   function estModifie() {
     const codes = new Set([...Object.keys(reference.levels), ...Object.keys(brouillon.levels)]);
     for (const c of codes) if ((reference.levels[c] ?? 0) !== (brouillon.levels[c] ?? 0)) return true;
+    if (signaturePriorites(reference.priorites) !== signaturePriorites(brouillon.priorites)) return true;
     return !memeListe(reference.current, brouillon.current) || !memeListe(reference.later, brouillon.later);
   }
 
@@ -3348,6 +3447,9 @@
       niveaux,
       cibles: !memeListe(reference.current, brouillon.current),
       plusTard: !memeListe(reference.later, brouillon.later),
+      // Réordonner le classement ne change ni l'ensemble des cibles ni celui de la
+      // liste d'attente : sans ce drapeau, la barre annonçait « Modifié : . ».
+      priorites: signaturePriorites(reference.priorites) !== signaturePriorites(brouillon.priorites),
     };
   }
 
@@ -3449,7 +3551,31 @@
 
   // « Maintenant » et « plus tard » s'excluent : une compétence que l'on travaille
   // n'est plus en attente, et la promotion est donc un déplacement, pas une copie.
+  //
+  // Dès qu'un classement existe, c'est LUI que ces trois gestes déplacent : `current`
+  // et `later` en sont dérivés, les écrire directement les ferait diverger au prochain
+  // enregistrement. Une compétence absente du classement — gardée depuis la carte, par
+  // exemple — suit l'ancien chemin.
   function basculerPlusTard(code) {
+    const p = etatPriorites();
+    const rang = p.classement.indexOf(code);
+    if (rang >= 0) {
+      // Déjà sous les trois du mois : un second clic la retire tout à fait. Et quand le
+      // classement tient en trois lignes, il n'y a rien en dessous où la faire
+      // descendre : elle sort du classement et rejoint la file d'attente, ce que le
+      // bouton promet. Sans ce cas, « Garder pour plus tard » ne faisait rien.
+      if (rang >= MAX_MAINTENANT || p.classement.length <= MAX_MAINTENANT) {
+        const resteEnAttente = rang < MAX_MAINTENANT;
+        retirerDuClassement(code);
+        if (resteEnAttente) appliquerChangement(() => {
+          brouillon.later = [...new Set([...brouillon.later, code])];
+        });
+        return;
+      }
+      deplacerDansClassement(code, MAX_MAINTENANT);
+      memoriserPriorites();
+      return;
+    }
     appliquerChangement(() => {
       if (brouillon.later.includes(code)) {
         brouillon.later = brouillon.later.filter((c) => c !== code);
@@ -3461,6 +3587,13 @@
   }
 
   function basculerMaintenant(code) {
+    const p = etatPriorites();
+    if (p.classement.length > 0) {
+      if (brouillon.current.includes(code)) deplacerDansClassement(code, MAX_MAINTENANT);
+      else deplacerDansClassement(code, Math.min(brouillon.current.length, MAX_MAINTENANT - 1));
+      memoriserPriorites();
+      return;
+    }
     appliquerChangement(() => {
       if (brouillon.current.includes(code)) {
         brouillon.current = brouillon.current.filter((c) => c !== code);
@@ -3472,6 +3605,14 @@
   }
 
   function remplacerMaintenant(sortant, entrant) {
+    const p = etatPriorites();
+    if (p.classement.length > 0) {
+      const rang = p.classement.indexOf(sortant);
+      deplacerDansClassement(entrant, rang >= 0 ? rang : 0);
+      deplacerDansClassement(sortant, MAX_MAINTENANT);
+      memoriserPriorites();
+      return;
+    }
     appliquerChangement(() => {
       brouillon.current = [...new Set(
         brouillon.current.filter((c) => c !== sortant).concat(entrant)
@@ -3965,7 +4106,6 @@
   function ligneSelection(code, options = {}) {
     const c = etat.referentiel.competencies.find((x) => x.id === code);
     if (!c) return '';
-    const t = etat.referentiel.themes.find((x) => x.id === c.theme);
     const niveau = brouillon.levels[code] ?? 0;
     const ouverte = estOuverte(c.theme);
     const etatTexte = options.cible
@@ -3982,7 +4122,7 @@
 
     return `<div class="sel-item${options.cible ? ' cible' : ''}">
       <button type="button" class="sel-nom" data-aller="${echapper(code)}">
-        ${echapper(c.name)}<small>${echapper(t ? t.name : '')}${aUneNote(code) ? ' · note' : ''}</small>
+        ${echapper(c.name)}<small>${echapper(origineDe(code))}${aUneNote(code) ? ' · note' : ''}</small>
       </button>
       <span class="sel-etat">${etatTexte}</span>
       ${promouvoir}
@@ -4000,14 +4140,19 @@
       <h2 class="panneau-titre" id="panneau-titre">Mon mois</h2>
       <p class="panneau-def">Ce que tu travailles maintenant, et ce que tu gardes pour la suite.</p>`;
 
+    const classement = etatPriorites().classement;
+    const suiteClassement = classement.slice(MAX_MAINTENANT);
+
     const cibles = brouillon.current.length
       ? brouillon.current.map((c) => ligneSelection(c, { cible: true })).join('')
       : `<p class="sel-vide">Aucune compétence choisie pour ce mois. Trois au maximum : c'est peu, et c'est voulu — mieux vaut trois compétences travaillées qu'une liste d'intentions.</p>`;
 
-    // « Plus tard » groupé par dimension : c'est ce qui transforme un fourre-tout en
-    // file d'attente lisible.
+    // La suite du classement garde SON ordre : c'est celui que le membre a posé sur
+    // l'écran de récap, et le regrouper par dimension l'effacerait. Le reste de la
+    // liste d'attente, qui n'a jamais été classé, reste groupé par dimension : c'est
+    // ce qui transforme un fourre-tout en file d'attente lisible.
     const parDim = new Map();
-    brouillon.later.forEach((code) => {
+    brouillon.later.filter((code) => !classement.includes(code)).forEach((code) => {
       const c = etat.referentiel.competencies.find((x) => x.id === code);
       if (!c) return;
       const d = dimensionDe(c);
@@ -4022,13 +4167,27 @@
         <p class="sel-dim" style="--h: ${TEINTES_HEX[id] || '#f0ebe0'}"><i></i>${echapper(g.dimension ? g.dimension.name : '')}</p>
         ${g.codes.map((c) => ligneSelection(c)).join('')}`).join('');
 
+    const suiteHtml = suiteClassement.length
+      ? `<p class="sel-dim sel-dim-classement"><i></i>Dans ton classement</p>
+         ${suiteClassement.map((code) => ligneSelection(code)).join('')}`
+      : '';
+
     const plusTard = brouillon.later.length
-      ? groupes
+      ? suiteHtml + groupes
       : `<p class="sel-vide">Rien en attente. Sur n'importe quelle compétence, « Garder pour plus tard » la range ici — y compris dans une thématique encore fermée.</p>`;
+
+    // « Réordonner » renvoie vers l'écran de récap, le seul endroit où l'ordre se
+    // décide. Sans dimension bouclée, il s'ouvre en mode global.
+    const reordonner = classement.length
+      ? '<button type="button" class="choix-lien" id="mois-reordonner">Réordonner</button>'
+      : '';
 
     ecrireCorps(`
       <section class="panneau-section sel-groupe">
-        <p class="panneau-label">Ce mois — ${brouillon.current.length}/${MAX_MAINTENANT}</p>
+        <div class="sel-entete">
+          <p class="panneau-label">Ce mois-ci — ${brouillon.current.length}/${MAX_MAINTENANT}</p>
+          ${reordonner}
+        </div>
         ${cibles}
       </section>
       <section class="panneau-section sel-groupe">
@@ -4038,6 +4197,9 @@
       <div id="zone-remplacement"></div>
       <p class="sel-rappel">Touche une compétence pour la retrouver dans sa constellation.</p>`);
     elPanneauCorps.scrollTop = 0;
+
+    const boutonReordonner = document.getElementById('mois-reordonner');
+    if (boutonReordonner) boutonReordonner.addEventListener('click', () => ouvrirRecapDimension(derniereDimensionEvaluee()));
 
     elPanneauCorps.querySelectorAll('[data-aller]').forEach((btn) => {
       btn.addEventListener('click', () => allerVersCompetence(btn.dataset.aller));
@@ -4374,7 +4536,12 @@
   // ils décrivent un parcours, pas une modification en attente. On les réécrit donc
   // à la main quand l'écriture automatique vient de les emporter.
   function persisterAudit() {
-    if ((brouillon.passees || []).length === 0 && !brouillon.derniere) return;
+    const priorites = brouillon.priorites;
+    const aDesPriorites = Boolean(priorites) && (
+      Object.keys(priorites.themes || {}).length > 0
+      || Object.keys(priorites.dimensions || {}).length > 0
+      || (priorites.classement || []).length > 0);
+    if ((brouillon.passees || []).length === 0 && !brouillon.derniere && !aDesPriorites) return;
     try {
       localStorage.setItem(cleBrouillon(), JSON.stringify({ ...brouillon, le: Date.now() }));
     } catch { /* stockage indisponible : on continue sans filet */ }
@@ -4407,6 +4574,112 @@
     // Simple signet : pas de redessin. Le bloc d'accueil est masqué tant que le panneau
     // est ouvert, le rafraîchir à chaque question ne servait à personne.
     persisterAudit();
+  }
+
+  // --- Priorités et classement --------------------------------------------------
+  // Trois priorités par thématique, trois par dimension, et UN classement qui les
+  // ordonne toutes. Le classement est la seule source d'ordre : « maintenant » et
+  // « plus tard » en sont dérivés, ici comme sur le serveur. Mon mois, la carte et la
+  // synthèse continuent donc de lire `selections` sans rien savoir des priorités.
+  const PRIORITES_MAX = 3;
+
+  function etatPriorites() {
+    const p = brouillon.priorites;
+    if (!p || typeof p !== 'object' || Array.isArray(p)) {
+      brouillon.priorites = { themes: {}, dimensions: {}, classement: [] };
+      return brouillon.priorites;
+    }
+    if (!p.themes || typeof p.themes !== 'object' || Array.isArray(p.themes)) p.themes = {};
+    if (!p.dimensions || typeof p.dimensions !== 'object' || Array.isArray(p.dimensions)) p.dimensions = {};
+    if (!Array.isArray(p.classement)) p.classement = [];
+    return p;
+  }
+
+  const prioritesDuTheme = (themeId) => [...(etatPriorites().themes[themeId] || [])];
+  const prioritesDeLaDimension = (dimensionId) => {
+    const liste = etatPriorites().dimensions[dimensionId];
+    return Array.isArray(liste) ? [...liste] : null;
+  };
+  // Une dimension est « consolidée » dès que la clé existe, même vide : avoir regardé
+  // ses priorités et n'en retenir aucune n'est pas la même chose que ne pas l'avoir
+  // encore fait. La distinction décide si les priorités de thématique remontent.
+  const dimensionConsolidee = (dimensionId) => Array.isArray(etatPriorites().dimensions[dimensionId]);
+
+  // Les codes qui ont leur place au classement : les retenues de chaque dimension
+  // consolidée, et, pour une dimension qui ne l'est pas encore, les priorités de ses
+  // thématiques. Une priorité de thématique compte donc dès qu'elle est cochée.
+  function codesAttendusAuClassement() {
+    const attendus = [];
+    etat.referentiel.dimensions.forEach((dimension) => {
+      const retenues = prioritesDeLaDimension(dimension.id);
+      if (retenues) { attendus.push(...retenues); return; }
+      themesDeDimension(dimension).forEach((theme) => attendus.push(...prioritesDuTheme(theme.id)));
+    });
+    return [...new Set(attendus)];
+  }
+
+  // Recompose le classement : ce qui y figure garde sa place, ce qui vient d'être
+  // priorisé arrive à la suite. Réordonner est une décision du membre, une
+  // recomposition ne doit jamais l'effacer. Les retraits passent par des gestes
+  // explicites, jamais par la recomposition.
+  function recomposerClassement() {
+    const p = etatPriorites();
+    p.classement = [...p.classement, ...codesAttendusAuClassement().filter((code) => !p.classement.includes(code))];
+  }
+
+  // Miroir exact de `deriverSelections` côté serveur : les trois premières du
+  // classement sont les cibles du mois, la suite rejoint la file d'attente.
+  function deriverSelectionsLocales() {
+    const p = etatPriorites();
+    if (p.classement.length === 0) return;
+    const ouverte = (code) => estOuverte(competenceParCode(code)?.theme);
+    const tete = p.classement.slice(0, MAX_MAINTENANT);
+    const current = tete.filter(ouverte);
+    brouillon.later = [...new Set([
+      ...tete.filter((code) => !ouverte(code)),
+      ...p.classement.slice(MAX_MAINTENANT),
+      ...Object.values(p.themes).flat(),
+      ...brouillon.later,
+    ])].filter((code) => !current.includes(code));
+    brouillon.current = current;
+  }
+
+  function memoriserPriorites() {
+    recomposerClassement();
+    deriverSelectionsLocales();
+    appliquerChangement(() => {});
+    persisterAudit();
+  }
+
+  // Déplace un code à une position du classement sans jamais le dupliquer.
+  function deplacerDansClassement(code, position) {
+    const p = etatPriorites();
+    const sans = p.classement.filter((item) => item !== code);
+    const index = Math.max(0, Math.min(position, sans.length));
+    p.classement = [...sans.slice(0, index), code, ...sans.slice(index)];
+  }
+
+  // Retirer = sortir du classement ET des priorités qui l'alimentent. Sans le second
+  // geste, la recomposition suivante ferait revenir la compétence retirée.
+  function retirerDuClassement(code) {
+    const p = etatPriorites();
+    p.classement = p.classement.filter((item) => item !== code);
+    [p.themes, p.dimensions].forEach((groupe) => {
+      Object.keys(groupe).forEach((cle) => {
+        groupe[cle] = groupe[cle].filter((item) => item !== code);
+      });
+    });
+    brouillon.current = brouillon.current.filter((item) => item !== code);
+    brouillon.later = brouillon.later.filter((item) => item !== code);
+    memoriserPriorites();
+  }
+
+  // Signature canonique : l'ordre du classement compte, celui des cases cochées non.
+  function signaturePriorites(p) {
+    const q = p && typeof p === 'object' && !Array.isArray(p) ? p : {};
+    const groupe = (obj) => Object.keys(obj || {}).sort()
+      .map((cle) => cle + ':' + [...(obj[cle] || [])].sort().join(',')).join('|');
+    return `${groupe(q.themes)}#${groupe(q.dimensions)}#${(q.classement || []).join(',')}`;
   }
 
   // L'accueil porte le sous-texte de reprise : il se met à jour quand on le redécouvre.
@@ -4925,6 +5198,180 @@
     </div>`;
   }
 
+  // --- Priorités de thématique (section insérée dans l'écran de résultat) --------
+  // Les sections repliées par « Je choisirai plus tard » le restent le temps de la
+  // session : le membre a dit non, on ne le lui redemande pas à chaque aller-retour.
+  const prioritesRepliees = new Set();
+  let minuteurPriorites = null;
+
+  // Cocher une priorité ne déclenche pas un appel réseau par clic : l'enregistrement
+  // part deux secondes après le dernier geste, et tout de suite si le membre poursuit.
+  function planifierEnregistrementPriorites() {
+    clearTimeout(minuteurPriorites);
+    minuteurPriorites = setTimeout(() => { minuteurPriorites = null; void enregistrer(); }, 2000);
+  }
+
+  function enregistrerPrioritesMaintenant() {
+    if (minuteurPriorites === null) return;
+    clearTimeout(minuteurPriorites);
+    minuteurPriorites = null;
+    void enregistrer();
+  }
+
+  // Candidates d'une thématique : les compétences situées qui ne sont pas maîtrisées,
+  // de la moins maîtrisée à la plus maîtrisée. Une compétence jamais située ne peut pas
+  // devenir une priorité, une maîtrisée n'a plus rien à donner.
+  function candidatesPrioritesTheme(themeId) {
+    return codesDeTheme(themeId)
+      .filter((code) => estEvaluee(code) && brouillon.levels[code] < NIVEAU_ACQUIS)
+      .sort((a, b) => brouillon.levels[a] - brouillon.levels[b]
+        || ((competenceParCode(a)?.order ?? 0) - (competenceParCode(b)?.order ?? 0)));
+  }
+
+  function pastilleNiveau(code) {
+    const niveau = brouillon.levels[code] ?? 0;
+    return `<span class="audit-priorite-niveau niveau-${niveau}">${echapper(etat.referentiel.scale[niveau] || 'Non évaluée')}</span>`;
+  }
+
+  // La fiche est dépliée SUR PLACE et non ouverte dans le panneau de compétence :
+  // quitter l'écran de résultat pour lire un énoncé ferait perdre les cases cochées et
+  // le fil du parcours. Le membre lit, referme, et continue où il en était.
+  function ficheRepliee(code) {
+    const competence = competenceParCode(code);
+    if (!competence) return '';
+    const enonce = competence.statement || competence.definition || '';
+    return `<details class="audit-priorite-fiche">
+      <summary>Voir la fiche</summary>
+      <div class="audit-priorite-detail">
+        ${enonce ? `<p>${lierLexique(typoFr(echapper(enonce)))}</p>` : ''}
+        ${competence.markers ? marqueursListe(competence.markers) : ''}
+      </div>
+    </details>`;
+  }
+
+  function ligneChoixPriorite(code, { cle, retenue, origine = '', proposee = false }) {
+    const competence = competenceParCode(code);
+    if (!competence) return '';
+    return `<div class="audit-priorite${retenue ? ' retenue' : ''}" data-ligne-priorite="${echapper(code)}">
+      <label class="audit-priorite-choix">
+        <input type="checkbox" class="audit-priorite-case" data-${cle}="${echapper(code)}"${retenue ? ' checked' : ''}>
+        <span class="audit-priorite-texte">
+          <span class="audit-priorite-nom">${echapper(competence.name)}</span>
+          <span class="audit-priorite-meta">
+            ${pastilleNiveau(code)}
+            ${origine ? `<span class="audit-priorite-origine">${echapper(origine)}</span>` : ''}
+            ${proposee ? '<span class="audit-priorite-proposee">proposée</span>' : ''}
+          </span>
+        </span>
+      </label>
+      ${ficheRepliee(code)}
+    </div>`;
+  }
+
+  function sectionPrioritesTheme(themeId) {
+    const theme = themeParId(themeId);
+    if (!theme) return '';
+    const candidates = candidatesPrioritesTheme(themeId);
+    const retenues = prioritesDuTheme(themeId);
+
+    let corps;
+    if (prioritesRepliees.has(themeId)) {
+      corps = `<p class="audit-priorites-repliee">Tu choisiras plus tard. Tes priorités t'attendront à la fin de la dimension.</p>
+        <div class="audit-priorites-actions">
+          <button type="button" class="choix-lien" data-priorites-deplier="${echapper(themeId)}">Choisir maintenant</button>
+        </div>`;
+    } else if (candidates.length === 0) {
+      corps = `<p class="audit-bilan-aide">${codesDeTheme(themeId).some(estEvaluee)
+        ? 'Tout est maîtrisé ici, rien à prioriser.'
+        : "Tu n'as encore situé aucune compétence de cette thématique : rien à prioriser."}</p>`;
+    } else {
+      corps = `<p class="audit-bilan-aide">Parmi ce qu'il te reste à travailler, retiens jusqu'à trois priorités. Tu les consolideras à la fin de la dimension.</p>
+        <div class="audit-priorites-liste">
+          ${candidates.map((code) => ligneChoixPriorite(code, { cle: 'priorite-theme', retenue: retenues.includes(code) })).join('')}
+        </div>
+        <p class="audit-priorites-alerte" id="priorites-theme-alerte" role="status"></p>
+        <div class="audit-priorites-actions">
+          <button type="button" class="choix-lien" data-priorites-replier="${echapper(themeId)}">Je choisirai plus tard</button>
+        </div>`;
+    }
+
+    return `<section class="audit-bilan-section audit-priorites" id="priorites-theme" data-theme-priorites="${echapper(themeId)}">
+      <p class="audit-bilan-label">Tes priorités pour cette thématique</p>
+      <div class="audit-priorites-tete">
+        <p class="audit-priorites-compteur" id="priorites-theme-compteur" role="status">${retenues.length} / ${PRIORITES_MAX} choisie${retenues.length > 1 ? 's' : ''}</p>
+      </div>
+      ${corps}
+    </section>`;
+  }
+
+  function rafraichirSectionPrioritesTheme(themeId) {
+    const section = document.getElementById('priorites-theme');
+    if (!section) return;
+    section.outerHTML = sectionPrioritesTheme(themeId);
+    brancherSectionPrioritesTheme(themeId);
+  }
+
+  function brancherSectionPrioritesTheme(themeId) {
+    const section = document.getElementById('priorites-theme');
+    if (!section) return;
+    const compteur = document.getElementById('priorites-theme-compteur');
+    const alerte = document.getElementById('priorites-theme-alerte');
+
+    section.querySelectorAll('[data-priorite-theme]').forEach((case_) => {
+      case_.addEventListener('change', () => {
+        const code = case_.dataset.prioriteTheme;
+        const p = etatPriorites();
+        const retenues = prioritesDuTheme(themeId);
+        if (case_.checked && retenues.length >= PRIORITES_MAX) {
+          // Refus sur place plutôt que case grisée : le membre voit pourquoi, et sait
+          // quoi faire. La case revient d'elle-même à son état précédent.
+          case_.checked = false;
+          if (alerte) alerte.textContent = `Trois priorités au maximum. Décoche-en une pour en choisir une autre.`;
+          return;
+        }
+        if (alerte) alerte.textContent = '';
+        p.themes[themeId] = case_.checked
+          ? [...retenues, code]
+          : retenues.filter((item) => item !== code);
+        // Décocher sort la compétence du classement : sans cela, la recomposition la
+        // garderait et elle réapparaîtrait en fin de dimension.
+        if (!case_.checked && !codesAttendusAuClassement().includes(code)) {
+          p.classement = p.classement.filter((item) => item !== code);
+          brouillon.later = brouillon.later.filter((item) => item !== code);
+        }
+        memoriserPriorites();
+        const total = prioritesDuTheme(themeId).length;
+        if (compteur) compteur.textContent = `${total} / ${PRIORITES_MAX} choisie${total > 1 ? 's' : ''}`;
+        const ligne = section.querySelector(`[data-ligne-priorite="${CSS.escape(code)}"]`);
+        if (ligne) ligne.classList.toggle('retenue', case_.checked);
+        planifierEnregistrementPriorites();
+      });
+    });
+
+    section.querySelectorAll('[data-priorites-replier]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        prioritesRepliees.add(bouton.dataset.prioritesReplier);
+        rafraichirSectionPrioritesTheme(themeId);
+      });
+    });
+    section.querySelectorAll('[data-priorites-deplier]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        prioritesRepliees.delete(bouton.dataset.prioritesDeplier);
+        rafraichirSectionPrioritesTheme(themeId);
+      });
+    });
+  }
+
+  function brancherPrioritesTheme(themeId) {
+    brancherSectionPrioritesTheme(themeId);
+    // Poursuivre sans attendre les deux secondes : le membre quitte l'écran, ce qu'il
+    // vient de cocher part avec lui. Branché avant les gestionnaires de navigation,
+    // qui réécrivent le corps du panneau.
+    elPanneauCorps.querySelectorAll('[data-suite], #audit-voir-dimension').forEach((bouton) => {
+      bouton.addEventListener('click', enregistrerPrioritesMaintenant);
+    });
+  }
+
   // --- Écran « Résultat de la thématique » --------------------------------------
   function ouvrirResultatTheme({ dimensionId, themeId, suite = 'theme', enregistrement = 'inutile', libelleAuto = null }) {
     const dimension = dimensionParId(dimensionId);
@@ -4988,6 +5435,7 @@
             ${listeCompetences(info.passees, { cle: 'evaluerPassee', libelle: 'Évaluer maintenant' })}
           </section>`
         : ''}
+      ${sectionPrioritesTheme(theme.id)}
       </div>
       <aside class="audit-bilan-suite">${dimensionBouclee
         ? `<div class="audit-poursuivre">
@@ -5014,10 +5462,172 @@
     });
     const voirDimension = document.getElementById('audit-voir-dimension');
     if (voirDimension) voirDimension.addEventListener('click', () => ouvrirResultatDimension(dimension.id, suite));
+    brancherPrioritesTheme(theme.id);
     brancherPoursuivre(dimension);
 
     afficherPanneau();
     document.body.dataset.panneau = 'resultat-theme';
+  }
+
+  // --- Consolidation des priorités par dimension --------------------------------
+  // La sélection de cet écran vit à part du modèle : elle n'est écrite qu'au clic sur
+  // « Valider mes priorités ». Cocher et décocher en réfléchissant ne doit pas faire
+  // bouger Mon mois à chaque geste.
+  let consolidation = null;
+
+  // Candidates d'une dimension : les priorités déjà cochées dans ses thématiques,
+  // complétées, s'il en manque, par ses compétences les plus faibles. Tout reste
+  // groupé par thématique, y compris le complément.
+  function candidatesPrioritesDimension(dimensionId) {
+    const dimension = dimensionParId(dimensionId);
+    if (!dimension) return { groupes: [], proposees: [], codes: [] };
+    const themes = themesDeDimension(dimension);
+    const cochees = themes.flatMap((theme) => prioritesDuTheme(theme.id));
+
+    const proposees = [];
+    if (cochees.length < PRIORITES_MAX) {
+      const faibles = themes
+        .flatMap((theme) => candidatesPrioritesTheme(theme.id))
+        .filter((code) => !cochees.includes(code))
+        .sort((a, b) => brouillon.levels[a] - brouillon.levels[b]
+          || ((competenceParCode(a)?.order ?? 0) - (competenceParCode(b)?.order ?? 0)));
+      proposees.push(...faibles.slice(0, PRIORITES_MAX - cochees.length));
+    }
+
+    const retenus = new Set([...cochees, ...proposees]);
+    const groupes = themes
+      .map((theme) => ({
+        theme,
+        codes: codesDeTheme(theme.id)
+          .filter((code) => retenus.has(code))
+          .sort((a, b) => brouillon.levels[a] - brouillon.levels[b]
+            || ((competenceParCode(a)?.order ?? 0) - (competenceParCode(b)?.order ?? 0))),
+      }))
+      .filter((groupe) => groupe.codes.length > 0);
+
+    return { groupes, proposees, codes: groupes.flatMap((groupe) => groupe.codes) };
+  }
+
+  // Sélection de départ : ce qui a déjà été consolidé, sinon les candidates elles-mêmes
+  // quand il n'y en a pas plus de trois — cocher trois cases pour confirmer trois
+  // propositions n'apporte rien. Au-delà, le choix appartient au membre.
+  function selectionInitialeDimension(dimensionId, codes) {
+    const dejaRetenues = prioritesDeLaDimension(dimensionId);
+    if (dejaRetenues) return dejaRetenues.filter((code) => codes.includes(code));
+    return codes.length <= PRIORITES_MAX ? [...codes] : [];
+  }
+
+  function sectionPrioritesDimension(dimensionId) {
+    const dimension = dimensionParId(dimensionId);
+    if (!dimension) return '';
+    const { groupes, proposees, codes } = candidatesPrioritesDimension(dimensionId);
+    if (!consolidation || consolidation.dimensionId !== dimensionId) {
+      consolidation = { dimensionId, codes: selectionInitialeDimension(dimensionId, codes) };
+    }
+    const retenues = consolidation.codes;
+
+    let corps;
+    if (prioritesRepliees.has(`dim:${dimensionId}`)) {
+      corps = `<p class="audit-priorites-repliee">Tu choisiras plus tard. Tes priorités de thématique t'attendent ici.</p>
+        <div class="audit-priorites-actions">
+          <button type="button" class="choix-lien" data-priorites-deplier="dim:${echapper(dimensionId)}">Choisir maintenant</button>
+        </div>`;
+    } else if (codes.length === 0) {
+      corps = `<p class="audit-bilan-aide">Rien à prioriser dans cette dimension : tout ce que tu as situé, tu le maîtrises.</p>`;
+    } else {
+      corps = `<p class="audit-bilan-aide">Voici ce que tu as coché thématique par thématique${proposees.length ? ', complété par tes compétences les plus faibles' : ''}. Retiens-en trois pour cette dimension. Les autres passent en « pour plus tard ».</p>
+        <div class="audit-priorites-liste">
+          ${groupes.map((groupe) => `<p class="audit-priorites-groupe">${echapper(groupe.theme.name)}</p>
+            ${groupe.codes.map((code) => ligneChoixPriorite(code, {
+              cle: 'priorite-dimension',
+              retenue: retenues.includes(code),
+              proposee: proposees.includes(code),
+            })).join('')}`).join('')}
+        </div>
+        <p class="audit-priorites-alerte" id="priorites-dimension-alerte" role="status"></p>
+        <div class="audit-priorites-actions">
+          <button type="button" class="audit-priorites-valider" id="priorites-dimension-valider">Valider mes priorités</button>
+          <button type="button" class="choix-lien" data-priorites-replier="dim:${echapper(dimensionId)}">Je choisirai plus tard</button>
+        </div>`;
+    }
+
+    return `<section class="audit-bilan-section audit-priorites" id="priorites-dimension" data-dimension-priorites="${echapper(dimensionId)}">
+      <p class="audit-bilan-label">Tes 3 priorités pour cette dimension</p>
+      <div class="audit-priorites-tete">
+        <p class="audit-priorites-compteur" id="priorites-dimension-compteur" role="status">${retenues.length} / ${PRIORITES_MAX} retenue${retenues.length > 1 ? 's' : ''}</p>
+      </div>
+      ${corps}
+    </section>`;
+  }
+
+  function rafraichirSectionPrioritesDimension(dimensionId) {
+    const section = document.getElementById('priorites-dimension');
+    if (!section) return;
+    section.outerHTML = sectionPrioritesDimension(dimensionId);
+    brancherPrioritesDimension(dimensionId);
+  }
+
+  // Écrit la consolidation dans le modèle. Les candidates non retenues sortent du
+  // classement : elles restent « pour plus tard », où la dérivation les remet, mais
+  // elles ne pèsent plus sur l'ordre du mois.
+  function validerPrioritesDimension(dimensionId) {
+    const { codes } = candidatesPrioritesDimension(dimensionId);
+    const retenues = consolidation && consolidation.dimensionId === dimensionId ? consolidation.codes : [];
+    const p = etatPriorites();
+    p.dimensions[dimensionId] = [...retenues];
+    const ecartees = codes.filter((code) => !retenues.includes(code));
+    p.classement = p.classement.filter((code) => !ecartees.includes(code));
+    brouillon.later = [...new Set([...brouillon.later, ...ecartees])];
+    memoriserPriorites();
+  }
+
+  function brancherPrioritesDimension(dimensionId) {
+    const section = document.getElementById('priorites-dimension');
+    if (!section) return;
+    const compteur = document.getElementById('priorites-dimension-compteur');
+    const alerte = document.getElementById('priorites-dimension-alerte');
+
+    section.querySelectorAll('[data-priorite-dimension]').forEach((case_) => {
+      case_.addEventListener('change', () => {
+        const code = case_.dataset.prioriteDimension;
+        if (case_.checked && consolidation.codes.length >= PRIORITES_MAX) {
+          case_.checked = false;
+          if (alerte) alerte.textContent = 'Trois priorités au maximum pour cette dimension. Décoche-en une pour en retenir une autre.';
+          return;
+        }
+        if (alerte) alerte.textContent = '';
+        consolidation.codes = case_.checked
+          ? [...consolidation.codes, code]
+          : consolidation.codes.filter((item) => item !== code);
+        const total = consolidation.codes.length;
+        if (compteur) compteur.textContent = `${total} / ${PRIORITES_MAX} retenue${total > 1 ? 's' : ''}`;
+        const ligne = section.querySelector(`[data-ligne-priorite="${CSS.escape(code)}"]`);
+        if (ligne) ligne.classList.toggle('retenue', case_.checked);
+      });
+    });
+
+    section.querySelectorAll('[data-priorites-replier]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        prioritesRepliees.add(bouton.dataset.prioritesReplier);
+        rafraichirSectionPrioritesDimension(dimensionId);
+      });
+    });
+    section.querySelectorAll('[data-priorites-deplier]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        prioritesRepliees.delete(bouton.dataset.prioritesDeplier);
+        rafraichirSectionPrioritesDimension(dimensionId);
+      });
+    });
+
+    const valider = document.getElementById('priorites-dimension-valider');
+    if (valider) valider.addEventListener('click', async () => {
+      valider.disabled = true;
+      validerPrioritesDimension(dimensionId);
+      clearTimeout(minuteurPriorites);
+      minuteurPriorites = null;
+      await enregistrer();
+      ouvrirRecapDimension(dimensionId);
+    });
   }
 
   // --- Écran « Résultat de la dimension » ---------------------------------------
@@ -5055,14 +5665,236 @@
           </div>`).join('')}
         </div>
       </section>
+      ${sectionPrioritesDimension(dimension.id)}
       </div>
       <aside class="audit-bilan-suite">${blocPoursuivreHtml(dimension, suite)}</aside>
     </div></div>`);
     elPanneauCorps.scrollTop = 0;
+    brancherPrioritesDimension(dimension.id);
     brancherPoursuivre(dimension);
 
     afficherPanneau();
     document.body.dataset.panneau = 'resultat-dimension';
+  }
+
+  // --- Écran de récap : le classement des priorités ------------------------------
+  // Il tombe à la fin de chaque dimension, et c'est le seul endroit où l'ordre se
+  // décide. Les trois premières lignes alimentent Mon mois, la suite attend.
+
+  function scoreGlobalPartiel() {
+    const total = etat.referentiel.competencies.length;
+    const evaluees = etat.referentiel.competencies.filter((competence) => estEvaluee(competence.id));
+    const maitrisees = evaluees.filter((competence) => brouillon.levels[competence.id] >= NIVEAU_ACQUIS).length;
+    return {
+      total,
+      evaluees: evaluees.length,
+      pct: evaluees.length ? Math.round((maitrisees / evaluees.length) * 100) : 0,
+    };
+  }
+
+  function origineDe(code) {
+    const competence = competenceParCode(code);
+    if (!competence) return '';
+    const theme = themeParId(competence.theme);
+    const dimension = dimensionDe(competence);
+    return `${dimension ? dimension.name : ''}${dimension && theme ? ' › ' : ''}${theme ? theme.name : ''}`;
+  }
+
+  // Le glisser-déposer s'ajoute aux flèches, il ne les remplace pas : sur un téléphone
+  // il n'existe pas, et au clavier il n'a jamais existé.
+  function ligneClassement(code, index, total) {
+    const competence = competenceParCode(code);
+    if (!competence) return '';
+    const ceMois = index < MAX_MAINTENANT;
+    const glissable = !surMobile();
+    return `<li class="rang${ceMois ? ' rang-mois' : ''}" data-rang="${echapper(code)}"${glissable ? ' draggable="true"' : ''}>
+      <span class="rang-numero" aria-hidden="true">${index + 1}</span>
+      <span class="rang-corps">
+        <span class="rang-nom">${echapper(competence.name)}</span>
+        <span class="audit-priorite-meta">
+          ${pastilleNiveau(code)}
+          <span class="audit-priorite-origine">${echapper(origineDe(code))}</span>
+          ${ceMois ? '<span class="rang-marque">ce mois-ci</span>' : ''}
+        </span>
+      </span>
+      <span class="rang-actions">
+        <button type="button" class="rang-fleche" data-monter="${echapper(code)}" ${index === 0 ? 'disabled' : ''}
+          aria-label="Monter ${echapper(competence.name)} d'un rang">↑</button>
+        <button type="button" class="rang-fleche" data-descendre="${echapper(code)}" ${index === total - 1 ? 'disabled' : ''}
+          aria-label="Descendre ${echapper(competence.name)} d'un rang">↓</button>
+        <button type="button" class="rang-retirer" data-retirer-rang="${echapper(code)}">Retirer</button>
+      </span>
+      ${glissable ? '<span class="rang-poignee" aria-hidden="true" title="Glisser pour réordonner">⠿</span>' : ''}
+    </li>`;
+  }
+
+  function listeClassementHtml() {
+    const classement = etatPriorites().classement;
+    if (classement.length === 0) {
+      return `<p class="audit-bilan-aide" id="recap-classement">Tu n'as encore retenu aucune priorité. Elles apparaîtront ici au fur et à mesure des dimensions que tu boucles.</p>`;
+    }
+    return `<ol class="rangs" id="recap-classement">${classement.map((code, index) => ligneClassement(code, index, classement.length)).join('')}</ol>`;
+  }
+
+  function deplacerRangDe(code, pas) {
+    const p = etatPriorites();
+    const index = p.classement.indexOf(code);
+    if (index < 0) return;
+    deplacerDansClassement(code, Math.max(0, Math.min(index + pas, p.classement.length - 1)));
+    memoriserPriorites();
+  }
+
+  let rangPorte = null;
+
+  function rafraichirClassement(focusSur = null) {
+    const liste = document.getElementById('recap-classement');
+    if (!liste) return;
+    liste.outerHTML = listeClassementHtml();
+    brancherClassement();
+    const cible = focusSur && document.querySelector(`[data-rang="${CSS.escape(focusSur.code)}"] [data-${focusSur.sens}]`);
+    if (cible && !cible.disabled) cible.focus();
+    const total = document.getElementById('recap-compte');
+    if (total) total.textContent = texteCompteClassement();
+  }
+
+  function texteCompteClassement() {
+    const n = etatPriorites().classement.length;
+    const mois = Math.min(n, MAX_MAINTENANT);
+    return `${n} priorité${n > 1 ? 's' : ''} retenue${n > 1 ? 's' : ''}, dont ${mois} pour ce mois-ci.`;
+  }
+
+  function brancherClassement() {
+    const liste = document.getElementById('recap-classement');
+    if (!liste) return;
+
+    liste.querySelectorAll('[data-monter]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        deplacerRangDe(bouton.dataset.monter, -1);
+        rafraichirClassement({ code: bouton.dataset.monter, sens: 'monter' });
+      });
+    });
+    liste.querySelectorAll('[data-descendre]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        deplacerRangDe(bouton.dataset.descendre, 1);
+        rafraichirClassement({ code: bouton.dataset.descendre, sens: 'descendre' });
+      });
+    });
+    liste.querySelectorAll('[data-retirer-rang]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        retirerDuClassement(bouton.dataset.retirerRang);
+        rafraichirClassement();
+      });
+    });
+
+    liste.querySelectorAll('.rang[draggable="true"]').forEach((ligne) => {
+      const code = ligne.dataset.rang;
+      ligne.addEventListener('dragstart', (evenement) => {
+        rangPorte = code;
+        ligne.classList.add('rang-porte');
+        if (evenement.dataTransfer) {
+          evenement.dataTransfer.effectAllowed = 'move';
+          evenement.dataTransfer.setData('text/plain', code);
+        }
+      });
+      ligne.addEventListener('dragend', () => { rangPorte = null; ligne.classList.remove('rang-porte'); });
+      ligne.addEventListener('dragover', (evenement) => {
+        if (!rangPorte || rangPorte === code) return;
+        evenement.preventDefault();
+        ligne.classList.add('rang-cible');
+      });
+      ligne.addEventListener('dragleave', () => ligne.classList.remove('rang-cible'));
+      ligne.addEventListener('drop', (evenement) => {
+        evenement.preventDefault();
+        ligne.classList.remove('rang-cible');
+        const porte = rangPorte;
+        rangPorte = null;
+        if (!porte || porte === code) return;
+        deplacerDansClassement(porte, etatPriorites().classement.indexOf(code));
+        memoriserPriorites();
+        rafraichirClassement();
+      });
+    });
+  }
+
+  // Dimension par laquelle rouvrir le récap : celle où le membre s'est arrêté, sinon la
+  // dernière qu'il a consolidée, sinon aucune — le récap s'ouvre alors en mode global.
+  function derniereDimensionEvaluee() {
+    const repere = brouillon.derniere && brouillon.derniere.dimensionId;
+    if (repere && dimensionParId(repere)) return repere;
+    const consolidees = etat.referentiel.dimensions.filter((dimension) => dimensionConsolidee(dimension.id));
+    return consolidees.length ? consolidees[consolidees.length - 1].id : null;
+  }
+
+  // `dimensionId` nul : mode global, ouvert depuis la synthèse ou depuis Mon mois quand
+  // aucune dimension n'a encore été bouclée.
+  function ouvrirRecapDimension(dimensionId = null, suite = 'theme') {
+    const dimension = dimensionId ? dimensionParId(dimensionId) : null;
+    const teinte = dimension ? (TEINTES_HEX[dimension.id] || '#c9a661') : '#c9a661';
+    preparerEcranAudit(teinte, { plein: true });
+    const global = scoreGlobalPartiel();
+
+    elPanneauTete.innerHTML = `
+      <p class="panneau-fil audit-fil">M'évaluer <span>›</span> <b>${dimension ? echapper(dimension.name) : 'Mon classement'}</b></p>
+      <h2 class="panneau-titre" id="panneau-titre">${dimension ? `Récap après ${echapper(dimension.name)}` : 'Ton classement'}</h2>
+      <p class="audit-sous-compteur" id="recap-compte" role="status">${texteCompteClassement()}</p>`;
+
+    const infoDim = dimension ? etatDimension(dimension) : null;
+
+    ecrireCorps(`<div class="audit-cadre"><div class="audit-bilan audit-bilan-large">
+      <div class="audit-bilan-colonne">
+      <div class="recap-scores">
+        ${infoDim ? `<div class="recap-score">
+          <p class="recap-score-label">${echapper(dimension.name)}</p>
+          <p class="audit-bilan-score">${pctHtml(infoDim.score)} de maîtrise</p>
+        </div>` : ''}
+        <div class="recap-score">
+          <p class="recap-score-label">Ton sphérier</p>
+          <p class="audit-bilan-score">${pctHtml(global.pct)} maîtrisées sur ${global.evaluees} compétence${global.evaluees > 1 ? 's' : ''} évaluée${global.evaluees > 1 ? 's' : ''} sur ${global.total}</p>
+        </div>
+      </div>
+      <section class="audit-bilan-section">
+        <p class="audit-bilan-label">Ton classement</p>
+        <p class="audit-bilan-aide">Les trois premières sont ce que tu travailles ce mois-ci. Monte, descends ou retire une ligne pour changer l'ordre.</p>
+        ${listeClassementHtml()}
+        <div class="audit-priorites-actions">
+          <button type="button" class="audit-priorites-valider" id="recap-enregistrer">Enregistrer mon classement</button>
+        </div>
+      </section>
+      </div>
+      <aside class="audit-bilan-suite">${dimension
+        ? blocPoursuivreHtml(dimension, suite)
+        : `<div class="audit-poursuivre">
+            <p class="audit-poursuivre-titre">Poursuivre</p>
+            <div class="audit-suites">
+              <button type="button" class="audit-suite-choix principal" data-recap-suite="dimension">Choisir une autre dimension<small>Les ${etat.referentiel.dimensions.length} dimensions du sphérier</small></button>
+              <button type="button" class="audit-suite-choix" data-recap-suite="arreter">M'arrêter là<small>Tes réponses sont enregistrées, tu reprendras ici</small></button>
+            </div>
+          </div>`}</aside>
+    </div></div>`);
+    elPanneauCorps.scrollTop = 0;
+
+    brancherClassement();
+    const enregistrerClassement = document.getElementById('recap-enregistrer');
+    enregistrerClassement.addEventListener('click', async () => {
+      enregistrerClassement.disabled = true;
+      enregistrerClassement.textContent = 'Enregistrement…';
+      clearTimeout(minuteurPriorites);
+      minuteurPriorites = null;
+      await enregistrer();
+      enregistrerClassement.disabled = false;
+      enregistrerClassement.textContent = 'Enregistrer mon classement';
+    });
+
+    if (dimension) brancherPoursuivre(dimension);
+    else elPanneauCorps.querySelectorAll('[data-recap-suite]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        if (bouton.dataset.recapSuite === 'dimension') ouvrirChoixDimension();
+        else { majAuditInitial(); fermerPanneau(); }
+      });
+    });
+
+    afficherPanneau();
+    document.body.dataset.panneau = 'recap-dimension';
   }
 
   let auditToutesThemes = false;
@@ -5210,6 +6042,9 @@
     // Le choix des trois priorités demande de quoi choisir : sous cinq compétences à
     // améliorer, le tri n'en est pas un.
     const prioritesPossibles = aAmeliorer >= 5;
+    // Dès qu'un classement existe, il fait foi : la synthèse ne propose plus sa propre
+    // sélection, elle renvoie vers l'écran qui porte l'ordre.
+    const aClassement = etatPriorites().classement.length > 0;
 
     ecrireCorps(`<section class="carte-resultat">
       <p class="carte-resultat-intro">Voici la carte de ta pratique. Les pourcentages portent sur ce que tu as déjà évalué, et chaque territoire dit sur combien de ses thématiques il repose.${
@@ -5219,9 +6054,12 @@
       <div class="ciel-piste">${categories}</div>
       <div class="niveaux-accueil">${contenuNiveauxAccueil(true)}</div>
       <div class="carte-resultat-actions">
-        ${prioritesChoisies || !prioritesPossibles
-          ? '<button type="button" class="carte-resultat-cta" id="resultat-retour-carte">Revenir à mon sphérier</button>'
-          : '<button type="button" class="carte-resultat-cta" id="resultat-priorites">Choisir mes trois priorités</button>'}
+        ${aClassement
+          ? '<button type="button" class="carte-resultat-cta" id="resultat-classement">Voir mon classement</button>'
+          : (prioritesChoisies || !prioritesPossibles
+            ? '<button type="button" class="carte-resultat-cta" id="resultat-retour-carte">Revenir à mon sphérier</button>'
+            : '<button type="button" class="carte-resultat-cta" id="resultat-priorites">Choisir mes trois priorités</button>')}
+        ${aClassement ? '<button type="button" class="carte-resultat-secondaire" id="resultat-retour-carte">Revenir à mon sphérier</button>' : ''}
         <button type="button" class="carte-resultat-secondaire" id="resultat-lineaire">Ouvrir la vue d’ensemble linéaire</button>
         ${prioritesChoisies ? '<button type="button" class="carte-resultat-secondaire" data-audit-rdv>Réserver un échange</button>' : ''}
       </div>
@@ -5250,6 +6088,8 @@
     });
     const priorites = document.getElementById('resultat-priorites');
     if (priorites) priorites.addEventListener('click', ouvrirSelectionAudit);
+    const voirClassement = document.getElementById('resultat-classement');
+    if (voirClassement) voirClassement.addEventListener('click', () => ouvrirRecapDimension(null));
     const retourCarte = document.getElementById('resultat-retour-carte');
     if (retourCarte) retourCarte.addEventListener('click', () => { fermerPanneau(); allerAuCiel(); });
     document.getElementById('resultat-lineaire').addEventListener('click', () => ouvrirSynthese(true));
@@ -6072,6 +6912,7 @@
     if (c.niveaux.length) bouts.push(`<b>${c.niveaux.length}</b> positionnement${c.niveaux.length > 1 ? 's' : ''}`);
     if (c.cibles) bouts.push('tes cibles du mois');
     if (c.plusTard) bouts.push('ta liste « plus tard »');
+    if (c.priorites && bouts.length === 0) bouts.push('tes priorités');
     texteBarre(
       `Modifié : ${bouts.join(', ')}. Rien n'est encore enregistré.`,
       `Modifié : ${bouts.join(', ')}`
@@ -6169,6 +7010,9 @@
           // membre en était. Sans lui, la reprise sur un autre appareil repartirait du
           // début de la liste et redemanderait les compétences déjà écartées.
           audit: { passees: [...(brouillon.passees || [])], derniere: brouillon.derniere || null },
+          // Priorités par thématique, par dimension, et le classement qui les ordonne.
+          // Le serveur en redérive « maintenant » et « plus tard », comme ici.
+          priorites: etatPriorites(),
         }),
       });
       if (!reponse.ok) {
@@ -6181,7 +7025,13 @@
       etat.snapshot = data.snapshot;
       etat.computed = data.computed;
       const sel = data.snapshot.blob.selections;
-      reference = { levels: { ...data.snapshot.blob.levels }, current: [...sel.current], later: [...sel.later] };
+      const prioritesEnregistrees = data.priorites ?? data.snapshot.blob.priorites ?? etatPriorites();
+      reference = {
+        levels: { ...data.snapshot.blob.levels },
+        current: [...sel.current],
+        later: [...sel.later],
+        priorites: JSON.parse(JSON.stringify(prioritesEnregistrees)),
+      };
       // Le contexte d'audit survit à la remise à plat du brouillon : il décrit un
       // parcours, pas une modification en attente. L'écraser ici reperdrait les
       // compétences passées à chaque fin de thématique.
@@ -6195,6 +7045,7 @@
         // Un tableau vide renvoyé par le serveur, lui, reste une réponse à respecter.
         passees: [...(auditEnregistre.passees ?? brouillon.passees ?? [])],
         derniere: auditEnregistre.derniere ?? brouillon.derniere ?? null,
+        priorites: JSON.parse(JSON.stringify(prioritesEnregistrees)),
       };
 
       try { localStorage.removeItem(cleBrouillon()); } catch {}
@@ -6254,6 +7105,9 @@
       // membre avait déjà mis de côté.
       passees: [...(brouillon.passees || [])],
       derniere: brouillon.derniere || null,
+      // Les priorités suivent les sélections dont elles sont la source : les garder
+      // pendant qu'on remet `current` à la référence les ferait diverger d'un cran.
+      priorites: JSON.parse(JSON.stringify(reference.priorites || { themes: {}, dimensions: {}, classement: [] })),
     };
     etat.computed.levels = { ...reference.levels };
     etat.computed.themes = calculerOuvertureLocale(brouillon.levels);
@@ -6574,10 +7428,13 @@
       // n'existe peut contenir une compétence dans les deux listes. On l'affiche
       // proprement sans attendre le prochain enregistrement.
       const cur = [...new Set(sel.current || [])];
+      const prioritesServeur = etatClient.priorites ?? etatClient.snapshot?.blob?.priorites
+        ?? { themes: {}, dimensions: {}, classement: [] };
       reference = {
         levels: { ...etat.computed.levels },
         current: cur,
         later: [...new Set(sel.later || [])].filter((c) => !cur.includes(c)),
+        priorites: JSON.parse(JSON.stringify(prioritesServeur)),
       };
       // Contexte de l'audit modulaire, tel que le serveur le renvoie : compétences
       // passées sciemment, et dernière thématique ouverte.
@@ -6588,6 +7445,7 @@
         later: [...reference.later],
         passees: [...(auditServeur.passees || [])],
         derniere: auditServeur.derniere || null,
+        priorites: JSON.parse(JSON.stringify(prioritesServeur)),
       };
 
       // Reprise d'un travail interrompu : page fermée, onglet perdu, réseau tombé.
@@ -6601,6 +7459,8 @@
           // le contexte d'audit aussi, sinon un « Passer » non enregistré disparaîtrait.
           passees: [...(repris.passees || brouillon.passees || [])],
           derniere: repris.derniere || brouillon.derniere || null,
+          // Même raisonnement pour les priorités : le brouillon local est plus récent.
+          priorites: JSON.parse(JSON.stringify(repris.priorites || brouillon.priorites)),
         };
         if (estModifie()) {
           brouillonRestaure = true;
@@ -6609,7 +7469,8 @@
           bandeau('Tes modifications ont été retrouvées.',
             "Elles n'avaient pas été enregistrées : elles t'attendaient sur cet appareil.",
             'succes', null, { enHaut: true });
-        } else if ((brouillon.passees || []).length === 0 && !brouillon.derniere) {
+        } else if ((brouillon.passees || []).length === 0 && !brouillon.derniere
+          && (brouillon.priorites?.classement || []).length === 0) {
           // Le brouillon ne diffère de la référence que sur des niveaux : rien à garder.
           // S'il porte des compétences passées ou un repère de reprise, on le laisse :
           // `estModifie()` ne les voit pas, et les effacer les perdrait au rechargement

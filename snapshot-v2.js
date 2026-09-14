@@ -48,18 +48,155 @@ function identifiantBorne(valeur) {
   return propre !== '' && propre.length <= MAX_IDENTIFIANT ? propre : null;
 }
 
+// Priorités vides : un snapshot écrit avant le classement reste valide, et le membre
+// n'a rien à remigrer. Même principe que `audit`.
+const PRIORITES_VIDES = { themes: {}, dimensions: {}, classement: [] };
+
+// Trois priorités par thématique et par dimension : le plafond est la règle
+// pédagogique, pas un détail d'affichage, donc il est tenu ici aussi.
+const MAX_PRIORITES_PAR_ENTREE = 3;
+// Le classement est l'union des priorités de toutes les dimensions : avec 6 dimensions
+// il plafonne à 18. La borne à 100 n'existe que pour qu'une requête forgée ne puisse
+// pas faire grossir le blob par ce chemin.
+const MAX_CLASSEMENT = 100;
+
+// Un code appartient à une dimension par sa thématique : la compétence porte `theme`,
+// la thématique porte le NOM de sa dimension, et la dimension porte son identifiant.
+function indexDimensions(referentiel) {
+  const idParNom = new Map((referentiel.dimensions ?? []).map((d) => [d.name, d.id]));
+  const parTheme = new Map((referentiel.themes ?? []).map((t) => [t.id, idParNom.get(t.dimension) ?? null]));
+  return (competence) => (competence ? parTheme.get(competence.theme) ?? null : null);
+}
+
+// Valide `priorites` et le renvoie normalisé. Les entrées mal formées remplissent
+// `erreurs` : un code inconnu ou rangé sous la mauvaise thématique signale un envoi
+// douteux, pas une donnée à corriger en silence — même raisonnement que `audit.passees`.
+function validerPriorites({ referentiel, brut, competenceParCode, erreurs }) {
+  if (brut === undefined) return { themes: {}, dimensions: {}, classement: [] };
+  if (typeof brut !== 'object' || brut === null || Array.isArray(brut)) {
+    erreurs.push('priorites doit être un objet { themes, dimensions, classement }.');
+    return { themes: {}, dimensions: {}, classement: [] };
+  }
+
+  const dimensionDe = indexDimensions(referentiel);
+  const themeDe = (code) => competenceParCode.get(code)?.theme ?? null;
+
+  const validerGroupe = (nom, groupeBrut, appartient) => {
+    const resultat = {};
+    if (groupeBrut === undefined) return resultat;
+    if (typeof groupeBrut !== 'object' || groupeBrut === null || Array.isArray(groupeBrut)) {
+      erreurs.push(`priorites.${nom} doit être un objet { identifiant: [codes] }.`);
+      return resultat;
+    }
+    for (const [cle, liste] of Object.entries(groupeBrut)) {
+      if (!Array.isArray(liste)) {
+        erreurs.push(`priorites.${nom}["${cle}"] doit être un tableau de codes.`);
+        continue;
+      }
+      const codes = [...new Set(liste)];
+      const inconnus = codes.filter((code) => !competenceParCode.has(code));
+      if (inconnus.length > 0) {
+        erreurs.push(`priorites.${nom}["${cle}"] contient des codes absents du référentiel (${inconnus.slice(0, 5).join(', ')}).`);
+        continue;
+      }
+      const etrangers = codes.filter((code) => appartient(code) !== cle);
+      if (etrangers.length > 0) {
+        erreurs.push(`priorites.${nom}["${cle}"] contient des codes qui n'en font pas partie (${etrangers.slice(0, 5).join(', ')}).`);
+        continue;
+      }
+      if (codes.length > MAX_PRIORITES_PAR_ENTREE) {
+        erreurs.push(`priorites.${nom}["${cle}"] est limité à ${MAX_PRIORITES_PAR_ENTREE} compétences (reçu ${codes.length}).`);
+        continue;
+      }
+      // Un tableau vide est conservé : pour une dimension, il dit « j'ai consolidé, et
+      // je n'ai rien retenu », ce qui n'est pas la même chose que « je n'ai pas encore
+      // consolidé ». La distinction décide si les priorités de thématique remontent.
+      resultat[cle] = codes;
+    }
+    return resultat;
+  };
+
+  const themes = validerGroupe('themes', brut.themes, themeDe);
+  const dimensions = validerGroupe('dimensions', brut.dimensions, (code) => dimensionDe(competenceParCode.get(code)));
+
+  let classement = [];
+  if (brut.classement !== undefined) {
+    if (!Array.isArray(brut.classement)) {
+      erreurs.push('priorites.classement doit être un tableau de codes.');
+    } else if (brut.classement.length > MAX_CLASSEMENT) {
+      erreurs.push(`priorites.classement est limité à ${MAX_CLASSEMENT} codes (reçu ${brut.classement.length}).`);
+    } else {
+      // Dédoublonné plutôt que refusé : l'ORDRE est la donnée, un code répété n'est pas
+      // une intention contradictoire, juste une liste mal recomposée.
+      classement = [...new Set(brut.classement)];
+      const inconnus = classement.filter((code) => !competenceParCode.has(code));
+      if (inconnus.length > 0) {
+        erreurs.push(`priorites.classement contient des codes absents du référentiel (${inconnus.slice(0, 5).join(', ')}).`);
+        classement = [];
+      }
+    }
+  }
+
+  return { themes, dimensions, classement };
+}
+
+// Dérive « maintenant » et « plus tard » du classement. C'est ce qui permet à Mon mois,
+// à la carte et à la synthèse de continuer à lire `selections` sans rien savoir des
+// priorités : une seule source d'ordre, trois écrans qui la lisent comme avant.
+// Appliquée à l'enregistrement ET à la relecture, pour qu'un snapshot ancien relu
+// aujourd'hui donne le même résultat qu'un snapshot écrit aujourd'hui.
+function deriverSelections({ priorites, maxMaintenant, laterExistant = [], estOuverte = () => true }) {
+  const classement = priorites?.classement ?? [];
+  if (classement.length === 0) return null;
+
+  const tete = classement.slice(0, maxMaintenant);
+  // Une compétence dont la thématique est fermée ne peut pas être une cible : le
+  // contrat le refuse. Elle glisse en « plus tard » au lieu de faire échouer tout
+  // l'enregistrement — le classement du membre n'a pas à payer une règle d'ouverture.
+  const current = tete.filter((code) => estOuverte(code));
+  const prioritesTheme = Object.values(priorites?.themes ?? {}).flat();
+  const later = [...new Set([
+    ...tete.filter((code) => !estOuverte(code)),
+    ...classement.slice(maxMaintenant),
+    // Les priorités de thématique non retenues au niveau dimension ne disparaissent
+    // pas : elles rejoignent la file d'attente.
+    ...prioritesTheme,
+    ...laterExistant,
+  ])].filter((code) => !current.includes(code));
+
+  return { current, later };
+}
+
 // Assemble l'état renvoyé au navigateur : le snapshot brut, et l'état calculé.
 // Le calcul d'ouverture vit côté serveur, un seul endroit où la règle existe.
 function composerEtat({ referentiel, snapshot }) {
   const levels = snapshot?.blob?.levels ?? {};
+  const themesOuverts = calculerOuverture({ referentiel, levels });
+  const priorites = snapshot?.blob?.priorites ?? PRIORITES_VIDES;
+  const competenceParCode = new Map(referentiel.competencies.map((c) => [c.id, c]));
+
+  // Le classement fait autorité sur « maintenant » et « plus tard ». Un snapshot écrit
+  // avant qu'il n'existe n'en a pas : ses sélections repartent telles quelles.
+  const selectionsBlob = snapshot?.blob?.selections ?? { current: [], later: [] };
+  const derivees = deriverSelections({
+    priorites,
+    maxMaintenant: MAX_CIBLES_MAINTENANT,
+    laterExistant: selectionsBlob.later ?? [],
+    estOuverte: (code) => themesOuverts[competenceParCode.get(code)?.theme]?.status === 'open',
+  });
+  const snapshotSorti = derivees && snapshot
+    ? { ...snapshot, blob: { ...snapshot.blob, selections: derivees } }
+    : snapshot;
+
   return {
-    snapshot,
+    snapshot: snapshotSorti,
     // Renvoyé tel quel, sans recalcul : le contexte de reprise décrit où le membre en
     // était dans SON parcours. Le serveur n'a rien à en déduire, il le conserve.
     audit: snapshot?.blob?.audit ?? AUDIT_VIDE,
+    priorites,
     computed: {
       levels: niveauxComplets({ referentiel, levels }),
-      themes: calculerOuverture({ referentiel, levels }),
+      themes: themesOuverts,
     },
   };
 }
@@ -112,20 +249,35 @@ function validerEtNormaliser({ referentiel, corps }) {
   }
 
   const filtrerCodes = (liste) => [...new Set(liste)].filter((code) => competenceParCode.has(code));
-  const currentFiltre = filtrerCodes(current);
+  const currentBrut = filtrerCodes(current);
   // « Maintenant » et « plus tard » s'excluent : une compétence que l'on travaille
   // n'est plus en attente. Sans cette normalisation, promouvoir depuis la wishlist
   // laisserait la compétence dans les deux listes.
-  const laterFiltre = filtrerCodes(later).filter((code) => !currentFiltre.includes(code));
+  const laterBrut = filtrerCodes(later).filter((code) => !currentBrut.includes(code));
 
-  if (currentFiltre.length > MAX_CIBLES_MAINTENANT) {
-    erreurs.push(`selections.current est limité à ${MAX_CIBLES_MAINTENANT} compétences (reçu ${currentFiltre.length}).`);
-  }
+  const priorites = validerPriorites({ referentiel, brut: corps.priorites, competenceParCode, erreurs });
+  if (erreurs.length > 0) return { erreurs };
 
   // L'ouverture est évaluée sur les niveaux SOUMIS, pas sur ceux du snapshot précédent :
   // monter une compétence et sélectionner la thématique ainsi débloquée doit pouvoir se
   // faire en un seul enregistrement.
   const ouverture = calculerOuverture({ referentiel, levels });
+
+  // Le classement écrase les sélections envoyées : c'est lui que le membre a ordonné,
+  // et deux sources d'ordre finiraient par diverger. Sans classement, rien ne change.
+  const derivees = deriverSelections({
+    priorites,
+    maxMaintenant: MAX_CIBLES_MAINTENANT,
+    laterExistant: laterBrut,
+    estOuverte: (code) => ouverture[competenceParCode.get(code)?.theme]?.status === 'open',
+  });
+  const currentFiltre = derivees ? derivees.current : currentBrut;
+  const laterFiltre = derivees ? derivees.later : laterBrut;
+
+  if (currentFiltre.length > MAX_CIBLES_MAINTENANT) {
+    erreurs.push(`selections.current est limité à ${MAX_CIBLES_MAINTENANT} compétences (reçu ${currentFiltre.length}).`);
+  }
+
   const horsThematiqueOuverte = currentFiltre.filter((code) => {
     const themeId = competenceParCode.get(code).theme;
     return ouverture[themeId]?.status !== 'open';
@@ -174,6 +326,8 @@ function validerEtNormaliser({ referentiel, corps }) {
       // L'horodatage est posé ICI et pas repris du navigateur : une horloge de poste
       // mal réglée écrirait une date de reprise fantaisiste dans la base.
       audit: { passees, derniere, maj: new Date().toISOString() },
+      // Priorités par thématique, par dimension, et le classement qui les ordonne.
+      priorites,
     },
   };
 }
@@ -195,6 +349,7 @@ module.exports = {
   lireDernierSnapshotV2,
   composerEtat,
   validerEtNormaliser,
+  deriverSelections,
   ecrireSnapshotV2,
   estUuidV4,
   VERSION_REFERENTIEL,

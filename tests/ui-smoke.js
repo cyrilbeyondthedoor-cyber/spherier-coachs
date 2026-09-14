@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
 const { chromium } = require('playwright');
+const { deriverSelections } = require('../snapshot-v2.js');
 const {
   CATEGORIES,
   DIMENSIONS,
@@ -124,6 +125,20 @@ let echecSnapshot = false;
 let delaiSnapshot = 0;
 let nbSnapshots = 0;
 
+const PRIORITES_VIDES = { themes: {}, dimensions: {}, classement: [] };
+
+// Même dérivation que le serveur, faite avec SA fonction : un faux serveur qui
+// renverrait les sélections telles quelles laisserait passer une régression du
+// contrat que l'écran de récap repose entièrement sur.
+function selectionsDerivees(envoi) {
+  const priorites = envoi.priorites ?? PRIORITES_VIDES;
+  return deriverSelections({
+    priorites,
+    maxMaintenant: MAX_CIBLES_MAINTENANT,
+    laterExistant: envoi.selections?.later ?? [],
+  }) ?? envoi.selections;
+}
+
 function json(reponse, valeur, statut = 200) {
   reponse.writeHead(statut, { 'Content-Type': 'application/json; charset=utf-8' });
   reponse.end(JSON.stringify(valeur));
@@ -161,10 +176,12 @@ const serveur = http.createServer((requete, reponse) => {
         derniere: dernierSnapshot.audit?.derniere ?? null,
         maj: new Date().toISOString(),
       };
+      const prioritesRelues = dernierSnapshot.priorites ?? PRIORITES_VIDES;
       return json(reponse, {
         snapshot: { id: 'snapshot-relu', cree_le: new Date().toISOString(), libelle: dernierSnapshot.label || null,
-          blob: { levels: dernierSnapshot.levels, selections: dernierSnapshot.selections, audit } },
+          blob: { levels: dernierSnapshot.levels, selections: selectionsDerivees(dernierSnapshot), audit, priorites: prioritesRelues } },
         audit,
+        priorites: prioritesRelues,
         computed: { levels: { ...niveauxVides, ...dernierSnapshot.levels }, themes: etatThemes },
         notes: {},
       });
@@ -214,6 +231,7 @@ const serveur = http.createServer((requete, reponse) => {
         derniere: dernierSnapshot.audit?.derniere ?? null,
         maj: new Date().toISOString(),
       };
+      const prioritesEcrites = dernierSnapshot.priorites ?? PRIORITES_VIDES;
       const repondre = () => json(reponse, {
         snapshot: {
           id: 'snapshot-test',
@@ -221,11 +239,13 @@ const serveur = http.createServer((requete, reponse) => {
           libelle: dernierSnapshot.label || null,
           blob: {
             levels: dernierSnapshot.levels,
-            selections: dernierSnapshot.selections,
+            selections: selectionsDerivees(dernierSnapshot),
             audit,
+            priorites: prioritesEcrites,
           },
         },
         audit,
+        priorites: prioritesEcrites,
         computed: { levels: dernierSnapshot.levels, themes: etatThemes },
       });
       if (delaiSnapshot > 0) setTimeout(repondre, delaiSnapshot);
@@ -778,6 +798,229 @@ async function principal() {
     assert.equal(await priorites.locator('.audit-competence-niveau', { hasText: 'À évaluer' }).count(), 0,
       'une compétence jamais située ne peut pas devenir une priorité');
     assert.equal(await priorites.getByText(`Je sais mobiliser la compétence ${DIM_MULTI.id}-02-02.`).count(), 0);
+
+    // --- Lot 7 : priorités de thématique ---------------------------------------
+    // Le membre 0004 a quatre compétences situées entre 1 et 2 dans sa première
+    // thématique : de quoi cocher trois priorités et se voir refuser la quatrième.
+    const prioTheme = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
+    await prioTheme.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000004`);
+    await prioTheme.locator('#ciel:not([hidden])').waitFor();
+    await prioTheme.locator('#audit-cta').dispatchEvent('click');
+    await prioTheme.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await prioTheme.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}"]`).dispatchEvent('click');
+    // La thématique est déjà complète : on arrive droit sur son résultat.
+    await prioTheme.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
+    await prioTheme.getByText('Tes priorités pour cette thématique', { exact: true }).waitFor();
+    const casesTheme = prioTheme.locator('#priorites-theme .audit-priorite-case');
+    assert.equal(await casesTheme.count(), 4, 'les quatre compétences non maîtrisées sont proposées');
+    // De la moins maîtrisée à la plus maîtrisée : les deux « Je ne maîtrise pas du
+    // tout » passent devant les deux « Je dois m'améliorer ».
+    assert.deepEqual(
+      (await prioTheme.locator('#priorites-theme .audit-priorite-niveau').allTextContents()).map((t) => t.trim()),
+      ['Je ne maîtrise pas du tout', 'Je ne maîtrise pas du tout', "Je dois m'améliorer", "Je dois m'améliorer"],
+    );
+    await casesTheme.nth(0).check();
+    assert.match(await prioTheme.locator('#priorites-theme-compteur').textContent(), /^1 \/ 3/);
+    await casesTheme.nth(1).check();
+    await casesTheme.nth(2).check();
+    assert.match(await prioTheme.locator('#priorites-theme-compteur').textContent(), /^3 \/ 3/);
+    // La quatrième est refusée, la case revient d'elle-même et le message le dit.
+    // `.check()` exigerait que la case reste cochée : ici elle doit revenir seule.
+    await casesTheme.nth(3).click();
+    assert.equal(await casesTheme.nth(3).isChecked(), false, 'la quatrième coche est refusée');
+    await prioTheme.getByText('Trois priorités au maximum.', { exact: false }).waitFor();
+    assert.match(await prioTheme.locator('#priorites-theme-compteur').textContent(), /^3 \/ 3/);
+
+    // Enregistrement différé : deux secondes après le dernier geste, les priorités
+    // sont parties sans que le membre ait rien cliqué d'autre.
+    await prioTheme.waitForTimeout(2400);
+    assert.equal(dernierSnapshot.priorites.themes[`theme-${DIM_MULTI.id}`].length, 3,
+      'les priorités cochées partent toutes seules après deux secondes');
+    assert.deepEqual(dernierSnapshot.priorites.classement.slice().sort(),
+      dernierSnapshot.priorites.themes[`theme-${DIM_MULTI.id}`].slice().sort(),
+      'le classement reprend les priorités de thématique tant qu\'aucune dimension n\'est consolidée');
+    assert.deepEqual(dernierSnapshot.selections.current.slice().sort(),
+      dernierSnapshot.priorites.classement.slice().sort(),
+      'les trois du classement deviennent les trois cibles du mois');
+    assert.equal(await prioTheme.locator('#bar.visible').count(), 0,
+      'la barre d\'enregistrement se referme après l\'envoi différé');
+    // La fiche se déplie sur place, sans quitter l'écran de résultat.
+    await prioTheme.locator('#priorites-theme summary').first().click();
+    await prioTheme.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
+    assert.ok(await prioTheme.locator('#priorites-theme .audit-priorite-detail').first().isVisible());
+    await capturer(prioTheme, screenshotDir, 'priorites-theme-desktop.png', { fullPage: true });
+    // « Je choisirai plus tard » replie la section sans perdre les coches.
+    await prioTheme.getByRole('button', { name: 'Je choisirai plus tard' }).click();
+    assert.equal(await prioTheme.locator('#priorites-theme .audit-priorite-case').count(), 0);
+    await prioTheme.getByRole('button', { name: 'Choisir maintenant' }).click();
+    assert.equal(await prioTheme.locator('#priorites-theme .audit-priorite-case:checked').count(), 3);
+
+    await prioTheme.locator('[data-suite="theme"]').dispatchEvent('click');
+    await prioTheme.locator('body[data-panneau="choix-theme"]').waitFor({ state: 'attached' });
+
+    // --- Lot 7 : consolidation par dimension -----------------------------------
+    // Seconde thématique de la dimension : il y reste une compétence à situer. Une fois
+    // faite, la dimension est bouclée et sa consolidation devient accessible.
+    await prioTheme.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}-2"]`).dispatchEvent('click');
+    await prioTheme.locator('.situer-compte', { hasText: '2 / 2' }).waitFor();
+    await prioTheme.locator('.marche[data-niveau="1"]').dispatchEvent('click');
+    await prioTheme.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
+    await prioTheme.locator('#priorites-theme .audit-priorite-case').first().check();
+    await prioTheme.locator('#audit-voir-dimension').click();
+    await prioTheme.getByRole('heading', { name: 'Résultat de la dimension' }).waitFor();
+
+    await prioTheme.getByText('Tes 3 priorités pour cette dimension', { exact: true }).waitFor();
+    const casesDim = prioTheme.locator('#priorites-dimension .audit-priorite-case');
+    // Quatre priorités de thématique : rien à compléter, et rien de pré-coché puisqu'il
+    // y en a plus de trois. Elles restent groupées par thématique.
+    assert.equal(await casesDim.count(), 4);
+    assert.equal(await prioTheme.locator('#priorites-dimension .audit-priorites-groupe').count(), 2);
+    assert.equal(await prioTheme.locator('#priorites-dimension .audit-priorite-proposee').count(), 0);
+    assert.match(await prioTheme.locator('#priorites-dimension-compteur').textContent(), /^0 \/ 3/);
+    await casesDim.nth(0).check();
+    await casesDim.nth(1).check();
+    await casesDim.nth(2).check();
+    assert.match(await prioTheme.locator('#priorites-dimension-compteur').textContent(), /^3 \/ 3/);
+    await casesDim.nth(3).click();
+    assert.equal(await casesDim.nth(3).isChecked(), false, 'la quatrième retenue est refusée');
+    await prioTheme.getByText('Trois priorités au maximum pour cette dimension.', { exact: false }).waitFor();
+    await capturer(prioTheme, screenshotDir, 'priorites-dimension-desktop.png', { fullPage: true });
+
+    const avantConsolidation = nbSnapshots;
+    await prioTheme.getByRole('button', { name: 'Valider mes priorités' }).click();
+    await prioTheme.waitForFunction((n) => true, null);
+    await prioTheme.waitForTimeout(500);
+    assert.ok(nbSnapshots > avantConsolidation, 'valider enregistre la consolidation');
+    assert.equal(dernierSnapshot.priorites.dimensions[DIM_MULTI.id].length, 3);
+    assert.deepEqual(dernierSnapshot.priorites.classement.slice().sort(),
+      dernierSnapshot.priorites.dimensions[DIM_MULTI.id].slice().sort(),
+      'la quatrième priorité sort du classement');
+    assert.deepEqual(dernierSnapshot.selections.current.slice().sort(),
+      dernierSnapshot.priorites.dimensions[DIM_MULTI.id].slice().sort());
+    assert.equal(dernierSnapshot.selections.later.length, 1,
+      'la priorité non retenue reste pour plus tard');
+
+    // --- Lot 7 : écran de récap et classement réordonnable ---------------------
+    await prioTheme.getByRole('heading', { name: `Récap après ${DIM_MULTI.name}` }).waitFor();
+    assert.equal(await prioTheme.locator('#recap-classement .rang').count(), 3);
+    assert.equal(await prioTheme.locator('#recap-classement .rang.rang-mois').count(), 3,
+      'les trois premières sont marquées « ce mois-ci »');
+    assert.equal(await prioTheme.locator('.rang-marque').count(), 3);
+    // Score de la dimension et score global partiel, tous deux affichés.
+    assert.equal(await prioTheme.locator('.recap-score').count(), 2);
+    assert.match(await prioTheme.locator('.recap-score').last().textContent(),
+      /maîtrisées sur 6 compétences évaluées sur 12/);
+    // Chaque ligne porte son origine : dimension puis thématique.
+    assert.ok((await prioTheme.locator('#recap-classement .audit-priorite-origine').first().textContent())
+      .includes(DIM_MULTI.name));
+    // La première flèche « monter » est désactivée, la dernière « descendre » aussi.
+    assert.equal(await prioTheme.locator('#recap-classement .rang').first().locator('[data-monter]').isDisabled(), true);
+    assert.equal(await prioTheme.locator('#recap-classement .rang').last().locator('[data-descendre]').isDisabled(), true);
+    await capturer(prioTheme, screenshotDir, 'recap-dimension-desktop.png', { fullPage: true });
+
+    const ordreAvant = await prioTheme.locator('#recap-classement .rang').evaluateAll((lignes) => lignes.map((l) => l.dataset.rang));
+    await prioTheme.locator(`[data-rang="${ordreAvant[0]}"] [data-descendre]`).click();
+    const ordreApres = await prioTheme.locator('#recap-classement .rang').evaluateAll((lignes) => lignes.map((l) => l.dataset.rang));
+    assert.deepEqual(ordreApres, [ordreAvant[1], ordreAvant[0], ordreAvant[2]],
+      'la flèche bas échange la ligne avec la suivante');
+
+    const avantClassement = nbSnapshots;
+    await prioTheme.getByRole('button', { name: 'Enregistrer mon classement' }).click();
+    await prioTheme.waitForTimeout(600);
+    assert.ok(nbSnapshots > avantClassement);
+    assert.deepEqual(dernierSnapshot.priorites.classement, ordreApres,
+      'le classement part dans le snapshot dans l\'ordre affiché');
+    assert.deepEqual(dernierSnapshot.selections.current, ordreApres,
+      'les trois premières du classement sont les trois cibles du mois');
+    // Aller-retour complet : ce que le serveur renvoie doit annuler « modifié ». Une
+    // normalisation qui diffère d'un côté laisserait la barre allumée pour toujours.
+    assert.equal(await prioTheme.locator('#bar.visible').count(), 0,
+      'après enregistrement, plus rien n\'est signalé comme modifié');
+
+    // --- Lot 7 : Mon mois et synthèse globale ----------------------------------
+    await prioTheme.locator('#panneau-fermer').dispatchEvent('click');
+    await prioTheme.locator('#btn-mois').dispatchEvent('click');
+    await prioTheme.getByRole('heading', { name: 'Mon mois' }).waitFor();
+    assert.equal(await prioTheme.locator('.sel-item.cible').count(), 3);
+    await prioTheme.getByText(`Ce mois-ci — 3/${MAX_CIBLES_MAINTENANT}`, { exact: true }).waitFor();
+    // Chaque ligne porte son origine : dimension puis thématique.
+    assert.ok((await prioTheme.locator('.sel-item.cible .sel-nom small').first().textContent()).includes('›'));
+    // Et l'ordre affiché est celui du classement.
+    assert.deepEqual(
+      await prioTheme.locator('.sel-item.cible [data-aller]').evaluateAll((boutons) => boutons.map((b) => b.dataset.aller)),
+      ordreApres);
+    await capturer(prioTheme, screenshotDir, 'mon-mois-desktop.png', { fullPage: true });
+
+    // La fiche d'une compétence reste cohérente avec le classement : « Garder pour
+    // plus tard » la fait descendre sous les trois du mois au lieu d'écrire `later`
+    // dans le dos du classement.
+    await prioTheme.locator(`.sel-item.cible [data-aller="${ordreApres[0]}"]`).click();
+    await prioTheme.locator('#btn-plus-tard').click();
+    await prioTheme.locator('#btn-mois').dispatchEvent('click');
+    await prioTheme.getByRole('heading', { name: 'Mon mois' }).waitFor();
+    const apresPlusTard = await prioTheme.locator('.sel-item.cible [data-aller]')
+      .evaluateAll((boutons) => boutons.map((b) => b.dataset.aller));
+    assert.equal(apresPlusTard.includes(ordreApres[0]), false,
+      'gardée pour plus tard, elle sort des trois du mois');
+    assert.equal(apresPlusTard.length, 2);
+
+    await prioTheme.getByRole('button', { name: 'Réordonner', exact: true }).click();
+    await prioTheme.getByRole('heading', { name: `Récap après ${DIM_MULTI.name}` }).waitFor();
+
+    // Depuis le récap, la synthèse ne propose plus sa propre sélection.
+    await prioTheme.locator('[data-suite="synthese"]').dispatchEvent('click');
+    await prioTheme.getByRole('heading', { name: 'Ton sphérier en un regard' }).waitFor();
+    assert.equal(await prioTheme.getByRole('button', { name: 'Choisir mes trois priorités' }).count(), 0,
+      'un classement existe : la synthèse renvoie vers lui');
+    await prioTheme.getByRole('button', { name: 'Voir mon classement' }).click();
+    await prioTheme.getByRole('heading', { name: 'Ton classement', exact: true }).waitFor();
+    // Deux lignes : la troisième vient d'être gardée pour plus tard depuis sa fiche.
+    assert.equal(await prioTheme.locator('#recap-classement .rang').count(), 2);
+    // Mode global : un seul score, celui du sphérier entier.
+    assert.equal(await prioTheme.locator('.recap-score').count(), 1);
+    await capturer(prioTheme, screenshotDir, 'classement-global-desktop.png', { fullPage: true });
+
+    // Retirer une ligne la sort du classement et de « ce mois-ci ».
+    await prioTheme.locator(`[data-rang="${ordreApres[2]}"] [data-retirer-rang]`).click();
+    assert.equal(await prioTheme.locator('#recap-classement .rang').count(), 1);
+    assert.equal(await prioTheme.locator('#recap-classement .rang.rang-mois').count(), 1);
+
+    // --- Lot 7 : rechargement complet, le classement est retrouvé --------------
+    // Nouvel onglet, aucun brouillon local : tout doit venir du snapshot relu.
+    const relecture = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
+    await relecture.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000003`);
+    await relecture.locator('#ciel:not([hidden])').waitFor();
+    await relecture.locator('#btn-mois').dispatchEvent('click');
+    await relecture.getByRole('heading', { name: 'Mon mois' }).waitFor();
+    assert.deepEqual(
+      await relecture.locator('.sel-item.cible [data-aller]').evaluateAll((boutons) => boutons.map((b) => b.dataset.aller)),
+      ordreApres, 'le classement enregistré revient dans le même ordre après rechargement');
+    await relecture.getByRole('button', { name: 'Réordonner', exact: true }).click();
+    await relecture.getByRole('heading', { name: /Récap après|Ton classement/ }).waitFor();
+    assert.equal(await relecture.locator('#recap-classement .rang').count(), 3);
+    await relecture.close();
+
+    // --- Lot 7 : le récap sur un téléphone -------------------------------------
+    const recapMobile = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
+    await recapMobile.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000003`);
+    await recapMobile.locator('#ciel:not([hidden])').waitFor();
+    await recapMobile.locator('#btn-mois').dispatchEvent('click');
+    await recapMobile.getByRole('button', { name: 'Réordonner', exact: true }).click();
+    await recapMobile.getByRole('heading', { name: /Récap après|Ton classement/ }).waitFor();
+    assert.equal(await recapMobile.locator('#recap-classement .rang').count(), 3);
+    // Le glisser-déposer n'existe pas au doigt : les flèches, elles, sont partout.
+    assert.equal(await recapMobile.locator('.rang-poignee').count(), 0);
+    assert.equal(await recapMobile.locator('#recap-classement [data-monter]').count(), 3);
+    assert.equal((await mesurerColonnes(recapMobile)).empilees, true, 'en 390x844 le récap s\'empile');
+    assert.ok(await recapMobile.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    assert.ok(await recapMobile.locator('#panneau-corps').evaluate((element) => element.scrollWidth <= element.clientWidth),
+      'le corps du panneau ne défile pas horizontalement');
+    // Cibles tactiles : les flèches et « Retirer » tiennent les 44 px.
+    const hauteurs = await recapMobile.locator('#recap-classement .rang').first()
+      .locator('button').evaluateAll((boutons) => boutons.map((b) => Math.round(b.getBoundingClientRect().height)));
+    assert.ok(hauteurs.every((h) => h >= 44), `cibles tactiles trop petites : ${hauteurs.join(', ')}`);
+    await capturer(recapMobile, screenshotDir, 'recap-dimension-mobile.png', { fullPage: true });
+    await recapMobile.close();
 
     const publicMobile = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
     await publicMobile.goto(`http://127.0.0.1:${adresse.port}/`);
