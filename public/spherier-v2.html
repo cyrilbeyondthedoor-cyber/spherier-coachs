@@ -598,6 +598,20 @@
   }
   .theme-verrouille .theme-nom { fill: var(--stone); }
   .theme-verrouille .theme-noyau { stroke-dasharray: 3 3; }
+
+  /* SECOND SIGNAL POUR LE DALTONISME (deuteranopie/protanopie) — un testeur daltonien
+     (deficience rouge-vert) confond les teintes de dimension Communication et
+     Transformation, proches d'Intervenir en entreprise sous simulation. Impossible de
+     changer les 7 teintes ici (elles vivent dans club.config.js, hors perimetre CSS) :
+     on cible les valeurs hex EXACTES deja ecrites en attribut SVG (stroke/fill) par le
+     JS existant pour leur donner un motif de trait distinct, en plus de la couleur.
+     Valeurs de remplacement plus separables proposees dans le rapport. */
+  .theme-noyau[stroke="#9b86b3"] { stroke-dasharray: 5 3; } /* Transformation du client */
+  .theme-noyau[stroke="#718ba6"] { stroke-dasharray: 1.5 2.5; } /* Intervenir en entreprise */
+  .etoile-corps[fill="#7ca0bc"] { stroke: var(--night-deep); stroke-width: .6; } /* Communication */
+  .etoile-corps[fill="#9b86b3"] { stroke: var(--paper); stroke-width: .9; } /* Transformation du client */
+  .etoile-corps[fill="#718ba6"] { stroke: var(--night-deep); stroke-width: 1.3; } /* Intervenir en entreprise */
+
   .theme-cadenas { font-size: 11px; text-anchor: middle; fill: var(--stone); }
   .theme-progression { font-family: 'Inter Tight', sans-serif; font-size: 9px; text-anchor: middle; fill: var(--stone); }
 
@@ -750,6 +764,12 @@
   }
   .marche-enonce { font-size: 14px; line-height: 1.6; color: var(--paper-dim); margin-top: 6px; }
   .marche-actuelle .marche-enonce { color: var(--paper); }
+  /* Liste des marqueurs observables : retrait suspendu natif via list-style, la 2e
+     ligne d'un marqueur s'aligne sur le texte et non sous la puce (principe 2.3). */
+  .marche-enonce .marche-marqueurs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+  .marche-enonce .marche-marqueurs li { position: relative; padding-left: 1.2em; }
+  .marche-enonce .marche-marqueurs li::before { content: '•'; position: absolute; left: 0; top: 0; color: var(--teinte-p, var(--gold)); }
+  .marche-enonce p + p, .marche-enonce .marche-marqueurs + p, .marche-enonce p + .marche-marqueurs { margin-top: 8px; }
 
   .escalier-note {
     margin-top: 12px; font-size: 14px; line-height: 1.6; color: var(--stone);
@@ -868,14 +888,29 @@
   .btn-enregistrer:hover:not(:disabled) { background: var(--gold); color: #0a0e1a; }
   .btn-enregistrer:disabled { opacity: .55; cursor: default; }
 
+  /* Bandeau de confirmation : repositionné près du bouton Enregistrer (barre de
+     sauvegarde fixée en bas) plutôt qu'en haut de l'écran, agrandi et plus contrasté —
+     un testeur le trouvait « peu visible, petit et loin du bouton » (principe 2.3). */
   .bandeau {
     position: fixed; left: 50%; transform: translateX(-50%) translateY(-12px);
     top: 14px; z-index: 60; max-width: min(560px, calc(100vw - 28px));
-    padding: 12px 20px; border-radius: 12px;
-    background: #0d1320; border: 1px solid var(--line);
-    font-size: 14px; line-height: 1.55; color: var(--paper-dim);
+    padding: 16px 22px; border-radius: 14px; border-width: 1.5px;
+    background: #0d1320; border-style: solid; border-color: var(--line);
+    font-size: 15px; line-height: 1.55; color: var(--paper-dim);
     opacity: 0; pointer-events: none; transition: opacity .3s ease, transform .3s ease;
     box-shadow: 0 14px 40px rgba(0,0,0,.5);
+  }
+  /* Quand la barre de sauvegarde (bouton Enregistrer) est affichée, la confirmation se
+     rapproche d'elle au lieu de rester en haut, loin du bouton qui l'a déclenchée —
+     signalé par un testeur (principe 2.3). Hors de ce contexte (pas de barre visible),
+     le haut de l'écran reste la position la plus sûre : elle ne recouvre alors aucun
+     bouton de page (ex. la synthèse d'audit, qui n'a pas de barre de sauvegarde). */
+  body:has(.barre-sauvegarde.visible) .bandeau {
+    top: auto; bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%) translateY(12px);
+  }
+  @media (max-width: 640px) {
+    body:has(.barre-sauvegarde.visible) .bandeau { bottom: calc(158px + env(safe-area-inset-bottom, 0px)); }
   }
   .bandeau.visible { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
   .bandeau.succes { border-color: var(--gold); color: var(--gold-bright); }
@@ -1047,13 +1082,21 @@
   .situer-difficulte .pastille-diff { margin: 0; }
   .situer-nom {
     font-family: 'Cormorant Garamond', serif; font-weight: 500;
-    font-size: 23px; line-height: 1.2; margin: 8px 0 6px; text-wrap: balance;
+    /* Enonce de competence : 22px minimum sur mobile, 26px sur desktop (principe 2.1). */
+    font-size: clamp(22px, 3vw, 26px); line-height: 1.2; margin: 8px 0 6px; text-wrap: balance;
   }
   .situer-def { font-size: 14px; line-height: 1.65; color: var(--paper-dim); }
 
+  /* Pied ancré en bas du panneau scrollable : sur petit écran, un énoncé de 3 lignes
+     avec 3 marqueurs poussait « Précédente »/« Passer » hors du viewport (principe 2.3).
+     `position: sticky` colle le pied au bord bas de .panneau-corps (son ancêtre
+     scrollable), le contenu au-dessus continue de défiler derrière un fond opaque. */
   .situer-pied {
     display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
-    padding-top: 16px; margin-top: 18px; border-top: 1px solid var(--line-faint);
+    padding: 16px 0 calc(16px + env(safe-area-inset-bottom, 0px));
+    margin-top: 18px; border-top: 1px solid var(--line-faint);
+    position: sticky; bottom: 0; z-index: 2;
+    background: #0d1320;
   }
   .situer-btn {
     padding: 10px 20px; border-radius: 999px; cursor: pointer;
@@ -2689,10 +2732,14 @@
   let dernierFocus = null;
 
   function astreCran(niveau, teinte) {
-    const c = CRANS[niveau];
+    const c = CRANS[niveau] ?? CRANS[0];
+    // Taille FIXE (celle du cran le plus haut) quel que soit le niveau : la progression
+    // se lit par la position (l'escalier) et par la couleur de remplissage, jamais par
+    // la taille du point — un pré-jugement visuel signale par les testeurs (principe 2.3).
+    const taille = CRANS[3];
     return `<svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
-      ${c.halo ? `<circle cx="13" cy="13" r="${Math.min(c.halo, 12)}" fill="${teinte}" fill-opacity="${c.haloOpacite}"/>` : ''}
-      <circle cx="13" cy="13" r="${c.r}" fill="${teinte}" fill-opacity="${c.opacite}"/>
+      ${taille.halo ? `<circle cx="13" cy="13" r="${Math.min(taille.halo, 12)}" fill="${teinte}" fill-opacity="${c.haloOpacite}"/>` : ''}
+      <circle cx="13" cy="13" r="${taille.r}" fill="${teinte}" fill-opacity="${c.opacite}"/>
     </svg>`;
   }
 
@@ -2895,6 +2942,29 @@
     </section>`;
   }
 
+  // Les marqueurs observables arrivent en texte multi-lignes avec puces « • » (format
+  // du référentiel Notion). On les transforme en vraie liste <ul><li> : le retrait
+  // suspendu natif aligne alors la 2e ligne d'un marqueur sur le texte, pas sous la
+  // puce — signalé par un testeur (principe 2.3). Tout le texte reste échappé.
+  function marqueursListe(texte) {
+    const lignes = texte.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+    let html = '';
+    let enListe = false;
+    for (const ligne of lignes) {
+      const estPuce = ligne.startsWith('•');
+      const contenu = estPuce ? ligne.slice(1).trim() : ligne;
+      if (estPuce) {
+        if (!enListe) { html += '<ul class="marche-marqueurs">'; enListe = true; }
+        html += `<li>${echapper(contenu)}</li>`;
+      } else {
+        if (enListe) { html += '</ul>'; enListe = false; }
+        html += `<p>${echapper(contenu)}</p>`;
+      }
+    }
+    if (enListe) html += '</ul>';
+    return html;
+  }
+
   function escalier(competence, niveau, teinte) {
     const marches = [1, 2, 3].map((n) => {
       const classes = ['marche', 'marche-' + n];
@@ -2918,7 +2988,7 @@
 
     return `<section class="panneau-section">
       ${competence.markers ? `<p class="panneau-label">Marqueurs observables</p>
-        <p class="marche-enonce" style="white-space:pre-line;margin-bottom:18px">${echapper(competence.markers)}</p>` : ''}
+        <div class="marche-enonce" style="margin-bottom:18px">${marqueursListe(competence.markers)}</div>` : ''}
       <p class="panneau-label">Où tu en es</p>
       <div class="escalier">${marches}</div>
       <p class="escalier-note">${note}</p>
