@@ -66,21 +66,20 @@ function competence(codeTheme, code, index) {
 const competencies = DIMENSIONS.map((dimension, index) =>
   competence(`theme-${dimension.id}`, `${dimension.id}-01-01`, index));
 
-// La compétence de la deuxième dimension porte un énoncé de 3 lignes et 3 marqueurs à
-// puces : elle sert de cas dédié au contrôle de lisibilité de l'écran d'évaluation
-// (pied ancré, astres de même hauteur — principe 2.3). Sa thématique ne contient
-// qu'elle, l'écran d'évaluation s'ouvre donc directement dessus.
+// La compétence de la deuxième dimension est calée sur la TAILLE RÉELLE d'une
+// compétence du référentiel Notion : énoncé de trois lignes, quatre marqueurs de deux
+// lignes chacun. C'est ce qui manquait au faux référentiel précédent, dont les énoncés
+// tenaient sur une ligne : le contrôle de recouvrement du pied passait alors qu'en
+// production le pied recouvrait 9 marches sur 10 en 1280×700 (revue finale, bloquant 1).
+// Sa thématique ne contient qu'elle, l'écran d'évaluation s'ouvre donc directement dessus.
 const DIM_LISIBILITE = DIMENSIONS[1];
 const compLisibilite = competencies.find((c) => c.id === `${DIM_LISIBILITE.id}-01-01`);
-compLisibilite.statement = 'Je sais créer et entretenir une relation de travail suffisamment solide, sûre et vraie pour que le client ose se montrer tel qu’il est, même quand ce qu’il traverse est difficile à dire.';
-// Marqueurs de longueur réaliste (une phrase courte chacun, comme dans le référentiel
-// Notion) : un contenu artificiellement long faussait le contrôle de recouvrement du
-// pied ancré (voir revue lot2 — le cas nominal du brief, pas un cas extrême, doit déjà
-// être sans recouvrement).
+compLisibilite.statement = 'Je sais créer et entretenir une relation de travail suffisamment solide, sûre et vraie pour que le client ose se montrer tel qu’il est, même quand ce qu’il traverse est difficile à dire, et je sais la réparer quand elle se fissure.';
 compLisibilite.markers = [
-  '• Premier marqueur observé chez le coach.',
-  '• Deuxième marqueur observé pendant la séance.',
-  '• Troisième marqueur observé dans le suivi.',
+  '• Je nomme ce que je perçois dans la relation sans l’interpréter, et je laisse au client le dernier mot sur ce qu’il en fait.',
+  '• Je repère les moments où le client se retire, je le lui dis simplement et je lui propose de regarder ensemble ce qui vient de se passer.',
+  '• Je tiens le cadre que nous avons posé même quand le client me demande de le déplacer, et j’explique pourquoi je le tiens.',
+  '• Je reviens sur une maladresse de ma part à la séance suivante plutôt que de la laisser s’installer en silence entre nous.',
 ].join('\n');
 
 // Quatre compétences dans la première thématique : de quoi passer, évaluer, et lire
@@ -1032,30 +1031,27 @@ async function principal() {
         `Les 3 points colorés de l'escalier n'ont pas la même taille (${viewport.width}x${viewport.height}) : ${taillesAstres}`
       );
 
-      // Le pied ancré ne doit jamais recouvrir une marche : ni à l'affichage initial
-      // (sur 1280×700, les 3 marches doivent tenir au-dessus du pied sans scroll —
-      // c'est le cas nominal du brief, pas un cas extrême), ni une fois défilé tout en
-      // bas (où elles ont, par construction, déjà quitté visuellement cette zone).
+      // Le pied vit hors de la zone qui défile : sur une compétence de taille réelle,
+      // il ne doit recouvrir AUCUNE marche, ni à l'affichage initial ni une fois défilé
+      // tout en bas. C'est la garantie que le pied sticky interne ne donnait pas.
+      // On compare la partie VISIBLE de chaque marche (son rectangle rogné par la zone
+      // qui défile) au rectangle du pied : une marche simplement sortie par le haut ou
+      // par le bas du corps n'est pas recouverte, elle attend qu'on défile.
       const chevauchement = async () => pageLisibilite.evaluate(() => {
         const pied = document.querySelector('.situer-pied').getBoundingClientRect();
+        const corps = document.getElementById('panneau-corps').getBoundingClientRect();
         return [...document.querySelectorAll('.marche')].map((marche) => {
           const m = marche.getBoundingClientRect();
-          return !(m.bottom <= pied.top || m.top >= pied.bottom);
+          const haut = Math.max(m.top, corps.top);
+          const bas = Math.min(m.bottom, corps.bottom);
+          if (bas <= haut) return false; // marche entièrement hors de la zone visible
+          return !(bas <= pied.top || haut >= pied.bottom);
         });
       });
       assert.deepEqual(
         await chevauchement(), [false, false, false],
         `Le pied recouvre au moins une marche à l'affichage initial (${viewport.width}x${viewport.height})`
       );
-      if (viewport.width === 1280) {
-        const marches = await pageLisibilite.locator('.marche').evaluateAll(
-          (elements) => elements.map((element) => element.getBoundingClientRect())
-        );
-        assert.ok(
-          marches.every((m) => m.top >= 0 && m.bottom <= viewport.height),
-          `Les 3 marches ne sont pas toutes visibles sans scroll sur 1280x700 : ${JSON.stringify(marches)}`
-        );
-      }
       await pageLisibilite.evaluate(() => {
         const corps = document.getElementById('panneau-corps');
         corps.scrollTop = corps.scrollHeight;
@@ -1065,6 +1061,30 @@ async function principal() {
         await chevauchement(), [false, false, false],
         `Le pied recouvre au moins une marche après scroll en bas (${viewport.width}x${viewport.height})`
       );
+      // Une fois en bas du corps, les 3 marches doivent être entièrement dégagées :
+      // dans le viewport ET dans la zone visible du corps. Une compétence longue impose
+      // de défiler, jamais de renoncer à voir une marche.
+      const marchesEnBas = await pageLisibilite.evaluate(() => {
+        const corps = document.getElementById('panneau-corps').getBoundingClientRect();
+        return [...document.querySelectorAll('.marche')].map((marche) => {
+          const m = marche.getBoundingClientRect();
+          return { top: Math.round(m.top), bottom: Math.round(m.bottom), corpsHaut: Math.round(corps.top), corpsBas: Math.round(corps.bottom) };
+        });
+      });
+      assert.equal(marchesEnBas.length, 3);
+      assert.ok(
+        marchesEnBas.every((m) => m.top >= m.corpsHaut - 1 && m.bottom <= m.corpsBas + 1
+          && m.top >= 0 && m.bottom <= viewport.height),
+        `Les 3 marches ne sont pas toutes dégagées après scroll en bas (${viewport.width}x${viewport.height}) : ${JSON.stringify(marchesEnBas)}`
+      );
+      // Les boutons restent visibles quel que soit le défilement : le pied ne bouge pas.
+      for (const id of ['#situer-precedent', '#situer-passer']) {
+        const boite = await pageLisibilite.locator(id).boundingBox();
+        assert.ok(
+          boite && boite.y >= 0 && boite.y + boite.height <= viewport.height,
+          `${id} hors du viewport après scroll en bas (${viewport.width}x${viewport.height})`
+        );
+      }
 
       await pageLisibilite.close();
     }

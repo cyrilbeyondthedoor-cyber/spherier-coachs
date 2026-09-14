@@ -719,6 +719,12 @@
   .panneau-plein-ecran[hidden] { display: none; }
 
   .panneau-corps { overflow-y: auto; padding: 20px 26px 30px; -webkit-overflow-scrolling: touch; }
+  /* Vrai pied de panneau : frère de .panneau-corps dans le conteneur flex, donc hors
+     de la zone qui défile. Le corps défile AU-DESSUS de lui au lieu de passer dessous,
+     ce qu'un pied `sticky` interne ne pouvait pas garantir (principe 2.3). Vide, il ne
+     prend aucune place : les écrans qui n'en posent pas ne changent pas de hauteur. */
+  .panneau-pied { flex-shrink: 0; padding: 0 26px calc(6px + env(safe-area-inset-bottom, 0px)); }
+  .panneau-pied:empty { display: none; }
   .panneau-section + .panneau-section { margin-top: 26px; }
   .panneau-label {
     font-size: 11px; letter-spacing: 0.26em; text-transform: uppercase;
@@ -1079,10 +1085,7 @@
   body[data-panneau="situer"] .panneau-corps { padding-bottom: 10px; }
   body[data-panneau="situer"] .escalier { gap: 4px; }
   body[data-panneau="situer"] .marche { padding: 7px 14px; gap: 10px; }
-  body[data-panneau="situer"] .situer-pied {
-    padding-top: 12px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-    margin-top: 12px; gap: 8px;
-  }
+  body[data-panneau="situer"] .situer-pied { gap: 8px; }
   .situer-layout { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 28px; align-items: start; }
   .audit-mini-carte { position: sticky; top: 0; padding: 16px; border: 1px solid var(--line-faint); border-radius: 14px; background: rgba(240,235,224,.02); }
   .audit-mini-repere { color: var(--gold); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; }
@@ -1124,23 +1127,21 @@
   }
   .situer-def { font-size: 14px; line-height: 1.65; color: var(--paper-dim); }
 
-  /* Pied ancré en bas du panneau scrollable : sur petit écran, un énoncé de 3 lignes
-     avec 3 marqueurs poussait « Précédente »/« Passer » hors du viewport (principe 2.3).
-     `position: sticky` colle le pied au bord bas de .panneau-corps (son ancêtre
-     scrollable) : les boutons restent donc TOUJOURS atteignables sans scroll, quelle
-     que soit la longueur de l'énoncé ou des marqueurs. Limite connue et documentée
-     dans le rapport : quand le contenu qui précède (énoncé + marqueurs + escalier)
-     dépasse largement la hauteur du panneau, le pied peut recouvrir le bas de la
-     dernière marche visible tant qu'on n'a pas commencé à défiler — un compromis
-     inhérent au motif "bouton d'action fixe au-dessus d'une liste plus longue que
-     l'écran", inévitable en CSS pur sans mesurer la hauteur réelle du pied en JS. */
+  /* Pied de l'écran d'évaluation. Il était `position: sticky` À L'INTÉRIEUR de la zone
+     qui défile : sur les vraies compétences (énoncé de trois lignes, quatre marqueurs
+     de deux lignes) il recouvrait la deuxième et la troisième marche, jusqu'à −116 px
+     de marge en 390×844. Il est maintenant rendu dans `#panneau-pied`, frère du corps :
+     le corps s'arrête où le pied commence, donc plus aucun recouvrement possible, quelle
+     que soit la longueur du texte (principe 2.3). Les marches trop basses passent
+     simplement sous la ligne de flottaison, et le membre défile pour les atteindre. */
   .situer-pied {
     display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
-    padding: 16px 0 calc(16px + env(safe-area-inset-bottom, 0px));
-    margin-top: 18px; border-top: 1px solid var(--line-faint);
-    position: sticky; bottom: 0; z-index: 2;
-    background: #0d1320;
+    padding: 14px 0 10px;
+    border-top: 1px solid var(--line-faint);
   }
+  /* Le bilan d'exploration libre garde son pied dans le corps : la liste y est courte
+     et centrée, il lui faut donc sa propre respiration au-dessus. */
+  .situer-bilan .situer-pied { margin-top: 18px; }
   .situer-btn {
     min-height: 44px; padding: 10px 20px; border-radius: 999px; cursor: pointer;
     display: inline-flex; align-items: center; justify-content: center;
@@ -1151,7 +1152,10 @@
   .situer-btn:hover:not(:disabled) { border-color: var(--line); color: var(--paper); }
   .situer-btn:disabled { opacity: .4; cursor: default; }
   .situer-passer { margin-left: auto; }
-  .situer-astuce { width: 100%; font-size: 14px; color: var(--stone);
+  /* `flex: 1 1 260px` : l'astuce tient sur la ligne des boutons quand la largeur le
+     permet, et passe à la ligne en dessous de 260 px disponibles. Le pied ne fait alors
+     qu'une seule ligne sur grand écran, autant de hauteur rendue aux marches. */
+  .situer-astuce { flex: 1 1 260px; min-width: 0; font-size: 14px; color: var(--stone);
     font-family: 'Inter Tight', sans-serif; font-style: normal; }
 
   /* Fin de bloc : le moment où l'on propose d'enregistrer, pour pouvoir s'y reprendre. */
@@ -1801,11 +1805,6 @@
   /* Sous-compteur du parcours : « Thématique 2 / 5 de Alliance ». Le membre sait où il
      est dans le grand chapitre, pas seulement dans la page. */
   .audit-sous-compteur { margin-top: 4px; color: var(--stone); font-size: 12px; font-variant-numeric: tabular-nums; }
-  .audit-chapitre {
-    display: flex; align-items: center; gap: 9px; margin-bottom: 4px;
-    color: var(--teinte-p); font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
-  }
-  .audit-chapitre::after { content: ''; flex: 1; height: 1px; background: color-mix(in srgb, var(--teinte-p) 30%, transparent); }
 
   /* Retour visuel du clic : la marche cochée se colore avant que le parcours n'avance.
      Sans elle, une testeuse a cru que son clic n'avait pas été pris en compte. */
@@ -2076,6 +2075,7 @@
     <button type="button" class="panneau-fermer" id="panneau-fermer" aria-label="Fermer">✕</button>
     <div class="panneau-tete" id="panneau-tete"></div>
     <div class="panneau-corps" id="panneau-corps"></div>
+    <div class="panneau-pied" id="panneau-pied"></div>
   </div>
 </div>
 
@@ -3294,7 +3294,18 @@
   const elPanneau = document.getElementById('panneau');
   const elPanneauTete = document.getElementById('panneau-tete');
   const elPanneauCorps = document.getElementById('panneau-corps');
+  const elPanneauPied = document.getElementById('panneau-pied');
   let dernierFocus = null;
+
+  // Le pied du panneau vit HORS de la zone qui défile : c'est ce qui l'empêche de
+  // recouvrir les marches quand l'énoncé et les marqueurs dépassent la hauteur visible
+  // (principe 2.3). Conséquence : il survivrait à l'écran qui l'a posé. Chaque écran
+  // écrit donc son corps par ici, ce qui remet le pied à zéro ; seul l'écran
+  // d'évaluation le remplit ensuite, juste après avoir écrit son corps.
+  function ecrireCorps(html) {
+    elPanneauPied.innerHTML = '';
+    elPanneauCorps.innerHTML = html;
+  }
 
   function astreCran(niveau, teinte) {
     const c = CRANS[niveau] ?? CRANS[0];
@@ -3678,11 +3689,11 @@
         </div>
       </section>`;
 
-    elPanneauCorps.innerHTML = horizon + `
+    ecrireCorps(horizon + `
       <section class="panneau-section">
         <p class="panneau-label">${competences.length} compétence${competences.length > 1 ? 's' : ''}</p>
         <div class="liste-comp">${items}</div>
-      </section>`;
+      </section>`);
     elPanneauCorps.scrollTop = 0;
 
     elPanneauCorps.querySelectorAll('.comp-item[data-competence]').forEach((btn) => {
@@ -3783,7 +3794,7 @@
       ? groupes
       : `<p class="sel-vide">Rien en attente. Sur n'importe quelle compétence, « Garder pour plus tard » la range ici — y compris dans une thématique encore fermée.</p>`;
 
-    elPanneauCorps.innerHTML = `
+    ecrireCorps(`
       <section class="panneau-section sel-groupe">
         <p class="panneau-label">Ce mois — ${brouillon.current.length}/${MAX_MAINTENANT}</p>
         ${cibles}
@@ -3793,7 +3804,7 @@
         ${plusTard}
       </section>
       <div id="zone-remplacement"></div>
-      <p class="sel-rappel">Touche une compétence pour la retrouver dans sa constellation.</p>`;
+      <p class="sel-rappel">Touche une compétence pour la retrouver dans sa constellation.</p>`);
     elPanneauCorps.scrollTop = 0;
 
     elPanneauCorps.querySelectorAll('[data-aller]').forEach((btn) => {
@@ -3937,28 +3948,35 @@
         ? `<p class="audit-sous-compteur">Thématique ${rang} / ${themesDim.length} de ${echapper(dimension.name)}</p>`
         : ''}`;
 
-    elPanneauCorps.innerHTML = `
+    // En audit modulaire, le fil d'Ariane porte déjà la dimension et la thématique, et
+    // le sous-compteur redit le rang de la thématique : répéter les deux noms ici
+    // coûtait 37 px de hauteur pour zéro information. En exploration libre, en
+    // revanche, la liste traverse plusieurs thématiques et le fil d'Ariane ne porte que
+    // le titre de la liste : le nom de la thématique reste alors le seul repère.
+    ecrireCorps(`
       <div class="situer-layout"><div class="situer">
-        ${dimension
-          ? `<p class="audit-chapitre">${echapper(dimension.name)}</p><p class="situer-fil">${echapper(theme ? theme.name : '')}</p>`
-          : `<p class="situer-fil">${echapper(theme ? theme.name : '')}</p>`}
+        ${dimension ? '' : `<p class="situer-fil">${echapper(theme ? theme.name : '')}</p>`}
         <h2 class="situer-nom" id="panneau-titre">${lierLexique(typoFr(echapper(c.name)))}</h2>
         ${(c.statement || c.definition) && (c.statement || c.definition) !== c.name
           ? `<p class="situer-def">${lierLexique(typoFr(echapper(c.statement || c.definition)))}</p>` : ''}
         <div style="margin-top:12px">${escalier(c, niveau, situer.teinte)}</div>
-        <div class="situer-pied">
-          <button type="button" class="situer-btn" id="situer-precedent" ${situer.index === 0 ? 'disabled' : ''}>← Précédente</button>
-          <button type="button" class="situer-btn situer-passer" id="situer-passer">
-            ${niveau > 0 ? 'Suivante →' : 'Passer →'}
-          </button>
-          <p class="situer-astuce" id="situer-astuce">${niveau > 0
-            ? `Déjà évalué à « ${echapper(etat.referentiel.scale[niveau])} ». Reclique sur ta marche pour l'effacer.`
-            : (estPassee(code)
-              ? 'Tu avais passé cette compétence. Coche une marche pour la situer.'
-              : 'Coche une marche, ou passe : tu pourras y revenir.')}</p>
-        </div>
       </div><aside>${miniCarteAudit(code)}</aside></div>
-      <div class="audit-carte-overlay" id="audit-carte-overlay" hidden><button type="button" class="audit-carte-fermer" id="audit-carte-fermer">Revenir à la question</button>${miniCarteAudit(code, true)}</div>`;
+      <div class="audit-carte-overlay" id="audit-carte-overlay" hidden><button type="button" class="audit-carte-fermer" id="audit-carte-fermer">Revenir à la question</button>${miniCarteAudit(code, true)}</div>`);
+    // L'astuce est placée ENTRE les deux boutons : sur un écran large elle tient sur la
+    // même ligne qu'eux et le pied ne fait plus qu'une ligne, ce qui rend une quarantaine
+    // de pixels aux marches. Sur écran étroit elle repasse en dessous.
+    elPanneauPied.innerHTML = `
+      <div class="situer-pied">
+        <button type="button" class="situer-btn" id="situer-precedent" ${situer.index === 0 ? 'disabled' : ''}>← Précédente</button>
+        <p class="situer-astuce" id="situer-astuce">${niveau > 0
+          ? `Déjà évalué à « ${echapper(etat.referentiel.scale[niveau])} ». Reclique sur ta marche pour l'effacer.`
+          : (estPassee(code)
+            ? 'Tu avais passé cette compétence. Coche une marche pour la situer.'
+            : 'Coche une marche, ou passe : tu pourras y revenir.')}</p>
+        <button type="button" class="situer-btn situer-passer" id="situer-passer">
+          ${niveau > 0 ? 'Suivante →' : 'Passer →'}
+        </button>
+      </div>`;
     elPanneauCorps.scrollTop = 0;
 
     // Cocher une marche fait avancer tout seul : c'est ce qui rend le parcours fluide.
@@ -4026,7 +4044,7 @@
         <span class="situer-compte">${situer.index} / ${situer.codes.length}</span>
       </div>`;
 
-    elPanneauCorps.innerHTML = `
+    ecrireCorps(`
       <div class="situer-bilan">
         <span class="mark">✧</span>
         <h3>Tu as parcouru toute la liste.</h3>
@@ -4039,7 +4057,7 @@
           <button type="button" class="situer-btn" id="situer-enregistrer" style="border-color:var(--gold);background:rgba(201,166,97,.16);color:var(--gold-bright)">Enregistrer</button>
           <button type="button" class="situer-btn" id="situer-fermer">Revenir à la carte</button>
         </div>
-      </div>`;
+      </div>`);
     elPanneauCorps.scrollTop = 0;
 
     document.getElementById('situer-enregistrer').addEventListener('click', async () => {
@@ -4302,7 +4320,7 @@
       </section>`;
     }).join('');
 
-    elPanneauCorps.innerHTML = `<div class="choix-ecran">${groupes}</div>`;
+    ecrireCorps(`<div class="choix-ecran">${groupes}</div>`);
     elPanneauCorps.scrollTop = 0;
     elPanneauCorps.querySelectorAll('[data-choix-dimension]').forEach((bouton) => {
       bouton.addEventListener('click', () => ouvrirChoixTheme(bouton.dataset.choixDimension));
@@ -4342,13 +4360,13 @@
       </article>`;
     }).join('');
 
-    elPanneauCorps.innerHTML = `<div class="choix-ecran">
+    ecrireCorps(`<div class="choix-ecran">
       ${restantes.length > 0
         ? `<button type="button" class="choix-principal" id="choix-toute-dimension">Évaluer toute la dimension<small>${restantes.length} thématique${restantes.length > 1 ? 's' : ''} restante${restantes.length > 1 ? 's' : ''}, enchaînées dans l'ordre</small></button>`
         : `<p class="choix-acheve">Cette dimension est complète : ${pctHtml(info.score)} de maîtrise.</p>`}
       <div class="choix-themes">${lignes}</div>
       <button type="button" class="choix-lien" id="choix-changer-dimension">Changer de dimension</button>
-    </div>`;
+    </div>`);
     elPanneauCorps.scrollTop = 0;
 
     const toute = document.getElementById('choix-toute-dimension');
@@ -4407,11 +4425,11 @@
   // Écran d'attente de fin de thématique. Il remplace la question en cours, donc les
   // marches et leurs gestionnaires disparaissent avec elle.
   function attendreEnregistrement(theme) {
-    elPanneauCorps.innerHTML = `<div class="audit-attente" role="status">
+    ecrireCorps(`<div class="audit-attente" role="status">
       <span class="mark">✧</span>
       <p class="audit-attente-titre">Enregistrement de ${echapper(theme ? theme.name : 'ta thématique')}…</p>
       <p class="audit-attente-note">Ton résultat arrive.</p>
-    </div>`;
+    </div>`);
     elPanneauCorps.scrollTop = 0;
   }
 
@@ -4507,7 +4525,7 @@
 
     // Deux colonnes sur desktop : la suite du parcours reste visible sans défiler,
     // c'est elle qui doit être atteignable en un geste après un score.
-    elPanneauCorps.innerHTML = `<div class="audit-cadre"><div class="audit-bilan audit-bilan-large">
+    ecrireCorps(`<div class="audit-cadre"><div class="audit-bilan audit-bilan-large">
       <div class="audit-bilan-colonne">
       ${enregistrement === 'echec'
         ? `<div class="audit-echec">
@@ -4548,7 +4566,7 @@
             <div class="audit-suites"><button type="button" class="audit-suite-choix principal" id="audit-voir-dimension">Voir le résultat de ${echapper(dimension.name)}<small>Toutes ses thématiques sont complètes</small></button></div>
           </div>`
         : blocPoursuivreHtml(dimension, suite)}</aside>
-    </div></div>`;
+    </div></div>`);
     elPanneauCorps.scrollTop = 0;
 
     const reessayer = document.getElementById('audit-reessayer');
@@ -4590,7 +4608,7 @@
       <h2 class="panneau-titre" id="panneau-titre">Résultat de la dimension</h2>
       <p class="audit-sous-compteur">${info.themes.length} thématique${info.themes.length > 1 ? 's' : ''} · ${info.evaluees} / ${info.codes.length} compétence${info.codes.length > 1 ? 's' : ''} évaluée${info.codes.length > 1 ? 's' : ''}</p>`;
 
-    elPanneauCorps.innerHTML = `<div class="audit-cadre"><div class="audit-bilan audit-bilan-large">
+    ecrireCorps(`<div class="audit-cadre"><div class="audit-bilan audit-bilan-large">
       <div class="audit-bilan-colonne">
       <div class="audit-bilan-tete">
         <h3 class="audit-bilan-nom">${echapper(dimension.name)}</h3>
@@ -4609,7 +4627,7 @@
       </section>
       </div>
       <aside class="audit-bilan-suite">${blocPoursuivreHtml(dimension, suite)}</aside>
-    </div></div>`;
+    </div></div>`);
     elPanneauCorps.scrollTop = 0;
     brancherPoursuivre(dimension);
 
@@ -4702,7 +4720,7 @@
       ${choix.map((competence) => `<div class="audit-choix-ligne"><span>${echapper(competence.name)}</span><button type="button" class="audit-choix-retirer" data-retirer="${echapper(competence.id)}">Retirer</button></div>`).join('')}
     </div>`;
 
-    elPanneauCorps.innerHTML = `
+    ecrireCorps(`
       <p class="audit-resultat-intro">Voici les thématiques avec les scores les moins élevés. Sélectionne les trois compétences qui te semblent les plus prioritaires à adresser pour progresser en tant que coach. Un clic sur une compétence sélectionnée la retire.</p>
       ${blocChoix}
       <div class="audit-zones">${zones}</div>
@@ -4710,7 +4728,7 @@
       <div class="audit-selection-pied">
         <p><b>${brouillon.current.length}</b> compétence${brouillon.current.length > 1 ? 's' : ''} choisie${brouillon.current.length > 1 ? 's' : ''} sur 3</p>
         <button type="button" class="audit-suite" id="audit-suite" ${brouillon.current.length === 3 ? '' : 'disabled'}>Voir ma synthèse</button>
-      </div>`;
+      </div>`);
     elPanneauCorps.scrollTop = 0;
 
     elPanneauCorps.querySelectorAll('[data-priorite]').forEach((bouton) => {
@@ -4763,7 +4781,7 @@
     // améliorer, le tri n'en est pas un.
     const prioritesPossibles = aAmeliorer >= 5;
 
-    elPanneauCorps.innerHTML = `<section class="carte-resultat">
+    ecrireCorps(`<section class="carte-resultat">
       <p class="carte-resultat-intro">Voici la carte de ta pratique. Les pourcentages portent sur ce que tu as déjà évalué, et chaque territoire dit sur combien de ses thématiques il repose.${
         complets < totalThemes
           ? ` ${complets} thématique${complets > 1 ? 's' : ''} sur ${totalThemes} évaluée${complets > 1 ? 's' : ''} : le reste s'ajoutera au fur et à mesure.`
@@ -4777,7 +4795,7 @@
         <button type="button" class="carte-resultat-secondaire" id="resultat-lineaire">Ouvrir la vue d’ensemble linéaire</button>
         ${prioritesChoisies ? '<button type="button" class="carte-resultat-secondaire" data-audit-rdv>Réserver un échange</button>' : ''}
       </div>
-    </section>`;
+    </section>`);
     elPanneauCorps.scrollTop = 0;
     elPanneauCorps.querySelectorAll('[data-resultat-categorie]').forEach((bouton) => {
       bouton.addEventListener('click', (event) => {
@@ -5091,12 +5109,12 @@
 
     const titreDimensions = synScope ? '' : '<p class="syn-section-titre">Progression par dimension</p>';
 
-    elPanneauCorps.innerHTML = rdvHaut
+    ecrireCorps(rdvHaut
       + enteteVue
       + actionSituer
       + titreDimensions
       + (corps || `<p class="syn-vide">Aucune compétence à renforcer dans cette vue.</p>`)
-      + finAudit;
+      + finAudit);
     elPanneauCorps.scrollTop = 0;
 
     elPanneauCorps.querySelectorAll('[data-plier]').forEach((btn) => {
@@ -5258,10 +5276,10 @@
         ? `<p class="panneau-def">${lierLexique(typoFr(echapper(competence.statement || competence.definition)))}</p>` : ''}
       ${pastilleDifficulte(competence, 'panneau-diff')}
     `;
-    elPanneauCorps.innerHTML = escalier(competence, niveau, teinte)
+    ecrireCorps(escalier(competence, niveau, teinte)
       + sectionSelections(competence)
       + sectionRessources(competence)
-      + blocNote(competence);
+      + blocNote(competence));
     brancherPanneau(competence);
     brancherNote(competence);
     if (!conserverDefilement) elPanneauCorps.scrollTop = 0;
@@ -5302,7 +5320,7 @@
     // Tri alphabétique français et insensible aux accents : le lexique se parcourt
     // comme un dictionnaire, sans dépendre de l'ordre historique du classeur source.
     const termesTries = [...lexique.termes].sort((x, y) => normaliserRecherche(x.terme).localeCompare(normaliserRecherche(y.terme), 'fr'));
-    elPanneauCorps.innerHTML = `
+    ecrireCorps(`
       <p class="lexique-intro">${echapper(lexique.intro)}</p>
       <div class="lexique-tete">
         <input type="search" class="lexique-recherche" id="lexique-recherche" placeholder="Rechercher un mot (ex. : domino, bascule, fils)" aria-label="Rechercher dans le lexique" autocomplete="off">
@@ -5311,7 +5329,7 @@
       <dl class="lexique-liste" id="lexique-liste">
         ${termesTries.map((t) => `<div class="lexique-terme" data-recherche="${echapper(normaliserRecherche(t.terme + ' ' + t.definition))}"><dt>${echapper(t.terme)}</dt><dd>${echapper(t.definition)}</dd></div>`).join('')}
       </dl>
-      <p class="syn-vide" id="lexique-vide" hidden>Aucun terme ne correspond.</p>`;
+      <p class="syn-vide" id="lexique-vide" hidden>Aucun terme ne correspond.</p>`);
     elPanneauCorps.scrollTop = 0;
 
     const champ = document.getElementById('lexique-recherche');
