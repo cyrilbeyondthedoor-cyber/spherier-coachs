@@ -5057,11 +5057,24 @@
     // Après une longue série d'évaluations, un clic ne doit pas tout effacer sans prévenir.
     const modifies = Object.keys(brouillon.levels).filter((code) => (brouillon.levels[code] ?? 0) !== (reference.levels[code] ?? 0)).length;
     if (modifies > 5 && !window.confirm(`Annuler ${modifies} positionnements non enregistrés ?`)) return;
-    brouillon = { levels: { ...reference.levels }, current: [...reference.current], later: [...reference.later] };
+    brouillon = {
+      levels: { ...reference.levels },
+      current: [...reference.current],
+      later: [...reference.later],
+      // Annuler des positionnements ne revient pas sur les compétences écartées
+      // sciemment : « passée » est une décision de parcours, pas une modification en
+      // attente. Les effacer ici ferait redemander, à la reprise, tout ce que le
+      // membre avait déjà mis de côté.
+      passees: [...(brouillon.passees || [])],
+      derniere: brouillon.derniere || null,
+    };
     etat.computed.levels = { ...reference.levels };
     etat.computed.themes = calculerOuvertureLocale(brouillon.levels);
     try { localStorage.removeItem(cleBrouillon()); } catch {}
+    // Le brouillon vient d'être effacé : le contexte d'audit, lui, doit y retourner.
+    persisterAudit();
     majBarre();
+    majAuditInitial();
     redessinerConstellations();
     if (competenceAffichee) rafraichirPanneau(competenceAffichee.code);
   });

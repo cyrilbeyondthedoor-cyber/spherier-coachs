@@ -545,6 +545,32 @@ async function principal() {
       `Je sais mobiliser la compétence ${DIM_MULTI.id}-02-01.`);
     await reprise.getByText('Tu avais passé cette compétence.', { exact: false }).waitFor();
 
+    // --- Annuler ne remet pas en jeu les compétences passées ------------------
+    // « Passée » est une décision de parcours, pas une modification en attente :
+    // annuler des positionnements ne doit pas la reprendre au membre.
+    const annulation = await navigateur.newPage({ viewport: { width: 1280, height: 700 } });
+    await annulation.goto(url);
+    await annulation.locator('#ciel:not([hidden])').waitFor();
+    await annulation.getByRole('button', { name: 'Commencer mon audit' }).dispatchEvent('click');
+    await annulation.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await annulation.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await annulation.locator('.situer-compte', { hasText: '1 / 4' }).waitFor();
+    await annulation.getByRole('button', { name: 'Passer →' }).dispatchEvent('click');
+    await annulation.locator('.situer-compte', { hasText: '2 / 4' }).waitFor();
+    await annulation.locator('.marche[data-niveau="2"]').dispatchEvent('click');
+    await annulation.locator('.situer-compte', { hasText: '3 / 4' }).waitFor();
+
+    await annulation.locator('#btn-annuler').dispatchEvent('click');
+    await annulation.locator('#panneau-fermer').dispatchEvent('click');
+    await annulation.getByRole('button', { name: 'Reprendre mon audit' }).dispatchEvent('click');
+    await annulation.locator('.situer-nom').waitFor();
+    // Le positionnement de la deuxième compétence est bien annulé, donc c'est elle qui
+    // est à faire ; la première reste passée, sinon la reprise ouvrirait sur elle.
+    assert.equal(await annulation.locator('.situer-nom').textContent(),
+      `Je sais mobiliser la compétence ${DIM_MULTI.id}-01-02.`);
+    assert.equal((await annulation.locator('#situer-astuce').textContent()).trim(),
+      'Coche une marche, ou passe : tu pourras y revenir.');
+
     console.log('UI desktop, mobile et sauvegarde simulée : OK');
   } finally {
     await Promise.race([
