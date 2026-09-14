@@ -5194,8 +5194,11 @@
     const theme = themeParId(themeId);
     const jour = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
     const ok = await enregistrer(`${theme ? theme.name : 'Thématique'}, ${jour}`);
+    // Une seule ligne : le bandeau se pose sous l'en-tête du panneau, donc sur la
+    // compétence suivante, et deux lignes en recouvraient l'énoncé pendant quatre
+    // secondes. La confirmation tient en une phrase, le parcours continue dessous.
     if (ok && theme) {
-      bandeau('Thématique enregistrée', `${theme.name} · ${etatTheme(theme).score} % de maîtrise`, 'succes');
+      bandeau(`Thématique enregistrée · ${etatTheme(theme).score} % de maîtrise`, '', 'succes');
     }
   }
 
