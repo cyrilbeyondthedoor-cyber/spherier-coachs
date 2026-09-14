@@ -1550,6 +1550,52 @@
     .titre h1 { font-size: 32px; }
     .titre h1::before, .titre h1::after { margin: 0 8px; }
   }
+
+  /* LOT 1 — ACCÈS ET RECONNEXION (classes neuves uniquement) */
+  .acces-reprise[hidden] { display: none; }
+  .acces-reprise {
+    max-width: 520px;
+    margin: 0 auto 22px;
+    padding: 18px 20px;
+    border: 1px solid var(--gold);
+    border-radius: 10px;
+    background: rgba(201, 166, 97, .07);
+    text-align: center;
+  }
+  .acces-reprise-texte { margin: 0 0 12px; color: var(--paper-dim); font-size: 13px; }
+  .acces-reprise-btn {
+    display: block;
+    width: 100%;
+    min-height: 46px;
+    border: 1px solid var(--gold);
+    border-radius: 999px;
+    background: var(--gold);
+    color: var(--night-deep);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .acces-reprise-btn:hover { background: var(--gold-bright); }
+  .acces-reprise-btn:active { transform: scale(.98); }
+  .acces-renvoi-lien { margin: 12px 0 0; text-align: center; }
+  /* Lien discret : la surface cliquable atteint 44px sans agrandir visuellement le texte. */
+  .acces-lien {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    margin-top: 8px;
+    padding: 0 4px;
+    border: 0;
+    background: none;
+    color: var(--stone);
+    font: inherit;
+    font-size: 12px;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .acces-lien:hover { color: var(--paper-dim); }
+  .acces-lien:focus-visible { outline: 2px solid color-mix(in srgb, var(--gold) 58%, transparent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -1585,8 +1631,13 @@
   <section class="portail" id="portail" hidden>
     <div id="portail-formulaire">
       <p class="portail-repere">Outil offert aux coachs</p>
-      <h1>Accède au sphérier de compétences du coach</h1>
+      <h1 id="portail-titre">Accède au sphérier de compétences du coach</h1>
       <p class="portail-intro">Évalue ta pratique, identifie tes zones de progression et choisis les compétences sur lesquelles concentrer ton travail.</p>
+      <div class="acces-reprise" id="acces-reprise" hidden>
+        <p class="acces-reprise-texte">Un audit t’attend déjà sur cet appareil.</p>
+        <button type="button" class="acces-reprise-btn" id="acces-reprise-btn">Reprendre mon audit</button>
+        <button type="button" class="acces-lien" id="acces-reprise-non">Ce n’est pas moi</button>
+      </div>
       <form class="portail-form" id="form-acces">
         <div class="portail-piege" aria-hidden="true">
           <label for="acces-website">Site web</label>
@@ -1607,14 +1658,17 @@
           <span>J’accepte de recevoir mon lien personnel par email et que mes réponses soient conservées pour me permettre de reprendre mon audit.</span>
         </label>
         <button class="portail-submit" id="acces-submit" type="submit">Recevoir mon lien personnel</button>
+        <p class="acces-renvoi-lien">
+          <button type="button" class="acces-lien" id="acces-basculer-mode">J’ai déjà mon lien mais je ne le retrouve plus</button>
+        </p>
         <p class="portail-erreur" id="acces-erreur" role="alert"></p>
       </form>
       <p class="portail-reassurance">Ton lien personnel te permettra d’enregistrer ton audit et de le reprendre plus tard.</p>
     </div>
     <div class="portail-confirmation" id="portail-confirmation" hidden>
       <span class="mark">✧</span>
-      <h2>Ton lien personnel est en route</h2>
-      <p>Consulte la boîte mail de <b id="confirmation-email"></b> pour commencer ton audit et le reprendre quand tu le souhaites.</p>
+      <h2 id="confirmation-titre">Ton lien personnel est en route</h2>
+      <p id="confirmation-texte">Consulte la boîte mail de <b id="confirmation-email"></b> pour commencer ton audit et le reprendre quand tu le souhaites.</p>
     </div>
   </section>
 
