@@ -3305,13 +3305,20 @@
         const n = Number(btn.dataset.niveau);
         const avant = brouillon.levels[code] ?? 0;
         definirNiveau(code, n);
+        // Une compétence évaluée n'est plus « passée » : le statut suit le dernier geste.
+        if (avant !== n) retirerDesPassees(code);
         // Décocher (recliquer sur sa propre marche) ne doit pas faire avancer :
         // le membre corrige, il ne valide pas.
         if (avant === n) rendreMeSituer();
         else avancerMeSituer();
       });
     });
-    document.getElementById('situer-passer').addEventListener('click', avancerMeSituer);
+    document.getElementById('situer-passer').addEventListener('click', () => {
+      // « Passer » est une décision, pas un oubli : elle se retient, pour que la
+      // reprise ne redemande pas ce que le membre a déjà mis de côté.
+      if (!estEvaluee(code)) marquerPassee(code);
+      avancerMeSituer();
+    });
     document.getElementById('situer-precedent').addEventListener('click', () => {
       situer.index = Math.max(0, situer.index - 1);
       rendreMeSituer();
@@ -3398,6 +3405,114 @@
       if (ok) ouvrirResultatAudit(false);
     });
     document.getElementById('situer-fermer').addEventListener('click', fermerPanneau);
+  }
+
+  // ============================================================
+  // --- Audit modulaire ---
+  // ============================================================
+  // L'audit ne se joue plus d'un bloc sur 192 compétences : le membre choisit une
+  // dimension, puis une thématique, s'évalue dessus, voit son score, et décide de la
+  // suite. La thématique est l'unité — c'est elle qui déclenche l'enregistrement, et
+  // c'est à sa fin que le parcours propose une bifurcation plutôt qu'une ligne droite.
+
+  // --- État « passée » ---------------------------------------------------------
+  // Trois statuts, pas deux : « non vue » et « vue mais laissée de côté » sont des
+  // situations différentes. Les confondre faisait repartir la reprise au mauvais
+  // endroit et obligeait à repasser sur ce qui avait déjà été écarté volontairement.
+  const estEvaluee = (code) => (brouillon.levels[code] ?? 0) > 0;
+  const estPassee = (code) => !estEvaluee(code) && (brouillon.passees || []).includes(code);
+  const estAFaire = (code) => !estEvaluee(code) && !estPassee(code);
+
+  // Le brouillon local est effacé dès que rien ne diffère de la référence : les
+  // compétences passées et le repère de reprise, eux, doivent survivre à ce cas.
+  // On les réécrit donc à la main quand l'enregistrement automatique les a laissés
+  // de côté.
+  function memoriserAudit() {
+    appliquerChangement(() => {});
+    if (!estModifie() && ((brouillon.passees || []).length > 0 || brouillon.derniere)) {
+      try {
+        localStorage.setItem(cleBrouillon(), JSON.stringify({ ...brouillon, le: Date.now() }));
+      } catch { /* stockage indisponible : on continue sans filet */ }
+    }
+  }
+
+  function marquerPassee(code) {
+    brouillon.passees = [...new Set([...(brouillon.passees || []), code])];
+    memoriserAudit();
+  }
+
+  // Évaluer une compétence la sort des passées : le statut suit le dernier geste.
+  function retirerDesPassees(code) {
+    if (!(brouillon.passees || []).includes(code)) return;
+    brouillon.passees = brouillon.passees.filter((item) => item !== code);
+    memoriserAudit();
+  }
+
+  // Repère de reprise : où le membre en était, à la compétence près.
+  function noterDerniere(contexte, code) {
+    if (!contexte) return;
+    brouillon.derniere = { dimensionId: contexte.dimensionId, themeId: contexte.themeId, code };
+    memoriserAudit();
+  }
+
+  // --- Lecture d'une thématique et d'une dimension -----------------------------
+  function codesDeTheme(themeId) {
+    return etat.referentiel.competencies
+      .filter((competence) => competence.theme === themeId)
+      .map((competence) => competence.id);
+  }
+
+  function themesDeDimension(dimension) {
+    return etat.referentiel.themes
+      .filter((theme) => theme.dimension === dimension.name)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }
+
+  // Une thématique est « complète » quand plus rien n'y est à faire : les compétences
+  // passées ne bloquent pas. Exiger qu'elles soient évaluées, c'est refuser au membre
+  // le droit de dire « celle-là, je ne sais pas ».
+  function etatTheme(theme) {
+    const codes = codesDeTheme(theme.id);
+    const evaluees = codes.filter(estEvaluee);
+    const passees = codes.filter(estPassee);
+    const aFaire = codes.filter(estAFaire);
+    const somme = evaluees.reduce((total, code) => total + brouillon.levels[code], 0);
+    return {
+      theme,
+      codes,
+      evaluees,
+      passees,
+      aFaire,
+      complete: aFaire.length === 0,
+      entierementEvaluee: aFaire.length === 0 && passees.length === 0,
+      // Même formule que `scoreThemeAudit` : le score se lit sur TOUTES les
+      // compétences de la thématique, une passée pèse donc comme un zéro.
+      score: codes.length ? Math.round((somme / (codes.length * 3)) * 100) : 0,
+    };
+  }
+
+  function etatDimension(dimension) {
+    const themes = themesDeDimension(dimension).map(etatTheme);
+    const codes = themes.flatMap((item) => item.codes);
+    const somme = codes.reduce((total, code) => total + (brouillon.levels[code] ?? 0), 0);
+    return {
+      dimension,
+      themes,
+      codes,
+      evaluees: codes.filter(estEvaluee).length,
+      complete: themes.length > 0 && themes.every((item) => item.complete),
+      score: codes.length ? Math.round((somme / (codes.length * 3)) * 100) : 0,
+    };
+  }
+
+  const themesComplets = () => etat.referentiel.themes.filter((theme) => etatTheme(theme).complete);
+
+  function dimensionParId(dimensionId) {
+    return etat.referentiel.dimensions.find((dimension) => dimension.id === dimensionId);
+  }
+
+  function themeParId(themeId) {
+    return etat.referentiel.themes.find((theme) => theme.id === themeId);
   }
 
   let auditToutesThemes = false;
@@ -4251,6 +4366,10 @@
           label: elLibelle.value.trim() || null,
           levels: brouillon.levels,
           selections: { current: brouillon.current, later: brouillon.later },
+          // Contexte de l'audit modulaire : ce qui a été passé sciemment, et où le
+          // membre en était. Sans lui, la reprise sur un autre appareil repartirait du
+          // début de la liste et redemanderait les compétences déjà écartées.
+          audit: { passees: [...(brouillon.passees || [])], derniere: brouillon.derniere || null },
         }),
       });
       if (!reponse.ok) {
@@ -4264,7 +4383,17 @@
       etat.computed = data.computed;
       const sel = data.snapshot.blob.selections;
       reference = { levels: { ...data.snapshot.blob.levels }, current: [...sel.current], later: [...sel.later] };
-      brouillon = { levels: { ...reference.levels }, current: [...reference.current], later: [...reference.later] };
+      // Le contexte d'audit survit à la remise à plat du brouillon : il décrit un
+      // parcours, pas une modification en attente. L'écraser ici reperdrait les
+      // compétences passées à chaque fin de thématique.
+      const auditEnregistre = data.audit ?? data.snapshot.blob.audit ?? {};
+      brouillon = {
+        levels: { ...reference.levels },
+        current: [...reference.current],
+        later: [...reference.later],
+        passees: [...(auditEnregistre.passees || [])],
+        derniere: auditEnregistre.derniere || null,
+      };
 
       try { localStorage.removeItem(cleBrouillon()); } catch {}
       elLibelle.value = '';
@@ -4632,7 +4761,16 @@
         current: cur,
         later: [...new Set(sel.later || [])].filter((c) => !cur.includes(c)),
       };
-      brouillon = { levels: { ...reference.levels }, current: [...reference.current], later: [...reference.later] };
+      // Contexte de l'audit modulaire, tel que le serveur le renvoie : compétences
+      // passées sciemment, et dernière thématique ouverte.
+      const auditServeur = etatClient.audit ?? etatClient.snapshot?.blob?.audit ?? {};
+      brouillon = {
+        levels: { ...reference.levels },
+        current: [...reference.current],
+        later: [...reference.later],
+        passees: [...(auditServeur.passees || [])],
+        derniere: auditServeur.derniere || null,
+      };
 
       // Reprise d'un travail interrompu : page fermée, onglet perdu, réseau tombé.
       const repris = lireBrouillon();
@@ -4641,6 +4779,10 @@
           levels: { ...repris.levels },
           current: [...(repris.current || [])],
           later: [...(repris.later || [])],
+          // Le brouillon local est plus récent que le snapshot : il fait autorité sur
+          // le contexte d'audit aussi, sinon un « Passer » non enregistré disparaîtrait.
+          passees: [...(repris.passees || brouillon.passees || [])],
+          derniere: repris.derniere || brouillon.derniere || null,
         };
         if (estModifie()) {
           etat.computed.levels = { ...etat.computed.levels, ...brouillon.levels };

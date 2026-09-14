@@ -33,12 +33,30 @@ async function lireDernierSnapshotV2(clientId) {
   return v2 ?? null;
 }
 
+// Contexte de reprise vide : la valeur qu'un membre sans snapshot, ou dont le snapshot
+// date d'avant l'audit modulaire, doit recevoir. Un `audit` absent reste valide.
+const AUDIT_VIDE = { passees: [], derniere: null, maj: null };
+
+// Longueur maximale d'un identifiant repris tel quel du navigateur. Les codes du
+// référentiel font une douzaine de caractères ; la borne existe pour qu'une requête
+// forgée ne puisse pas faire grossir le blob par ce chemin.
+const MAX_IDENTIFIANT = 64;
+
+function identifiantBorne(valeur) {
+  if (typeof valeur !== 'string') return null;
+  const propre = valeur.trim();
+  return propre !== '' && propre.length <= MAX_IDENTIFIANT ? propre : null;
+}
+
 // Assemble l'état renvoyé au navigateur : le snapshot brut, et l'état calculé.
 // Le calcul d'ouverture vit côté serveur, un seul endroit où la règle existe.
 function composerEtat({ referentiel, snapshot }) {
   const levels = snapshot?.blob?.levels ?? {};
   return {
     snapshot,
+    // Renvoyé tel quel, sans recalcul : le contexte de reprise décrit où le membre en
+    // était dans SON parcours. Le serveur n'a rien à en déduire, il le conserve.
+    audit: snapshot?.blob?.audit ?? AUDIT_VIDE,
     computed: {
       levels: niveauxComplets({ referentiel, levels }),
       themes: calculerOuverture({ referentiel, levels }),
@@ -74,6 +92,14 @@ function validerEtNormaliser({ referentiel, corps }) {
   if (!Array.isArray(current)) erreurs.push('selections.current doit être un tableau.');
   if (!Array.isArray(later)) erreurs.push('selections.later doit être un tableau.');
 
+  // Contexte de l'audit modulaire. Absent = audit vide : un snapshot écrit avant que ce
+  // champ n'existe reste parfaitement valide, et le membre n'a rien à remigrer.
+  const auditBrut = corps.audit ?? {};
+  const auditEstObjet = typeof auditBrut === 'object' && auditBrut !== null && !Array.isArray(auditBrut);
+  if (!auditEstObjet) erreurs.push('audit doit être un objet { passees, derniere }.');
+  const passeesBrutes = auditEstObjet ? (auditBrut.passees ?? []) : [];
+  if (!Array.isArray(passeesBrutes)) erreurs.push('audit.passees doit être un tableau de codes.');
+
   if (erreurs.length > 0) return { erreurs };
 
   const competenceParCode = new Map(referentiel.competencies.map((c) => [c.id, c]));
@@ -108,7 +134,33 @@ function validerEtNormaliser({ referentiel, corps }) {
     erreurs.push(`selections.current ne peut viser que des thématiques ouvertes (refusé : ${horsThematiqueOuverte.join(', ')}).`);
   }
 
+  // « Passées » porte une décision du membre — j'ai vu cette compétence et je la laisse
+  // de côté — donc un code inconnu est refusé plutôt que filtré en silence : contrairement
+  // aux niveaux, il n'y a rien à retomber dessus, et l'erreur signale un envoi douteux.
+  const passees = [...new Set(passeesBrutes)];
+  if (passees.length > referentiel.competencies.length) {
+    erreurs.push(`audit.passees est limité à ${referentiel.competencies.length} codes (reçu ${passees.length}).`);
+  }
+  const passeesInconnues = passees.filter((code) => !competenceParCode.has(code));
+  if (passeesInconnues.length > 0) {
+    erreurs.push(`audit.passees contient des codes absents du référentiel (${passeesInconnues.slice(0, 5).join(', ')}).`);
+  }
+
   if (erreurs.length > 0) return { erreurs };
+
+  // Le repère de reprise, lui, est un simple signet : s'il pointe vers une compétence
+  // disparue du référentiel depuis la dernière session, on l'abandonne au lieu de
+  // refuser l'enregistrement entier — ce serait perdre l'audit pour un détail d'écran.
+  const brute = auditBrut.derniere;
+  let derniere = null;
+  if (brute && typeof brute === 'object' && !Array.isArray(brute)) {
+    const code = identifiantBorne(brute.code);
+    const dimensionId = identifiantBorne(brute.dimensionId);
+    const themeId = identifiantBorne(brute.themeId);
+    if (code && dimensionId && themeId && competenceParCode.has(code)) {
+      derniere = { dimensionId, themeId, code };
+    }
+  }
 
   return {
     erreurs: [],
@@ -119,6 +171,9 @@ function validerEtNormaliser({ referentiel, corps }) {
       levels,
       // « plus tard » est libre : sans plafond, et autorisé même en thématique verrouillée.
       selections: { current: currentFiltre, later: laterFiltre },
+      // L'horodatage est posé ICI et pas repris du navigateur : une horloge de poste
+      // mal réglée écrirait une date de reprise fantaisiste dans la base.
+      audit: { passees, derniere, maj: new Date().toISOString() },
     },
   };
 }
