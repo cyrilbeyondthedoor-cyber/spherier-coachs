@@ -56,7 +56,7 @@ function competence(codeTheme, code, index) {
     name: `Je sais mobiliser la compétence ${code}.`,
     definition: `Je sais mobiliser la compétence ${code}.`,
     statement: `Je sais provoquer la bascule* : agir sur la compétence ${code}.`,
-    markers: `Un exemple observable pour ${code}. Tu sais suivre les fils* et tenir l'ancrage*.`,
+    markers: `Un exemple observable pour ${code}. Tu sais suivre les fils* et tenir l'ancrage*. Tu relis ces fils* à la séance suivante.`,
     difficulty: DIFFICULTES[index % DIFFICULTES.length].nom,
     order: index + 1,
     resources: [],
@@ -81,6 +81,14 @@ compLisibilite.markers = [
   '• Je tiens le cadre que nous avons posé même quand le client me demande de le déplacer, et j’explique pourquoi je le tiens.',
   '• Je reviens sur une maladresse de ma part à la séance suivante plutôt que de la laisser s’installer en silence entre nous.',
 ].join('\n');
+
+// Lot 6.4 c : la thématique de la deuxième dimension porte des mots du lexique dans son
+// titre, sa définition et l'énoncé de sa compétence. Le titre prend « ancrage » en
+// premier, la définition n'en garde qu'un rappel, et la liste garde « fils » à elle.
+const themeLexique = themes.find((theme) => theme.id === `theme-${DIM_LISIBILITE.id}`);
+themeLexique.name = `Ancrage* de ${DIM_LISIBILITE.name}`;
+themeLexique.definition = "Définition de la thématique, tournée vers l'ancrage*.";
+compLisibilite.name = "Je sais tenir l'ancrage* et suivre les fils*.";
 
 // Quatre compétences dans la première thématique : de quoi passer, évaluer, et lire
 // un pourcentage qui ne soit pas un simple 0 ou 100.
@@ -514,7 +522,10 @@ async function principal() {
     assert.equal(await motFils.textContent(), 'fils*');
     // Élision : seul « ancrage » est souligné, l'article reste du texte courant.
     assert.deepEqual(await page.locator('.marche-enonce .lex-mot').allTextContents(), ['fils*', 'ancrage*']);
-    assert.match(await page.locator('.marche-enonce').textContent(), /tenir l'ancrage\*\.$/);
+    assert.match(await page.locator('.marche-enonce').textContent(), /tenir l'ancrage\*\./);
+    // Lot 6.4 b : « fils* » revient dans le même marqueur, en rappel discret, pas en lien.
+    assert.equal(await page.locator('.marche-enonce .lex-rappel').count(), 1);
+    assert.equal(await page.locator('.marche-enonce .lex-rappel').textContent(), '*');
     await motFils.click();
     await page.locator('.lex-bulle[role="dialog"]').waitFor();
     assert.equal(await page.locator('.lex-bulle-terme').textContent(), 'Fils');
@@ -1216,6 +1227,85 @@ async function principal() {
 
       await pageLisibilite.close();
     }
+
+    // --- Lot 6.4 : lexique au survol, sans répétition, au niveau du dessus -----
+    const lexique = await navigateur.newPage({ viewport: { width: 1280, height: 700 } });
+    await lexique.bringToFront();
+    await lexique.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000009`);
+    await lexique.locator('#ciel:not([hidden])').waitFor();
+    await lexique.locator(`[data-ouvrir="${DIM_LISIBILITE.id}"]`).dispatchEvent('click');
+    await lexique.locator('body[data-vue="categorie"]').waitFor({ state: 'attached' });
+    await lexique.locator(`[data-dimension="${DIM_LISIBILITE.id}"] .theme[data-theme]`).first().dispatchEvent('click');
+    await lexique.locator('body[data-panneau^="theme:"]').waitFor({ state: 'attached' });
+
+    // c) Le titre de la thématique est cliquable.
+    const titreMot = lexique.locator('#panneau-titre .lex-mot');
+    assert.equal(await titreMot.count(), 1);
+    assert.equal(await titreMot.textContent(), 'Ancrage*');
+    // b) La définition répète le terme : rappel discret, pas un second lien.
+    assert.equal(await lexique.locator('.panneau-def .lex-mot').count(), 0);
+    assert.equal(await lexique.locator('.panneau-def .lex-rappel').count(), 1);
+    // c) L'énoncé de la liste porte son propre terme, rendu en span : un bouton dans un
+    // bouton n'est pas du HTML valide et le navigateur le sortirait de son parent.
+    const motListe = lexique.locator('.comp-nom .lex-mot');
+    assert.equal(await motListe.count(), 1);
+    assert.equal(await motListe.textContent(), 'fils*');
+    assert.equal(await motListe.evaluate((el) => el.tagName), 'SPAN');
+    assert.equal(await lexique.locator('.comp-nom .lex-rappel').count(), 1,
+      "« ancrage » est déjà pris par le titre : la liste n'en garde qu'un rappel");
+    await capturer(lexique, screenshotDir, 'lexique-theme-desktop.png');
+
+    // Le clic sur le mot ouvre la définition, pas la fiche de la compétence.
+    const panneauAvant = await lexique.locator('body').getAttribute('data-panneau');
+    await motListe.click();
+    await lexique.locator('.lex-bulle[role="dialog"]').waitFor();
+    assert.equal(await lexique.locator('.lex-bulle-terme').textContent(), 'Fils');
+    assert.equal(await lexique.locator('body').getAttribute('data-panneau'), panneauAvant,
+      'un mot du lexique cliqué dans la liste n\'ouvre pas la fiche de la compétence');
+    await lexique.keyboard.press('Escape');
+    await lexique.locator('.lex-bulle').waitFor({ state: 'detached' });
+
+    // a) Survol : la définition s'ouvre sans clic, puis se referme quand on s'éloigne.
+    await titreMot.hover();
+    await lexique.locator('.lex-bulle[role="dialog"]').waitFor({ timeout: 5000 });
+    assert.equal(await lexique.locator('.lex-bulle-terme').textContent(), 'Ancrage');
+    await capturer(lexique, screenshotDir, 'lexique-survol-desktop.png');
+    await lexique.mouse.move(5, 5);
+    await lexique.locator('.lex-bulle').waitFor({ state: 'detached', timeout: 5000 });
+
+    // c) Les listes de l'écran de résultat sont cliquables elles aussi, et suivent la
+    // même règle : le titre du bilan prend « ancrage », la liste garde « fils ».
+    await lexique.locator('#theme-evaluer').dispatchEvent('click');
+    await lexique.locator('body[data-panneau="situer"]').waitFor({ state: 'attached' });
+    await lexique.locator('.marche[data-niveau="1"]').dispatchEvent('click');
+    await lexique.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
+    assert.equal(await lexique.locator('.audit-bilan-nom .lex-mot').count(), 1);
+    const motResultat = lexique.locator('.audit-ligne-nom .lex-mot');
+    assert.equal(await motResultat.count(), 1);
+    assert.equal(await motResultat.textContent(), 'fils*');
+    assert.equal(await motResultat.evaluate((el) => el.tagName), 'BUTTON',
+      'hors conteneur cliquable, le mot reste un vrai bouton');
+    await capturer(lexique, screenshotDir, 'lexique-resultat-desktop.png');
+    await lexique.close();
+
+    // a) Pointeur grossier : pas de survol, le tap reste le seul geste.
+    const tactile = await navigateur.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    await tactile.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000010`);
+    await tactile.locator('#ciel:not([hidden])').waitFor();
+    assert.equal(
+      await tactile.evaluate(() => window.matchMedia('(hover: hover) and (pointer: fine)').matches),
+      false,
+      'le contexte tactile doit bien se déclarer en pointeur grossier');
+    await tactile.locator(`[data-categorie="${DIM_LISIBILITE.category}"]`).dispatchEvent('click');
+    await tactile.locator(`[data-dimension="${DIM_LISIBILITE.id}"] .theme[data-theme]`).first().dispatchEvent('click');
+    await tactile.locator('body[data-panneau^="theme:"]').waitFor({ state: 'attached' });
+    await tactile.locator('#panneau-titre .lex-mot').dispatchEvent('mouseover');
+    await tactile.waitForTimeout(600);
+    assert.equal(await tactile.locator('.lex-bulle').count(), 0,
+      'aucune bulle au survol sur pointeur grossier');
+    await tactile.locator('#panneau-titre .lex-mot').dispatchEvent('click');
+    await tactile.locator('.lex-bulle[role="dialog"]').waitFor();
+    await tactile.close();
 
     // --- Lot 6.5 : la constellation ouvre le parcours modulaire ---------------
     // Depuis la carte : dimension → thématique → bouton primaire → évaluation avec

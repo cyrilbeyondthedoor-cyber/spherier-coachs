@@ -2103,6 +2103,12 @@
      Le bouton primaire de l'écran de thématique : même parcours que l'écran
      « Choisis une thématique », pour que la carte ne soit pas une impasse. */
   .parcours-evaluer { margin-bottom: 4px; }
+  /* --- 6.4 Lexique : rappel des occurrences suivantes --------------------------
+     Le terme reste signalé par son astérisque, sans soulignement ni couleur : le renvoi
+     au lexique se lit toujours, le lien ne se répète plus. */
+  .lex-rappel { font-size: .7em; color: var(--stone); }
+  /* Le mot rendu en `span` dans un conteneur cliquable garde le geste du bouton. */
+  span.lex-mot { cursor: pointer; }
 </style>
 </head>
 <body>
@@ -2516,18 +2522,42 @@
   // Transforme « bascule* » en bouton cliquable lorsque le mot est défini au lexique.
   // Reçoit du texte DÉJÀ échappé et n'ajoute que du balisage écrit ici : aucun contenu
   // du référentiel ne peut ainsi devenir du HTML actif.
-  function lierLexique(texteEchappe) {
+  // Le même terme souligné cinq fois dans un écran devient un décor, plus un repère :
+  // seule sa PREMIÈRE occurrence est cliquable. Les suivantes gardent leur astérisque,
+  // en exposant discret, pour que le renvoi au lexique reste lisible. Le jeu est remis
+  // à zéro au début de chaque rendu d'écran.
+  let lexiqueRendu = new Set();
+
+  function reinitialiserLexiqueRendu() {
+    lexiqueRendu = new Set();
+  }
+
+  // `dansBouton` : dans un conteneur déjà cliquable — la liste des compétences d'une
+  // thématique — le mot devient un `span`. Un bouton dans un bouton n'est pas du HTML
+  // valide, et le navigateur remonte alors le bouton imbriqué hors de son parent.
+  function lierLexique(texteEchappe, { dansBouton = false } = {}) {
     const index = indexLexique();
     if (index.size === 0) return texteEchappe;
     return String(texteEchappe).replace(MOT_LEXIQUE, (entier, mot) => {
-      const bouton = (portion) => `<button type="button" class="lex-mot" data-terme="${portion}">${portion}<sup>*</sup></button>`;
+      const rendre = (portion, entree) => {
+        if (lexiqueRendu.has(entree.terme)) return `${portion}<sup class="lex-rappel">*</sup>`;
+        lexiqueRendu.add(entree.terme);
+        // Le `span` ne prend ni rôle ni focus : un contrôle dans un contrôle est une
+        // impasse pour les lecteurs d'écran. Au clavier, on ouvre la fiche de la
+        // compétence, où le même mot est un vrai bouton.
+        return dansBouton
+          ? `<span class="lex-mot" data-terme="${portion}">${portion}<sup>*</sup></span>`
+          : `<button type="button" class="lex-mot" data-terme="${portion}">${portion}<sup>*</sup></button>`;
+      };
       const nu = mot.replace(/&#39;/g, "'");
-      if (index.has(normaliserRecherche(nu))) return bouton(mot);
+      const directe = index.get(normaliserRecherche(nu));
+      if (directe) return rendre(mot, directe);
       // Élision : dans « l'ancrage* », c'est « ancrage » qui est au lexique. On ne
       // souligne que le mot, l'article reste du texte courant.
       const elision = mot.match(/^([a-zà-ÿ]&#39;)(.+)$/i);
-      if (elision && index.has(normaliserRecherche(elision[2].replace(/&#39;/g, "'")))) {
-        return elision[1] + bouton(elision[2]);
+      if (elision) {
+        const entree = index.get(normaliserRecherche(elision[2].replace(/&#39;/g, "'")));
+        if (entree) return elision[1] + rendre(elision[2], entree);
       }
       return entier;
     });
@@ -3825,6 +3855,12 @@
     themeAffiche = { id: themeId, dimension: idDimension };
     competenceAffichee = null;
 
+    // L'en-tête est composé AVANT la liste : le titre de la thématique doit garder la
+    // première occurrence de chaque terme, sinon un énoncé de la liste la lui prend.
+    reinitialiserLexiqueRendu();
+    const titreHtml = lierLexique(typoFr(echapper(theme.name)));
+    const definitionHtml = theme.definition ? lierLexique(typoFr(echapper(theme.definition))) : '';
+
     const competences = etat.referentiel.competencies
       .filter((c) => c.theme === themeId)
       .sort((a, b) => (brouillon.levels[a.id] ?? 0) - (brouillon.levels[b.id] ?? 0) || (a.order ?? 0) - (b.order ?? 0));
@@ -3838,7 +3874,7 @@
         <span class="comp-astre">${astreCran(Math.max(niveau, 1), ouverte ? teinte : '#8d8677')
           .replace('fill-opacity="' + CRANS[Math.max(niveau, 1)].opacite + '"', `fill-opacity="${niveau === 0 ? 0.22 : CRANS[niveau].opacite}"`)}</span>
         <span>
-          <span class="comp-nom">${echapper(c.name)}</span>
+          <span class="comp-nom">${lierLexique(typoFr(echapper(c.name)), { dansBouton: true })}</span>
           <span class="comp-marques">${pastilleDifficulte(c)}${marqueNote(c.id)}${marques}</span>
         </span>
         <span class="comp-palier">${niveau === 0 ? 'À évaluer' : echapper(etat.referentiel.scale[niveau])}</span>
@@ -3848,8 +3884,8 @@
     elPanneau.style.setProperty('--teinte-p', teinte);
     elPanneauTete.innerHTML = `
       <p class="panneau-fil">${echapper(dimension ? dimension.name : '')} <span>›</span> <b>Thématique</b></p>
-      <h2 class="panneau-titre" id="panneau-titre">${echapper(theme.name)}</h2>
-      ${theme.definition ? `<p class="panneau-def">${echapper(theme.definition)}</p>` : ''}
+      <h2 class="panneau-titre" id="panneau-titre">${titreHtml}</h2>
+      ${definitionHtml ? `<p class="panneau-def">${definitionHtml}</p>` : ''}
     `;
 
     const horizon = ouverte ? '' : `
@@ -3888,7 +3924,12 @@
     const evaluer = document.getElementById('theme-evaluer');
     if (evaluer) evaluer.addEventListener('click', () => evaluerTheme(idDimension, themeId, 'theme'));
     elPanneauCorps.querySelectorAll('.comp-item[data-competence]').forEach((btn) => {
-      btn.addEventListener('click', () => ouvrirCompetence(btn.dataset.competence, idDimension));
+      // Un mot du lexique cliqué dans l'énoncé ouvre sa définition, pas la fiche : les
+      // deux gestionnaires voient le même clic, celui-ci se retire.
+      btn.addEventListener('click', (evenement) => {
+        if (evenement.target.closest('.lex-mot')) return;
+        ouvrirCompetence(btn.dataset.competence, idDimension);
+      });
     });
 
     afficherPanneau();
@@ -4123,6 +4164,7 @@
     // Le verrou posé pendant le retour visuel et la transition tombe ici, et nulle part
     // ailleurs : c'est l'arrivée de la compétence suivante qui rouvre les clics.
     situer.enAttente = false;
+    reinitialiserLexiqueRendu();
     const code = situer.codes[situer.index];
     const c = etat.referentiel.competencies.find((x) => x.id === code);
     const theme = etat.referentiel.themes.find((t) => t.id === c.theme);
@@ -4813,7 +4855,7 @@
       const niveau = brouillon.levels[code] ?? 0;
       return `<div class="audit-ligne">
         <span class="audit-ligne-corps">
-          <span class="audit-ligne-nom">${echapper(competence.name)}</span>
+          <span class="audit-ligne-nom">${lierLexique(typoFr(echapper(competence.name)))}</span>
           ${pastilleDifficulte(competence, 'audit-pastille')}
         </span>
         <span class="audit-ligne-niveau">${niveau ? echapper(etat.referentiel.scale[niveau]) : 'Passée'}</span>
@@ -4890,6 +4932,7 @@
     if (!dimension || !theme) { ouvrirChoixDimension(); return; }
     const teinte = TEINTES_HEX[dimension.id] || '#c9a661';
     preparerEcranAudit(teinte, { plein: true });
+    reinitialiserLexiqueRendu();
 
     const info = etatTheme(theme);
     const themesDim = themesDeDimension(dimension);
@@ -4919,7 +4962,7 @@
           </div>`
         : ''}
       <div class="audit-bilan-tete">
-        <h3 class="audit-bilan-nom">${echapper(theme.name)}</h3>
+        <h3 class="audit-bilan-nom">${lierLexique(typoFr(echapper(theme.name)))}</h3>
         <p class="audit-bilan-score">${pctHtml(info.score)} de maîtrise</p>
       </div>
       ${progressionDimensionHtml(dimension, teinte)}
@@ -4983,6 +5026,7 @@
     if (!dimension) { ouvrirChoixDimension(); return; }
     const teinte = TEINTES_HEX[dimension.id] || '#c9a661';
     preparerEcranAudit(teinte, { plein: true });
+    reinitialiserLexiqueRendu();
     const info = etatDimension(dimension);
     // De la moins à la plus maîtrisée : ce qu'on vient chercher en fin de dimension,
     // c'est par où continuer, pas un palmarès.
@@ -5648,6 +5692,7 @@
   function ouvrirCompetence(code, idDimension, conserverDefilement = false) {
     const competence = etat.referentiel.competencies.find((c) => c.id === code);
     if (!competence) return;
+    reinitialiserLexiqueRendu();
     competenceAffichee = { code, dimension: idDimension };
     const theme = etat.referentiel.themes.find((t) => t.id === competence.theme);
     const dimension = etat.referentiel.dimensions.find((d) => d.id === idDimension);
@@ -5759,7 +5804,9 @@
   let bulleLexique = null;
   let motLexiqueActif = null;
 
-  function fermerBulleLexique() {
+  // `rendreFocus` : une fermeture au survol ne doit pas déplacer le focus, sinon la
+  // souris promenée sur un énoncé déplacerait le curseur clavier à chaque mot.
+  function fermerBulleLexique({ rendreFocus = true } = {}) {
     if (!bulleLexique) return;
     bulleLexique.remove();
     bulleLexique = null;
@@ -5767,13 +5814,15 @@
     motLexiqueActif = null;
     // Le focus revient au mot cliqué s'il est encore à l'écran : le panneau peut
     // avoir été redessiné entre-temps par une navigation dans l'audit.
-    if (mot && mot.isConnected && elVoile.classList.contains('visible')) mot.focus({ preventScroll: true });
+    if (rendreFocus && mot && mot.isConnected && elVoile.classList.contains('visible')) mot.focus({ preventScroll: true });
   }
 
-  function ouvrirBulleLexique(bouton) {
+  // `focus` : à l'ouverture au survol, la bulle ne prend pas le focus. Au clic, si.
+  function ouvrirBulleLexique(bouton, { focus = true } = {}) {
     const entree = indexLexique().get(normaliserRecherche(bouton.dataset.terme || ''));
     if (!entree) return;
-    fermerBulleLexique();
+    // La bulle remplacée disparaît sans rendre le focus : il part à la nouvelle.
+    fermerBulleLexique({ rendreFocus: false });
     const bulle = document.createElement('div');
     bulle.className = 'lex-bulle';
     bulle.id = 'lex-bulle';
@@ -5788,7 +5837,7 @@
     bulleLexique = bulle;
     motLexiqueActif = bouton;
     positionnerBulleLexique(bouton, bulle);
-    bulle.focus({ preventScroll: true });
+    if (focus) bulle.focus({ preventScroll: true });
   }
 
   function positionnerBulleLexique(bouton, bulle) {
@@ -5812,9 +5861,59 @@
   // chaque clic sur une marche, brancher chaque mot serait à refaire sans arrêt.
   elPanneau.addEventListener('click', (e) => {
     const mot = e.target.closest('.lex-mot');
-    if (mot) { ouvrirBulleLexique(mot); return; }
+    if (mot) { annulerMinuteursBulle(); ouvrirBulleLexique(mot); return; }
     if (e.target.closest('#lex-bulle-tout')) { fermerBulleLexique(); ouvrirLexique(); return; }
     if (!e.target.closest('.lex-bulle')) fermerBulleLexique();
+  });
+
+  // Survol, sur pointeur fin seulement : la définition s'ouvre sans clic. 150 ms avant
+  // d'ouvrir, pour ne pas clignoter quand la souris traverse un énoncé ; 200 ms avant de
+  // fermer, pour laisser le temps d'entrer dans la bulle et d'y cliquer.
+  // Sur pointeur grossier, rien ne change : le tap reste le seul geste.
+  const pointeurFin = window.matchMedia('(hover: hover) and (pointer: fine)');
+  const DELAI_BULLE_OUVRE = 150;
+  const DELAI_BULLE_FERME = 200;
+  let minuteurBulleOuvre = null;
+  let minuteurBulleFerme = null;
+
+  function annulerMinuteursBulle() {
+    clearTimeout(minuteurBulleOuvre);
+    minuteurBulleOuvre = null;
+    clearTimeout(minuteurBulleFerme);
+    minuteurBulleFerme = null;
+  }
+
+  // `mouseover` et `mouseout` remontent, contrairement à `mouseenter` : une seule paire
+  // de gestionnaires suffit pour tous les mots, redessinés ou non.
+  elPanneau.addEventListener('mouseover', (e) => {
+    if (!pointeurFin.matches) return;
+    if (e.target.closest('.lex-bulle')) {
+      clearTimeout(minuteurBulleFerme);
+      minuteurBulleFerme = null;
+      return;
+    }
+    const mot = e.target.closest('.lex-mot');
+    if (!mot) return;
+    clearTimeout(minuteurBulleFerme);
+    minuteurBulleFerme = null;
+    if (motLexiqueActif === mot) return;
+    clearTimeout(minuteurBulleOuvre);
+    minuteurBulleOuvre = setTimeout(() => {
+      minuteurBulleOuvre = null;
+      if (mot.isConnected) ouvrirBulleLexique(mot, { focus: false });
+    }, DELAI_BULLE_OUVRE);
+  });
+
+  elPanneau.addEventListener('mouseout', (e) => {
+    if (!pointeurFin.matches) return;
+    if (!e.target.closest('.lex-mot') && !e.target.closest('.lex-bulle')) return;
+    clearTimeout(minuteurBulleOuvre);
+    minuteurBulleOuvre = null;
+    clearTimeout(minuteurBulleFerme);
+    minuteurBulleFerme = setTimeout(() => {
+      minuteurBulleFerme = null;
+      fermerBulleLexique({ rendreFocus: false });
+    }, DELAI_BULLE_FERME);
   });
   // L'infobulle est ancrée au panneau, pas au texte : sans ce recalage elle se
   // décrocherait du mot dès que le corps du panneau défile ou que la fenêtre change.
