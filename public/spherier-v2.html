@@ -4195,8 +4195,15 @@
     const zones = affichees.map(({ theme, competences, score }) => {
       const dimension = etat.referentiel.dimensions.find((d) => d.name === theme.dimension);
       const categorie = CATEGORIES.find((c) => c.id === dimension?.category);
+      // Niveau 1 ou 2 seulement : une priorité se choisit sur une compétence que le
+      // membre a située. Tant que la synthèse exigeait un audit complet, le niveau 0
+      // n'existait plus ici ; depuis qu'elle s'ouvre sur un audit partiel, il ferait
+      // retenir comme priorité une compétence jamais regardée.
       const aTravailler = competences
-        .filter((competence) => (brouillon.levels[competence.id] ?? 0) < 3)
+        .filter((competence) => {
+          const niveau = brouillon.levels[competence.id] ?? 0;
+          return niveau > 0 && niveau < NIVEAU_ACQUIS;
+        })
         .sort((a, b) => (brouillon.levels[a.id] ?? 0) - (brouillon.levels[b.id] ?? 0) || (a.order ?? 0) - (b.order ?? 0));
       return `<section class="audit-zone">
         <div class="audit-zone-tete">
@@ -4209,7 +4216,7 @@
             const active = brouillon.current.includes(competence.id);
             return `<button type="button" class="audit-competence${active ? ' active' : ''}" data-priorite="${echapper(competence.id)}" aria-pressed="${active}">
               <span class="audit-competence-nom">${echapper(competence.name)}</span>
-              <span class="audit-competence-niveau">${active ? 'Sélectionnée' : echapper(etat.referentiel.scale[niveau] || 'À évaluer')}</span>
+              <span class="audit-competence-niveau">${active ? 'Sélectionnée' : echapper(etat.referentiel.scale[niveau])}</span>
             </button>`;
           }).join('')}
         </div>

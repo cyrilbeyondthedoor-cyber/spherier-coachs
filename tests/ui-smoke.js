@@ -102,6 +102,25 @@ const serveur = http.createServer((requete, reponse) => {
   if (requete.url.startsWith('/api/referential')) return json(reponse, referential);
   if (requete.url.startsWith('/api/state')) {
     const auditComplet = requete.url.includes('00000000-0000-4000-8000-000000000002');
+    // Membre 0004 : audit partiel. Une thématique complète, une autre entamée dont une
+    // compétence n'a jamais été située — le cas où le choix des priorités pouvait
+    // proposer une compétence que le membre n'a jamais regardée.
+    if (requete.url.includes('00000000-0000-4000-8000-000000000004')) {
+      const partiels = {
+        ...niveauxVides,
+        [`${DIM_MULTI.id}-01-01`]: 1,
+        [`${DIM_MULTI.id}-01-02`]: 2,
+        [`${DIM_MULTI.id}-01-03`]: 1,
+        [`${DIM_MULTI.id}-01-04`]: 2,
+        [`${DIM_MULTI.id}-02-01`]: 1,
+      };
+      return json(reponse, {
+        snapshot: null,
+        audit: { passees: [], derniere: null, maj: null },
+        computed: { levels: partiels, themes: etatThemes },
+        notes: {},
+      });
+    }
     // Le membre 0003 relit ce qui a été enregistré : c'est le seul moyen d'éprouver le
     // contexte de reprise après un rechargement complet de la page.
     const relecture = requete.url.includes('00000000-0000-4000-8000-000000000003') && dernierSnapshot;
@@ -505,6 +524,21 @@ async function principal() {
     await resultatPage.locator('[data-scope-difficulte="Professionnel établi"]').dispatchEvent('click');
     await resultatPage.locator('#panneau-titre', { hasText: 'Professionnel établi' }).waitFor();
     assert.ok(await resultatPage.locator('.syn-comp').count() > 0);
+
+    // --- Priorités : seulement des compétences réellement situées ---------------
+    const priorites = await navigateur.newPage({ viewport: { width: 1280, height: 700 } });
+    await priorites.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000004`);
+    await priorites.locator('#audit-synthese:not([hidden])').waitFor();
+    await priorites.locator('#audit-synthese').dispatchEvent('click');
+    await priorites.getByRole('button', { name: 'Choisir mes trois priorités' }).click();
+    await priorites.getByRole('heading', { name: 'Sélectionne tes principales zones de progression' }).waitFor();
+    // Deux thématiques entamées, cinq compétences situées entre 1 et 2. La sixième,
+    // jamais évaluée, ne doit pas être proposée comme priorité.
+    assert.equal(await priorites.locator('.audit-zone').count(), 2);
+    assert.equal(await priorites.locator('.audit-competence').count(), 5);
+    assert.equal(await priorites.locator('.audit-competence-niveau', { hasText: 'À évaluer' }).count(), 0,
+      'une compétence jamais située ne peut pas devenir une priorité');
+    assert.equal(await priorites.getByText(`Je sais mobiliser la compétence ${DIM_MULTI.id}-02-02.`).count(), 0);
 
     const publicMobile = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
     await publicMobile.goto(`http://127.0.0.1:${adresse.port}/`);
