@@ -90,6 +90,8 @@ const referential = {
 const niveauxVides = Object.fromEntries(competencies.map((competence) => [competence.id, 0]));
 const etatThemes = Object.fromEntries(themes.map((theme) => [theme.id, { status: 'open', unlock_hint: '' }]));
 let dernierSnapshot = null;
+// Panne simulée du serveur, pour éprouver le message d'échec et le bouton Réessayer.
+let echecSnapshot = false;
 
 function json(reponse, valeur) {
   reponse.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -137,6 +139,11 @@ const serveur = http.createServer((requete, reponse) => {
     let corps = '';
     requete.on('data', (morceau) => { corps += morceau; });
     requete.on('end', () => {
+      if (echecSnapshot) {
+        reponse.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+        reponse.end(JSON.stringify({ erreur: 'Panne simulée du serveur.' }));
+        return;
+      }
       dernierSnapshot = JSON.parse(corps);
       const audit = {
         passees: dernierSnapshot.audit?.passees ?? [],
@@ -264,6 +271,10 @@ async function principal() {
     assert.equal((await page.locator('.audit-bilan-score .syn-pct').textContent()).trim(), '50 %');
     assert.deepEqual(dernierSnapshot.audit.passees, [`${DIM_MULTI.id}-01-04`],
       'la compétence passée part bien dans le payload');
+    assert.match(dernierSnapshot.label, /^Thématique FON, \d+ \S+ \d{4}$/,
+      'libellé automatique de fin de thématique');
+    assert.equal(await page.locator('#barre-libelle').inputValue(), '',
+      'le libellé automatique ne s\'écrit pas dans le champ visible');
     assert.equal(dernierSnapshot.audit.derniere.themeId, `theme-${DIM_MULTI.id}`);
     assert.equal(await page.getByRole('button', { name: 'Évaluer maintenant' }).count(), 1);
     // Elle revient sur le résultat, une pastille par compétence listée : deux à
@@ -573,6 +584,28 @@ async function principal() {
       `Je sais mobiliser la compétence ${DIM_MULTI.id}-01-02.`);
     assert.equal((await annulation.locator('#situer-astuce').textContent()).trim(),
       'Coche une marche, ou passe : tu pourras y revenir.');
+
+    // --- Enregistrement en échec, puis Réessayer -----------------------------
+    // Le résultat reste affiché depuis le brouillon local, et le libellé automatique
+    // ne laisse aucune trace dans le champ de la barre.
+    echecSnapshot = true;
+    await annulation.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    await annulation.locator('.situer-compte', { hasText: '3 / 4' }).waitFor();
+    await annulation.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    await annulation.locator('.situer-compte', { hasText: '4 / 4' }).waitFor();
+    await annulation.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    await annulation.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
+    await annulation.locator('.audit-echec').waitFor();
+    await annulation.getByRole('button', { name: "Réessayer l'enregistrement" }).waitFor();
+    await annulation.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
+    assert.equal(await annulation.locator('#barre-libelle').inputValue(), '',
+      'le champ de libellé reste vide quand l\'enregistrement échoue');
+
+    echecSnapshot = false;
+    await annulation.locator('#audit-reessayer').dispatchEvent('click');
+    await annulation.locator('.audit-echec').waitFor({ state: 'detached' });
+    assert.match(dernierSnapshot.label, /^Thématique FON, /,
+      'le libellé automatique survit au Réessayer');
 
     console.log('UI desktop, mobile et sauvegarde simulée : OK');
   } finally {

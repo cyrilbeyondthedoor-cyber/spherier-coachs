@@ -3891,17 +3891,18 @@
     const passeesChangees = passeesLocales.length !== passeesEnvoyees.length
       || passeesLocales.some((code) => !passeesEnvoyees.includes(code));
 
+    // Libellé automatique quand le membre n'en a pas saisi : un point d'étape sans nom
+    // se retrouve mal dans l'historique. Il part directement dans le payload, sans
+    // passer par le champ de la barre : en cas d'échec, le membre y lirait un nom
+    // qu'il n'a pas écrit et qu'il devrait effacer lui-même.
+    const jour = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    const libelleAuto = `${theme ? theme.name : 'Thématique'}, ${jour}`;
+
     let enregistrement = 'inutile';
     if (estModifie() || passeesChangees) {
-      // Libellé automatique quand le membre n'en a pas saisi : un point d'étape sans
-      // nom se retrouve mal dans l'historique.
-      if (!elLibelle.value.trim()) {
-        const jour = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-        elLibelle.value = `${theme ? theme.name : 'Thématique'}, ${jour}`;
-      }
-      enregistrement = (await enregistrer()) ? 'ok' : 'echec';
+      enregistrement = (await enregistrer(libelleAuto)) ? 'ok' : 'echec';
     }
-    ouvrirResultatTheme({ dimensionId, themeId, suite, enregistrement });
+    ouvrirResultatTheme({ dimensionId, themeId, suite, enregistrement, libelleAuto });
   }
 
   function competenceParCode(code) {
@@ -3970,7 +3971,7 @@
   }
 
   // --- Écran « Résultat de la thématique » --------------------------------------
-  function ouvrirResultatTheme({ dimensionId, themeId, suite = 'theme', enregistrement = 'inutile' }) {
+  function ouvrirResultatTheme({ dimensionId, themeId, suite = 'theme', enregistrement = 'inutile', libelleAuto = null }) {
     const dimension = dimensionParId(dimensionId);
     const theme = themeParId(themeId);
     if (!dimension || !theme) { ouvrirChoixDimension(); return; }
@@ -4042,8 +4043,8 @@
 
     const reessayer = document.getElementById('audit-reessayer');
     if (reessayer) reessayer.addEventListener('click', async () => {
-      const ok = await enregistrer();
-      ouvrirResultatTheme({ dimensionId, themeId, suite, enregistrement: ok ? 'ok' : 'echec' });
+      const ok = await enregistrer(libelleAuto);
+      ouvrirResultatTheme({ dimensionId, themeId, suite, enregistrement: ok ? 'ok' : 'echec', libelleAuto });
     });
     elPanneauCorps.querySelectorAll('[data-evaluer-passee]').forEach((bouton) => {
       bouton.addEventListener('click', () => ouvrirMeSituer({
@@ -4981,7 +4982,11 @@
     if (variante !== 'echec') minuteurBandeau = setTimeout(() => elBandeau.classList.remove('visible'), 4200);
   }
 
-  async function enregistrer() {
+  // `libelleAuto` sert de repli quand le membre n'a rien saisi : la fin de thématique
+  // en propose un. Le paramètre est ignoré s'il n'est pas une chaîne, car cette
+  // fonction est aussi branchée directement sur un clic et reçoit alors un événement.
+  async function enregistrer(libelleAuto = null) {
+    const repli = typeof libelleAuto === 'string' ? libelleAuto.trim() : '';
     const retires = elaguerCiblesFermees();
     elBtnEnregistrer.disabled = true;
     elBtnEnregistrer.textContent = 'Enregistrement…';
@@ -4995,7 +5000,7 @@
           // Reprise de la version que le serveur vient de servir, jamais une constante
           // écrite en dur : elle avait déjà divergé au passage du référentiel en v3.
           referential_version: etat.referentiel.version,
-          label: elLibelle.value.trim() || null,
+          label: elLibelle.value.trim() || repli || null,
           levels: brouillon.levels,
           selections: { current: brouillon.current, later: brouillon.later },
           // Contexte de l'audit modulaire : ce qui a été passé sciemment, et où le
@@ -5056,7 +5061,7 @@
       // Rien n'est perdu : le brouillon local tient, l'écran garde les modifications.
       bandeau("L'enregistrement n'a pas abouti.",
         `${err.message}. Tes modifications sont conservées sur cet appareil : réessaie quand la connexion revient.`,
-        'echec', { libelle: 'Réessayer', faire: enregistrer });
+        'echec', { libelle: 'Réessayer', faire: () => enregistrer(repli) });
       return false;
     } finally {
       elBtnEnregistrer.disabled = false;
