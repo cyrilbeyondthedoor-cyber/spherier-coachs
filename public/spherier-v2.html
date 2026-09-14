@@ -2200,6 +2200,8 @@
   /* --- 6.5 La constellation lance le parcours --------------------------------
      Le bouton primaire de l'écran de thématique : même parcours que l'écran
      « Choisis une thématique », pour que la carte ne soit pas une impasse. */
+  .parcours-actions { display: grid; gap: 6px; justify-items: start; }
+  .parcours-actions .parcours-evaluer { margin-bottom: 0; }
   .parcours-evaluer { margin-bottom: 4px; }
   /* --- 6.4 Lexique : rappel des occurrences suivantes --------------------------
      Le terme reste signalé par son astérisque, sans soulignement ni couleur : le renvoi
@@ -4047,11 +4049,18 @@
     // le chemin naturel depuis la carte, et il s'arrêtait jusqu'ici sur une liste sans
     // sortie. La liste, elle, reste consultable : c'est le mode exploration.
     const aSituer = competences.filter((competence) => !estEvaluee(competence.id)).length;
+    // Thématique déjà complète : « Évaluer » n'a plus de sens et la reprise, qui cherche
+    // ce qui reste à faire, filait droit au résultat. Elle se « revoit » donc depuis la
+    // première compétence, et son résultat reste à portée d'un bouton à côté.
+    const complete = etatTheme(theme).complete;
     const boutonEvaluer = dimension
-      ? `<section class="panneau-section">
-          <button type="button" class="choix-principal parcours-evaluer" id="theme-evaluer">Évaluer cette thématique · ${competences.length} compétence${competences.length > 1 ? 's' : ''}<small>${aSituer === 0
-            ? 'Toutes situées. Tu peux revoir tes positionnements.'
+      ? `<section class="panneau-section parcours-actions">
+          <button type="button" class="choix-principal parcours-evaluer" id="theme-evaluer">${complete
+            ? `Revoir mes positionnements · ${competences.length} compétence${competences.length > 1 ? 's' : ''}`
+            : `Évaluer cette thématique · ${competences.length} compétence${competences.length > 1 ? 's' : ''}`}<small>${complete
+            ? 'Tu repars de la première, tes marches sont déjà cochées.'
             : `${aSituer} encore à situer · ton score arrive à la fin`}</small></button>
+          ${complete ? '<button type="button" class="choix-lien parcours-resultat" id="theme-resultat">Voir le résultat</button>' : ''}
         </section>`
       : '';
 
@@ -4063,7 +4072,12 @@
     elPanneauCorps.scrollTop = 0;
 
     const evaluer = document.getElementById('theme-evaluer');
-    if (evaluer) evaluer.addEventListener('click', () => evaluerTheme(idDimension, themeId, 'theme'));
+    if (evaluer) evaluer.addEventListener('click', () => evaluerTheme(idDimension, themeId, 'theme',
+      complete ? { depart: 0 } : {}));
+    const versResultat = document.getElementById('theme-resultat');
+    if (versResultat) versResultat.addEventListener('click', () => ouvrirResultatTheme({
+      dimensionId: idDimension, themeId, suite: 'theme',
+    }));
     elPanneauCorps.querySelectorAll('.comp-item[data-competence]').forEach((btn) => {
       // Un mot du lexique cliqué dans l'énoncé ouvre sa définition, pas la fiche : les
       // deux gestionnaires voient le même clic, celui-ci se retire.
@@ -4275,9 +4289,14 @@
     competenceAffichee = null;
     themeAffiche = null;
     elPanneau.style.setProperty('--teinte-p', teinte);
+    // Une liste sans rien à faire part droit au résultat : `rendreMeSituer` a alors déjà
+    // posé l'étiquette de l'écran atteint. L'écraser ici laissait le panneau à la
+    // largeur de l'évaluation, 980 px, sur un écran de résultat qui en veut deux fois
+    // plus. On ne l'écrit donc que si l'on est resté sur une compétence.
+    const surUneCompetence = situer.index < situer.codes.length;
     rendreMeSituer();
     afficherPanneau();
-    document.body.dataset.panneau = 'situer';
+    if (surUneCompetence) document.body.dataset.panneau = 'situer';
   }
 
   // Entrée dans une liste : d'abord ce qui reste à faire, puis ce qui a été passé, et
@@ -4380,15 +4399,20 @@
     // de pixels aux marches. Sur écran étroit elle repasse en dessous.
     // « Passer » n'est plus le grand bouton du pied : il est passé sous les marches, en
     // lien discret. Le pied ne porte plus que la navigation, d'où le libellé neutre.
+    // En 390 px, la phrase longue tenait sur deux lignes et poussait le pied jusqu'à
+    // toucher la troisième marche : le téléphone reçoit donc la version courte.
+    const astuceLongue = niveau > 0
+      ? `Déjà évalué à « ${echapper(etat.referentiel.scale[niveau])} ». Reclique sur ta marche pour l'effacer.`
+      : (estPassee(code)
+        ? 'Tu avais passé cette compétence. Coche une marche pour la situer.'
+        : 'Coche une marche, ou passe pour l\'instant : tu pourras y revenir.');
+    const astuceCourte = niveau > 0
+      ? 'Reclique sur ta marche pour l\'effacer.'
+      : (estPassee(code) ? 'Compétence passée. Coche une marche.' : 'Coche une marche.');
     elPanneauPied.innerHTML = `
       <div class="situer-pied">
         <button type="button" class="situer-btn" id="situer-precedent" ${situer.index === 0 ? 'disabled' : ''}>← Précédente</button>
-        <p class="situer-astuce" id="situer-astuce">${niveau > 0
-          ? `Déjà évalué à « ${echapper(etat.referentiel.scale[niveau])} ». Reclique sur ta marche pour l'effacer.`
-          : (estPassee(code)
-            ? 'Tu avais passé cette compétence. Coche une marche pour la situer.'
-            : 'Coche une marche, ou passe pour l\'instant : tu pourras y revenir.')}${
-          surMobile() ? '' : '<span class="tinder-clavier">1, 2 ou 3 au clavier</span>'}</p>
+        <p class="situer-astuce" id="situer-astuce">${surMobile() ? astuceCourte : `${astuceLongue}<span class="tinder-clavier">1, 2 ou 3 au clavier</span>`}</p>
         <button type="button" class="situer-btn situer-passer" id="situer-passer">Suivante →</button>
       </div>`;
     elPanneauCorps.scrollTop = 0;
@@ -4835,7 +4859,9 @@
   // Évaluer une thématique. `suite` dit ce que le membre a demandé en arrivant :
   // cette thématique seule, ou la dimension entière — l'écran de résultat s'en sert
   // pour proposer la bifurcation la plus probable en premier.
-  function evaluerTheme(dimensionId, themeId, suite = 'theme') {
+  // `depart` : une thématique déjà complète n'a plus rien « à faire », la reprise
+  // l'enverrait droit au résultat. Repartir de zéro est ce qu'on attend d'un « Revoir ».
+  function evaluerTheme(dimensionId, themeId, suite = 'theme', { depart = null } = {}) {
     const dimension = dimensionParId(dimensionId);
     const theme = themeParId(themeId);
     if (!dimension || !theme) { ouvrirChoixDimension(); return; }
@@ -4843,6 +4869,7 @@
       codes: codesDeTheme(theme.id),
       titre: theme.name,
       teinte: TEINTES_HEX[dimension.id] || '#c9a661',
+      depart,
       contexte: { dimensionId: dimension.id, themeId: theme.id, suite },
     });
   }
@@ -4942,12 +4969,12 @@
         return `<section class="choix-groupe">
           <button type="button" class="cat-carte" data-evaluer-categorie="${echapper(item.id)}"
             style="--cc:${echapper(item.couleur || '#c9a661')}"
-            aria-label="Évaluer la catégorie ${echapper(item.name)}">
+            aria-label="Explorer la catégorie ${echapper(item.name)} et ses dimensions">
             <span class="cat-carte-tete">
               <span class="cat-carte-titre">${echapper(item.name)}</span>
               <span class="cat-carte-fleche" aria-hidden="true">→</span>
             </span>
-            <span class="cat-carte-aide">Évaluer cette catégorie · ${dimensions.length} dimension${dimensions.length > 1 ? 's' : ''} · ${codesCategorie.length} compétence${codesCategorie.length > 1 ? 's' : ''}</span>
+            <span class="cat-carte-aide">Explorer cette catégorie · ${dimensions.length} dimension${dimensions.length > 1 ? 's' : ''} · ${codesCategorie.length} compétence${codesCategorie.length > 1 ? 's' : ''}</span>
           </button>
           <div class="choix-grille">${dimensions.map(carteDimension).join('')}</div>
         </section>`;
@@ -5009,7 +5036,8 @@
     elPanneauCorps.querySelectorAll('[data-evaluer-theme]').forEach((bouton) => {
       bouton.addEventListener('click', () => evaluerTheme(dimension.id, bouton.dataset.evaluerTheme, 'theme'));
     });
-    document.getElementById('choix-changer-dimension').addEventListener('click', ouvrirChoixDimension);
+    // Sans la lambda, l'événement de clic partait comme identifiant de catégorie.
+    document.getElementById('choix-changer-dimension').addEventListener('click', () => ouvrirChoixDimension());
 
     afficherPanneau();
     document.body.dataset.panneau = 'choix-theme';
