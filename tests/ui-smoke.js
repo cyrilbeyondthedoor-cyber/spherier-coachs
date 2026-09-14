@@ -454,6 +454,37 @@ async function principal() {
     assert.equal(await mobile.locator('#ciel').isVisible(), false);
     await capturer(mobile, screenshotDir, 'detail-mobile.png');
 
+    // --- Le parcours d'audit sur un téléphone --------------------------------
+    await mobile.locator('#detail-retour').dispatchEvent('click');
+    await mobile.locator('#detail-retour').dispatchEvent('click');
+    await mobile.locator('#audit-cta').dispatchEvent('click');
+    await mobile.locator('body[data-panneau="choix-dimension"]').waitFor({ state: 'attached' });
+    assert.equal(await mobile.locator('.choix-carte').count(), DIMENSIONS.length);
+    await capturer(mobile, screenshotDir, 'choix-dimension-mobile.png');
+    await mobile.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await mobile.locator('body[data-panneau="choix-theme"]').waitFor({ state: 'attached' });
+    await capturer(mobile, screenshotDir, 'choix-theme-mobile.png');
+    await mobile.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await mobile.locator('.situer-compte', { hasText: '1 / 4' }).waitFor();
+    await capturer(mobile, screenshotDir, 'evaluation-mobile.png');
+    await mobile.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    await mobile.locator('.situer-compte', { hasText: '2 / 4' }).waitFor();
+    await mobile.locator('.marche[data-niveau="2"]').dispatchEvent('click');
+    await mobile.locator('.situer-compte', { hasText: '3 / 4' }).waitFor();
+    await mobile.locator('.marche[data-niveau="1"]').dispatchEvent('click');
+    await mobile.locator('.situer-compte', { hasText: '4 / 4' }).waitFor();
+    await mobile.getByRole('button', { name: 'Passer →' }).dispatchEvent('click');
+    await mobile.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
+    await mobile.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
+    await capturer(mobile, screenshotDir, 'resultat-theme-mobile.png');
+    // Les quatre suites restent atteignables, empilées, sans débordement latéral.
+    assert.equal(await mobile.locator('.audit-suite-choix').count(), 4);
+    assert.ok(await mobile.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    assert.ok(await mobile.locator('#panneau-corps').evaluate((element) => element.scrollWidth <= element.clientWidth),
+      'le corps du panneau ne défile pas horizontalement');
+    await mobile.locator('[data-suite="dimension"]').dispatchEvent('click');
+    await mobile.locator('body[data-panneau="choix-dimension"]').waitFor({ state: 'attached' });
+
     console.log('UI desktop, mobile et sauvegarde simulée : OK');
   } finally {
     await Promise.race([
