@@ -1560,11 +1560,13 @@
   .audit-depart-texte .audit-reprise { margin-top: 5px; color: var(--gold-bright); font-size: 11.5px; }
   .audit-depart-texte .audit-reprise[hidden] { display: none; }
 
-  /* Le fil de l'audit compte trois segments : il doit s'arrêter avant « Agrandir »
-     et la croix, sinon il passe dessous sur les écrans étroits. */
-  .panneau-fil.audit-fil { padding-right: 150px; }
+  /* Le fil de l'audit compte trois segments : il doit s'arrêter avant « Agrandir » et
+     la croix, sinon il passe dessous sur les écrans étroits. Le retour à la ligne est
+     indispensable : le fil est un conteneur flex, et sans lui les segments débordent
+     dans la réserve au lieu de passer à la ligne avant elle. */
+  .audit-fil { flex-wrap: wrap; row-gap: 2px; padding-right: 150px; }
   /* Pendant l'évaluation, « Agrandir » est masqué : seule la croix demande de la place. */
-  .panneau-fil.audit-fil-court { padding-right: 56px; }
+  .audit-fil-court { flex-wrap: wrap; row-gap: 2px; padding-right: 56px; }
 
   .choix-ecran { display: grid; gap: 22px; padding-bottom: 8px; }
   .choix-intro { margin-top: 8px; color: var(--paper-dim); font-size: 13px; line-height: 1.6; max-width: 62ch; }
@@ -1634,7 +1636,7 @@
 
   /* Retour visuel du clic : la marche cochée se colore avant que le parcours n'avance.
      Sans elle, une testeuse a cru que son clic n'avait pas été pris en compte. */
-  .marche.marche-confirmee {
+  .audit-marche-confirmee {
     border-color: var(--teinte-p);
     background: color-mix(in srgb, var(--teinte-p) 22%, transparent);
   }
@@ -1667,7 +1669,7 @@
   }
   .audit-ligne-corps { flex: 1; min-width: 0; display: grid; justify-items: start; gap: 5px; }
   .audit-ligne-nom { font-size: 12.5px; line-height: 1.4; }
-  .audit-ligne .pastille-diff { font-size: 9px; padding: 2px 7px 2px 6px; }
+  .audit-pastille { font-size: 9px; padding: 2px 7px 2px 6px; }
   .audit-ligne-niveau { flex-shrink: 0; color: var(--stone); font-family: 'Cormorant Garamond', serif; font-size: 12px; font-style: italic; }
   .audit-ligne-action {
     flex-shrink: 0; min-height: 44px; padding: 8px 15px; border: 1px solid var(--line);
@@ -3549,7 +3551,7 @@
         // le membre corrige, il ne valide pas.
         if (avant === n) { rendreMeSituer(); return; }
         situer.enAttente = true;
-        btn.classList.add('marche-confirmee');
+        btn.classList.add('audit-marche-confirmee');
         const astuce = document.getElementById('situer-astuce');
         if (astuce) astuce.textContent = 'Enregistré, compétence suivante.';
         setTimeout(() => {
@@ -3943,7 +3945,7 @@
       return `<div class="audit-ligne">
         <span class="audit-ligne-corps">
           <span class="audit-ligne-nom">${echapper(competence.name)}</span>
-          ${pastilleDifficulte(competence)}
+          ${pastilleDifficulte(competence, 'audit-pastille')}
         </span>
         <span class="audit-ligne-niveau">${niveau ? echapper(etat.referentiel.scale[niveau]) : 'Passée'}</span>
         ${action ? `<button type="button" class="audit-ligne-action" data-${action.cle}="${echapper(code)}">${echapper(action.libelle)}</button>` : ''}

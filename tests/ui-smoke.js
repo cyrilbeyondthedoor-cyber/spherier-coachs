@@ -276,7 +276,7 @@ async function principal() {
       const marche = document.querySelector('.marche[data-niveau="3"]');
       marche.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       return {
-        confirmee: marche.classList.contains('marche-confirmee'),
+        confirmee: marche.classList.contains('audit-marche-confirmee'),
         astuce: document.getElementById('situer-astuce').textContent.trim(),
       };
     });
@@ -550,6 +550,19 @@ async function principal() {
     await mobile.getByRole('button', { name: 'Passer →' }).dispatchEvent('click');
     await mobile.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
     await mobile.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
+    // Le fil d'Ariane s'arrête avant « Agrandir » et la croix au lieu de passer dessous.
+    const filMobile = await mobile.locator('.audit-fil').evaluate((fil) => {
+      const bascule = document.getElementById('panneau-plein-ecran').getBoundingClientRect();
+      const fermer = document.querySelector('.panneau-fermer').getBoundingClientRect();
+      let droite = fil.getBoundingClientRect().left;
+      fil.querySelectorAll('b, span').forEach((segment) => {
+        const rect = segment.getBoundingClientRect();
+        if (rect.width > 0) droite = Math.max(droite, rect.right);
+      });
+      return { droite, obstacle: Math.min(bascule.left, fermer.left) };
+    });
+    assert.ok(filMobile.droite <= filMobile.obstacle + 1,
+      `le fil passe sous les boutons du panneau de ${Math.round(filMobile.droite - filMobile.obstacle)} px`);
     await capturer(mobile, screenshotDir, 'resultat-theme-mobile.png');
     // Les quatre suites restent atteignables, empilées, sans débordement latéral.
     assert.equal(await mobile.locator('.audit-suite-choix').count(), 4);
