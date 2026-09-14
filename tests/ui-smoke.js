@@ -59,8 +59,8 @@ const niveauxVides = Object.fromEntries(competencies.map((competence) => [compet
 const etatThemes = Object.fromEntries(themes.map((theme) => [theme.id, { status: 'open', unlock_hint: '' }]));
 let dernierSnapshot = null;
 
-function json(reponse, valeur) {
-  reponse.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+function json(reponse, valeur, statut = 200) {
+  reponse.writeHead(statut, { 'Content-Type': 'application/json; charset=utf-8' });
   reponse.end(JSON.stringify(valeur));
 }
 
@@ -80,7 +80,20 @@ const serveur = http.createServer((requete, reponse) => {
   if (requete.url === '/api/access' && requete.method === 'POST') {
     let corps = '';
     requete.on('data', (morceau) => { corps += morceau; });
-    requete.on('end', () => json(reponse, { accepte: Boolean(JSON.parse(corps).email) }));
+    requete.on('end', () => {
+      const donnees = JSON.parse(corps);
+      // Deux adresses réservées au test déclenchent les réponses d'erreur réelles du
+      // serveur (limiteur, panne d'envoi) sans dépendre de l'implémentation d'access.js.
+      if (donnees.email === 'trop-de-demandes@example.com') {
+        return json(reponse, { erreur: 'Trop de demandes. Réessaie plus tard.' }, 429);
+      }
+      if (donnees.email === 'envoi-impossible@example.com') {
+        return json(reponse, { erreur: "L'envoi du lien n'a pas abouti" }, 502);
+      }
+      // Le vrai `access.js` répond toujours 202, succès réel ou accusé silencieux
+      // anti-spam confondus : le front doit traiter les deux comme une réussite.
+      return json(reponse, { accepte: Boolean(donnees.email) }, 202);
+    });
     return;
   }
   if (requete.url === '/api/snapshot' && requete.method === 'POST') {
@@ -248,9 +261,112 @@ async function principal() {
     await publicPage.locator('#acces-prenom').fill('Camille');
     await publicPage.locator('#acces-email').fill('camille@example.com');
     await publicPage.locator('#acces-consentement').check();
-    await publicPage.getByRole('button', { name: 'Recevoir mon lien personnel' }).click();
+    const [reponseInscription] = await Promise.all([
+      publicPage.waitForResponse('**/api/access'),
+      publicPage.getByRole('button', { name: 'Recevoir mon lien personnel' }).click(),
+    ]);
+    // Le serveur répond 202 (accusé silencieux ou succès réel, indistinguables côté
+    // front) : la confirmation normale doit s'afficher, pas une erreur.
+    assert.equal(reponseInscription.status(), 202);
     await publicPage.getByRole('heading', { name: 'Ton lien personnel est en route' }).waitFor();
     assert.ok(await publicPage.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+
+    // --- Lot 1 : réponse 429 sur le portail d'inscription -----------------------
+    const page429 = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
+    await page429.goto(`http://127.0.0.1:${adresse.port}/`);
+    await page429.getByRole('heading', { name: 'Accède au sphérier de compétences du coach' }).waitFor();
+    await page429.locator('#acces-prenom').fill('Dana');
+    await page429.locator('#acces-email').fill('trop-de-demandes@example.com');
+    await page429.locator('#acces-consentement').check();
+    const [reponse429] = await Promise.all([
+      page429.waitForResponse('**/api/access'),
+      page429.getByRole('button', { name: 'Recevoir mon lien personnel' }).click(),
+    ]);
+    assert.equal(reponse429.status(), 429);
+    await page429.getByText('Trop de demandes', { exact: false }).waitFor();
+    assert.equal(await page429.getByRole('heading', { name: 'Ton lien personnel est en route' }).count(), 0);
+    await page429.close();
+
+    // --- Lot 1 : message serveur sans ponctuation finale (502) -------------------
+    // Le message d'access.js pour ce cas ("L'envoi du lien n'a pas abouti") ne se
+    // termine pas par un point : on vérifie qu'il en reçoit un avant la suite.
+    const page502 = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
+    await page502.goto(`http://127.0.0.1:${adresse.port}/`);
+    await page502.getByRole('heading', { name: 'Accède au sphérier de compétences du coach' }).waitFor();
+    await page502.locator('#acces-prenom').fill('Eve');
+    await page502.locator('#acces-email').fill('envoi-impossible@example.com');
+    await page502.locator('#acces-consentement').check();
+    const [reponse502] = await Promise.all([
+      page502.waitForResponse('**/api/access'),
+      page502.getByRole('button', { name: 'Recevoir mon lien personnel' }).click(),
+    ]);
+    assert.equal(reponse502.status(), 502);
+    await page502.getByText("L'envoi du lien n'a pas abouti. Réessaie dans quelques instants.").waitFor();
+    await page502.close();
+
+    // --- Lot 1 : mémorisation de l'UUID et reprise d'audit sur le même appareil -
+    const repriseUuid = '00000000-0000-4000-8000-000000000001';
+    const reprisePage = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
+    await reprisePage.goto(`${url}`);
+    await reprisePage.locator('#ciel:not([hidden])').waitFor();
+    const memorise = await reprisePage.evaluate(() => localStorage.getItem('spherier-coachs:client'));
+    assert.deepEqual(JSON.parse(memorise), { uuid: repriseUuid });
+
+    // Retour à la racine, sans ?c= : le bloc « Reprendre mon audit » doit apparaître
+    // au-dessus du formulaire d'inscription, qui reste accessible en dessous.
+    await reprisePage.goto(`http://127.0.0.1:${adresse.port}/`);
+    await reprisePage.getByRole('button', { name: 'Reprendre mon audit' }).waitFor();
+    await reprisePage.getByRole('heading', { name: 'Accède au sphérier de compétences du coach' }).waitFor();
+    await reprisePage.getByRole('button', { name: 'Reprendre mon audit' }).click();
+    await reprisePage.locator('#ciel:not([hidden])').waitFor();
+    assert.equal(reprisePage.url(), `http://127.0.0.1:${adresse.port}/?c=${repriseUuid}`);
+
+    // « Ce n'est pas moi » efface la mémorisation et laisse le formulaire seul visible.
+    await reprisePage.goto(`http://127.0.0.1:${adresse.port}/`);
+    await reprisePage.getByRole('button', { name: 'Ce n’est pas moi' }).click();
+    assert.equal(await reprisePage.locator('#acces-reprise').isVisible(), false);
+    assert.equal(await reprisePage.evaluate(() => localStorage.getItem('spherier-coachs:client')), null);
+    await reprisePage.getByRole('heading', { name: 'Accède au sphérier de compétences du coach' }).waitFor();
+
+    // --- Lot 1 : mode « J'ai déjà un lien mais je ne le retrouve plus » ---------
+    await reprisePage.getByRole('button', { name: 'J’ai déjà mon lien mais je ne le retrouve plus' }).click();
+    await reprisePage.getByRole('heading', { name: 'Recevoir à nouveau mon lien' }).waitFor();
+    await reprisePage.locator('#acces-prenom').fill('Camille');
+    await reprisePage.locator('#acces-email').fill('camille@example.com');
+    await reprisePage.locator('#acces-consentement').check();
+    const [reponseRenvoi] = await Promise.all([
+      reprisePage.waitForResponse('**/api/access'),
+      reprisePage.getByRole('button', { name: 'Me renvoyer mon lien' }).click(),
+    ]);
+    assert.equal(reponseRenvoi.status(), 202);
+    await reprisePage.getByRole('heading', { name: 'Ton lien est en route' }).waitFor();
+    await reprisePage.getByText('Ouvre le mail envoyé à', { exact: false }).waitFor();
+    await reprisePage.close();
+
+    // --- Lot 1 : timeout réseau sur /api/access ----------------------------------
+    // AbortSignal.timeout() rejette avec name: 'TimeoutError' (vérifié en Node), pas
+    // 'AbortError' ni une TypeError : on le simule en stubbant fetch pour rester
+    // rapide et déterministe plutôt que d'attendre un vrai timeout de 15 s.
+    const timeoutPage = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
+    await timeoutPage.addInitScript(() => {
+      const fetchOriginal = window.fetch.bind(window);
+      window.fetch = (entree, options) => {
+        const cible = typeof entree === 'string' ? entree : entree?.url;
+        if (cible && cible.includes('/api/access')) {
+          return Promise.reject(new DOMException('The operation was aborted due to timeout', 'TimeoutError'));
+        }
+        return fetchOriginal(entree, options);
+      };
+    });
+    await timeoutPage.goto(`http://127.0.0.1:${adresse.port}/`);
+    await timeoutPage.getByRole('heading', { name: 'Accède au sphérier de compétences du coach' }).waitFor();
+    await timeoutPage.locator('#acces-prenom').fill('Iris');
+    await timeoutPage.locator('#acces-email').fill('iris@example.com');
+    await timeoutPage.locator('#acces-consentement').check();
+    await timeoutPage.getByRole('button', { name: 'Recevoir mon lien personnel' }).click();
+    await timeoutPage.getByText('Le réseau a coupé, réessaie.').waitFor();
+    assert.equal(await timeoutPage.getByRole('heading', { name: 'Ton lien personnel est en route' }).count(), 0);
+    await timeoutPage.close();
 
     const resultatPage = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
     await resultatPage.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000002`);
