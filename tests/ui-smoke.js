@@ -163,7 +163,9 @@ async function principal() {
   try {
     const screenshotDir = process.env.SCREENSHOT_DIR || null;
     if (screenshotDir) fs.mkdirSync(screenshotDir, { recursive: true });
-    const page = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
+    // 1280x700 : le format de recette. L'écran de résultat doit y montrer son choix
+    // principal sans défilement, c'est ce que vérifie le parcours d'audit plus bas.
+    const page = await navigateur.newPage({ viewport: { width: 1280, height: 700 } });
     await page.goto(url);
     await page.locator('#ciel:not([hidden])').waitFor();
 

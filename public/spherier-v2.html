@@ -1634,6 +1634,12 @@
   }
 
   .audit-bilan { display: grid; gap: 18px; }
+  .audit-bilan-large { grid-template-columns: minmax(0, 1fr) 300px; gap: 26px; align-items: start; }
+  .audit-bilan-colonne { display: grid; gap: 18px; min-width: 0; }
+  .audit-bilan-suite { position: sticky; top: 0; }
+  .audit-bilan-suite .audit-poursuivre { padding-top: 0; border-top: 0; }
+  .audit-bilan-suite .audit-poursuivre-titre { margin-top: 0; }
+  .audit-bilan-suite .audit-suites { grid-template-columns: 1fr; }
   .audit-bilan-tete { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
   .audit-bilan-nom { font-family: 'Cormorant Garamond', serif; font-size: 25px; font-weight: 500; line-height: 1.15; }
   .audit-bilan-score { font-size: 13px; }
@@ -1692,6 +1698,13 @@
   }
   .audit-suite-choix.principal small { color: var(--paper-dim); }
   .audit-suite-choix.principal:hover { background: rgba(201, 166, 97, .24); }
+
+  @media (max-width: 900px) {
+    .audit-bilan-large { grid-template-columns: 1fr; }
+    .audit-bilan-suite { position: static; }
+    .audit-bilan-suite .audit-poursuivre { padding-top: 4px; border-top: 1px solid var(--line-faint); }
+    .audit-bilan-suite .audit-poursuivre-titre { margin-top: 14px; }
+  }
 
   @media (max-width: 720px) {
     .choix-grille { grid-template-columns: 1fr; }
@@ -3950,7 +3963,10 @@
       <h2 class="panneau-titre" id="panneau-titre">Résultat de la thématique</h2>
       <p class="audit-sous-compteur">Thématique ${rang} / ${themesDim.length} de ${echapper(dimension.name)}</p>`;
 
-    elPanneauCorps.innerHTML = `<div class="audit-bilan">
+    // Deux colonnes sur desktop : la suite du parcours reste visible sans défiler,
+    // c'est elle qui doit être atteignable en un geste après un score.
+    elPanneauCorps.innerHTML = `<div class="audit-bilan audit-bilan-large">
+      <div class="audit-bilan-colonne">
       ${enregistrement === 'echec'
         ? `<div class="audit-echec">
             <p>L'enregistrement n'a pas abouti. Ton résultat ci-dessous vient de cet appareil, où tout est conservé : rien n'est perdu.</p>
@@ -3983,12 +3999,13 @@
             ${listeCompetences(info.passees, { cle: 'evaluerPassee', libelle: 'Évaluer maintenant' })}
           </section>`
         : ''}
-      ${dimensionBouclee
+      </div>
+      <aside class="audit-bilan-suite">${dimensionBouclee
         ? `<div class="audit-poursuivre">
             <p class="audit-poursuivre-titre">Dimension terminée</p>
             <div class="audit-suites"><button type="button" class="audit-suite-choix principal" id="audit-voir-dimension">Voir le résultat de ${echapper(dimension.name)}<small>Toutes ses thématiques sont complètes</small></button></div>
           </div>`
-        : blocPoursuivreHtml(dimension, suite)}
+        : blocPoursuivreHtml(dimension, suite)}</aside>
     </div>`;
     elPanneauCorps.scrollTop = 0;
 
@@ -4032,7 +4049,8 @@
       <h2 class="panneau-titre" id="panneau-titre">Résultat de la dimension</h2>
       <p class="audit-sous-compteur">${info.themes.length} thématique${info.themes.length > 1 ? 's' : ''} · ${info.evaluees} / ${info.codes.length} compétences évaluées</p>`;
 
-    elPanneauCorps.innerHTML = `<div class="audit-bilan">
+    elPanneauCorps.innerHTML = `<div class="audit-bilan audit-bilan-large">
+      <div class="audit-bilan-colonne">
       <div class="audit-bilan-tete">
         <h3 class="audit-bilan-nom">${echapper(dimension.name)}</h3>
         <p class="audit-bilan-score">${pctHtml(info.score)} de maîtrise</p>
@@ -4048,7 +4066,8 @@
           </div>`).join('')}
         </div>
       </section>
-      ${blocPoursuivreHtml(dimension, suite)}
+      </div>
+      <aside class="audit-bilan-suite">${blocPoursuivreHtml(dimension, suite)}</aside>
     </div>`;
     elPanneauCorps.scrollTop = 0;
     brancherPoursuivre(dimension);
