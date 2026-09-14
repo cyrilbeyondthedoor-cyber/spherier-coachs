@@ -1173,6 +1173,57 @@ async function principal() {
       await pageLisibilite.close();
     }
 
+    // --- Lot 6.1 : la catégorie est évaluable ---------------------------------
+    // L'en-tête de catégorie est une carte : elle enchaîne les dimensions de la
+    // catégorie, et l'écran Poursuivre propose la suivante une fois la première finie.
+    const categorie = await navigateur.newPage({ viewport: { width: 1280, height: 700 } });
+    await categorie.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000005`);
+    await categorie.locator('#ciel:not([hidden])').waitFor();
+    // Sur le ciel, le second bouton discret existe à côté d'« Explorer cette catégorie ».
+    assert.equal(await categorie.locator('#ciel [data-evaluer-categorie]').count(), CATEGORIES.length);
+    await categorie.getByRole('button', { name: 'Commencer mon audit' }).dispatchEvent('click');
+    await categorie.locator('body[data-panneau="choix-dimension"]').waitFor({ state: 'attached' });
+    assert.equal(await categorie.locator('.cat-carte').count(), CATEGORIES.length);
+    const carteCoach = categorie.locator('.cat-carte[data-evaluer-categorie="COACH"]');
+    const aide = carteCoach.locator('.cat-carte-aide');
+    assert.match((await aide.textContent()).trim(), /^Évaluer toute la catégorie · 2 dimensions · \d+ compétences$/);
+    // Le texte d'aide est masqué au repos et se révèle au survol, sans disparaître du
+    // flux : c'est l'opacité qui porte la révélation.
+    assert.equal(await aide.evaluate((el) => getComputedStyle(el).opacity), '0');
+    await carteCoach.hover();
+    await categorie.waitForTimeout(300);
+    assert.equal(await aide.evaluate((el) => getComputedStyle(el).opacity), '1');
+    await capturer(categorie, screenshotDir, 'categorie-survol-desktop.png');
+
+    // Clic sur l'en-tête : première thématique de la première dimension de COACH.
+    await carteCoach.dispatchEvent('click');
+    await categorie.locator('body[data-panneau="situer"]').waitFor({ state: 'attached' });
+    await categorie.locator('.audit-sous-compteur', { hasText: 'Thématique 1 / 2 de Fondations du coach' }).waitFor();
+
+    // On boucle la dimension FON : 4 compétences puis 2, et la file de catégorie doit
+    // alors proposer « Être du coach » en premier choix.
+    for (const rang of [1, 2, 3, 4]) {
+      await categorie.locator('.situer-compte', { hasText: `${rang} / 4` }).waitFor();
+      await categorie.locator('.marche[data-niveau="2"]').dispatchEvent('click');
+    }
+    await categorie.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
+    await categorie.locator('[data-suite="continuer"]').dispatchEvent('click');
+    for (const rang of [1, 2]) {
+      await categorie.locator('.situer-compte', { hasText: `${rang} / 2` }).waitFor();
+      await categorie.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    }
+    await categorie.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
+    await categorie.getByRole('button', { name: /^Voir le résultat de/ }).click();
+    await categorie.locator('body[data-panneau="resultat-dimension"]').waitFor({ state: 'attached' });
+    const suiteCategorie = categorie.locator('[data-suite="categorie"]');
+    await suiteCategorie.waitFor();
+    assert.match(await suiteCategorie.textContent(), /Être du coach/);
+    assert.ok(await suiteCategorie.evaluate((el) => el.classList.contains('principal')),
+      'la suite de catégorie est le choix mis en avant une fois la dimension bouclée');
+    await suiteCategorie.dispatchEvent('click');
+    await categorie.locator('.audit-sous-compteur', { hasText: 'Thématique 1 / 1 de Être du coach' }).waitFor();
+    await categorie.close();
+
     console.log('UI desktop, mobile et sauvegarde simulée : OK');
   } finally {
     await Promise.race([

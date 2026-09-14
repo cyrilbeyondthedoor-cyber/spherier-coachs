@@ -1771,11 +1771,6 @@
 
   .choix-ecran { display: grid; gap: 22px; padding-bottom: 8px; }
   .choix-intro { margin-top: 8px; color: var(--paper-dim); font-size: 14px; line-height: 1.6; max-width: 62ch; }
-  .choix-groupe-titre {
-    display: flex; align-items: center; gap: 8px;
-    color: var(--cc, var(--gold)); font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
-  }
-  .choix-groupe-titre::after { content: ''; flex: 1; height: 1px; background: var(--line-faint); }
   .choix-grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-top: 11px; }
   .choix-carte {
     display: grid; gap: 7px; min-height: 44px; padding: 14px 15px; text-align: left;
@@ -1949,6 +1944,89 @@
   @media (prefers-reduced-motion: reduce) {
     .choix-carte, .audit-suite-choix { transition: none; }
     .choix-carte:hover { transform: none; }
+  }
+  /* ============================================================
+     LOT 6 — MOTION DES CATÉGORIES, TINDER DES COMPÉTENCES, ENCOURAGEMENT
+     ============================================================ */
+
+  /* --- 6.1 La catégorie devient évaluable -------------------------------------
+     L'en-tête « Moi en tant que coach » était une étiquette : rien ne disait qu'on
+     pouvait s'évaluer à ce niveau-là. Elle devient une carte, et le survol la fait
+     bouger juste assez pour qu'on comprenne qu'elle répond au clic. */
+  .cat-carte {
+    display: grid; gap: 5px; width: 100%; min-height: 44px; padding: 8px 12px;
+    text-align: left; border: 1px solid transparent; border-radius: 13px;
+    background: transparent; color: inherit; font: inherit; cursor: pointer;
+    transition: transform .22s ease, border-color .22s ease, background .22s ease, box-shadow .22s ease;
+  }
+  .cat-carte-tete {
+    display: flex; align-items: center; gap: 9px;
+    color: var(--cc, var(--gold)); font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
+  }
+  .cat-carte-titre { flex-shrink: 0; }
+  /* Le filet qui prolongeait l'ancien titre de groupe : il tient le rythme de l'écran. */
+  .cat-carte-tete::after { content: ''; order: 2; flex: 1; height: 1px; background: var(--line-faint); }
+  .cat-carte-fleche {
+    order: 3; flex-shrink: 0; opacity: 0; transform: translateX(-5px);
+    transition: opacity .22s ease, transform .22s ease;
+  }
+  .cat-carte-aide {
+    color: var(--stone); font-size: 12px; line-height: 1.4;
+    opacity: 0; max-height: 0; overflow: hidden;
+    transition: opacity .22s ease, max-height .22s ease;
+  }
+  .cat-carte:hover, .cat-carte:focus-visible {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--cc) 45%, transparent);
+    background: color-mix(in srgb, var(--cc) 6%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--cc) 12%, transparent), 0 10px 26px rgba(0, 0, 0, .3);
+  }
+  .cat-carte:focus-visible { outline: 2px solid var(--cc); outline-offset: 2px; }
+  .cat-carte:hover .cat-carte-fleche, .cat-carte:focus-visible .cat-carte-fleche { opacity: 1; transform: translateX(0); }
+  .cat-carte:hover .cat-carte-aide, .cat-carte:focus-visible .cat-carte-aide { opacity: 1; max-height: 48px; }
+
+  /* Sur le ciel, la carte de catégorie prend le même mouvement, et son second bouton
+     ne se montre franchement qu'au survol : « Explorer » reste l'entrée principale. */
+  .ciel-piste .ciel-categorie {
+    border-radius: 20px;
+    transition: transform .22s ease, background .22s ease, box-shadow .22s ease;
+  }
+  .ciel-piste .ciel-categorie:hover, .ciel-piste .ciel-categorie:focus-visible {
+    transform: translateY(-4px);
+    background: color-mix(in srgb, var(--sphere-color) 5%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--sphere-color) 26%, transparent), 0 18px 44px rgba(0, 0, 0, .32);
+  }
+  .cat-evaluer {
+    margin-top: 8px; min-height: 44px; padding: 9px 16px;
+    border: 1px solid transparent; border-radius: 999px; background: none;
+    color: var(--stone); font: inherit; font-size: 13px; cursor: pointer;
+    opacity: .6; transition: opacity .22s ease, color .22s ease, border-color .22s ease;
+  }
+  .ciel-piste .ciel-categorie:hover .cat-evaluer,
+  .ciel-piste .ciel-categorie:focus-within .cat-evaluer { opacity: 1; }
+  .cat-evaluer:hover, .cat-evaluer:focus-visible {
+    opacity: 1; color: var(--paper);
+    border-color: color-mix(in srgb, var(--sphere-color) 38%, transparent);
+  }
+
+  /* Sans survol, rien ne se révèle : la carte porte alors le bouton en clair. */
+  @media (hover: none), (max-width: 720px) {
+    .cat-carte-aide {
+      justify-self: start; opacity: 1; max-height: none; padding: 9px 15px;
+      min-height: 44px; display: flex; align-items: center;
+      border: 1px solid color-mix(in srgb, var(--cc) 38%, transparent); border-radius: 999px;
+      background: color-mix(in srgb, var(--cc) 8%, transparent); color: var(--paper-dim);
+    }
+    .cat-carte-fleche { opacity: 1; transform: none; }
+    .cat-evaluer { opacity: 1; border-color: color-mix(in srgb, var(--sphere-color) 32%, transparent); }
+  }
+
+  /* Mouvement réduit : l'élévation et le glissement tombent, l'opacité reste. */
+  @media (prefers-reduced-motion: reduce) {
+    .cat-carte:hover, .cat-carte:focus-visible,
+    .ciel-piste .ciel-categorie:hover, .ciel-piste .ciel-categorie:focus-visible { transform: none; }
+    .cat-carte-fleche, .cat-carte:hover .cat-carte-fleche { transform: none; }
+    .cat-carte-aide { max-height: 48px; }
   }
 </style>
 </head>
@@ -4254,6 +4332,54 @@
     return etat.referentiel.themes.find((theme) => theme.id === themeId);
   }
 
+  // --- Parcours par catégorie ----------------------------------------------------
+  // Une catégorie est un empilement de dimensions : l'évaluer, c'est les enchaîner dans
+  // l'ordre, chacune thématique par thématique, avec les résultats déjà en place. La
+  // file vit ici et non dans un écran : elle doit survivre aux résultats intermédiaires,
+  // qui redessinent tout le panneau.
+  let parcoursCategorie = null;
+
+  function dimensionsDeCategorie(categorieId) {
+    return etat.referentiel.dimensions.filter((dimension) => dimension.category === categorieId);
+  }
+
+  // Ce qu'il reste à évaluer dans la catégorie APRÈS la dimension en cours. Une
+  // dimension déjà complète est sautée : la file propose du travail, pas une relecture.
+  function dimensionsRestantesCategorie(dimensionActuelle) {
+    if (!parcoursCategorie) return [];
+    const rang = parcoursCategorie.dimensions.indexOf(dimensionActuelle.id);
+    return parcoursCategorie.dimensions.slice(rang + 1)
+      .map(dimensionParId)
+      .filter((dimension) => dimension && !etatDimension(dimension).complete);
+  }
+
+  // La suite de catégorie proposée par l'écran Poursuivre, ou `null` hors parcours.
+  function suiteDeCategorie(dimension) {
+    const restantes = dimensionsRestantesCategorie(dimension);
+    if (restantes.length === 0) return null;
+    const categorie = CATEGORIES.find((item) => item.id === parcoursCategorie.categorieId);
+    return { dimension: restantes[0], reste: restantes.length, categorie };
+  }
+
+  function evaluerCategorie(categorieId) {
+    const dimensions = dimensionsDeCategorie(categorieId);
+    if (dimensions.length === 0) { ouvrirChoixDimension(); return; }
+    parcoursCategorie = { categorieId, dimensions: dimensions.map((dimension) => dimension.id) };
+    const depart = dimensions.find((dimension) => !etatDimension(dimension).complete) || dimensions[0];
+    evaluerDimension(depart.id);
+  }
+
+  // Un clic sur une carte de catégorie, d'où qu'elle vienne : écran de choix ou ciel.
+  // En phase de CAPTURE, donc avant le gestionnaire de la carte du ciel, qui ouvrirait
+  // sinon la vue « explorer » par-dessus le parcours qu'on vient de lancer.
+  document.addEventListener('click', (evenement) => {
+    const bouton = evenement.target.closest('[data-evaluer-categorie]');
+    if (!bouton || !etat.referentiel) return;
+    evenement.preventDefault();
+    evenement.stopPropagation();
+    evaluerCategorie(bouton.dataset.evaluerCategorie);
+  }, true);
+
   // --- Entrées dans le parcours ------------------------------------------------
   // Évaluer une thématique. `suite` dit ce que le membre a demandé en arrivant :
   // cette thématique seule, ou la dimension entière — l'écran de résultat s'en sert
@@ -4266,7 +4392,15 @@
       codes: codesDeTheme(theme.id),
       titre: theme.name,
       teinte: TEINTES_HEX[dimension.id] || '#c9a661',
-      contexte: { dimensionId: dimension.id, themeId: theme.id, suite },
+      contexte: {
+        dimensionId: dimension.id,
+        themeId: theme.id,
+        suite,
+        // Parcours de catégorie : la file voyage avec le contexte, l'écran Poursuivre la
+        // relit pour proposer la dimension suivante plutôt qu'un retour à la liste.
+        categorieId: parcoursCategorie ? parcoursCategorie.categorieId : null,
+        fileDimensions: dimensionsRestantesCategorie(dimension).map((item) => item.id),
+      },
     });
   }
 
@@ -4321,6 +4455,9 @@
 
   function ouvrirChoixDimension() {
     preparerEcranAudit();
+    // Revenir choisir une dimension, c'est sortir du parcours de catégorie : garder la
+    // file proposerait ensuite « la suite de cette catégorie » que le membre a quittée.
+    parcoursCategorie = null;
     const total = etat.referentiel.competencies.length;
     const evaluees = etat.referentiel.competencies.filter((competence) => estEvaluee(competence.id)).length;
 
@@ -4344,8 +4481,19 @@
           ${jauge(info.evaluees, info.codes.length)}
         </button>`;
       }).join('');
+      // L'en-tête de catégorie n'est plus une étiquette : c'est une carte cliquable.
+      // Sans elle, rien ne disait qu'on pouvait s'évaluer à ce niveau-là aussi.
+      const codesCategorie = codesDeCategorie(categorie.id);
       return `<section class="choix-groupe">
-        <p class="choix-groupe-titre" style="--cc:${echapper(categorie.couleur || '#c9a661')}">${echapper(categorie.name)}</p>
+        <button type="button" class="cat-carte" data-evaluer-categorie="${echapper(categorie.id)}"
+          style="--cc:${echapper(categorie.couleur || '#c9a661')}"
+          aria-label="Évaluer toute la catégorie ${echapper(categorie.name)}">
+          <span class="cat-carte-tete">
+            <span class="cat-carte-titre">${echapper(categorie.name)}</span>
+            <span class="cat-carte-fleche" aria-hidden="true">→</span>
+          </span>
+          <span class="cat-carte-aide">Évaluer toute la catégorie · ${dimensions.length} dimension${dimensions.length > 1 ? 's' : ''} · ${codesCategorie.length} compétence${codesCategorie.length > 1 ? 's' : ''}</span>
+        </button>
         <div class="choix-grille">${cartes}</div>
       </section>`;
     }).join('');
@@ -4495,14 +4643,19 @@
     const suivante = restantes[0] || null;
     const complets = themesComplets().length;
     const totalThemes = etat.referentiel.themes.length;
-    const enchaine = suite === 'dimension' && suivante;
+    // La suite de catégorie ne passe devant que lorsque la dimension en cours n'a plus
+    // rien à offrir : on finit ce qu'on a ouvert avant d'ouvrir autre chose.
+    const suiteCategorie = suiteDeCategorie(dimension);
 
     const choix = [
       suivante
-        ? `<button type="button" class="audit-suite-choix${enchaine ? ' principal' : ''}" data-suite="continuer">Continuer avec la suite de cette dimension<small>${echapper(suivante.name)}</small></button>`
+        ? `<button type="button" class="audit-suite-choix principal" data-suite="continuer">Continuer avec la suite de cette dimension<small>${echapper(suivante.name)}</small></button>`
         : '',
-      `<button type="button" class="audit-suite-choix${!enchaine && suivante ? ' principal' : ''}" data-suite="theme">Choisir une autre thématique de cette dimension<small>${echapper(dimension.name)}</small></button>`,
-      `<button type="button" class="audit-suite-choix${suivante ? '' : ' principal'}" data-suite="dimension">Choisir une autre dimension<small>Les ${etat.referentiel.dimensions.length} dimensions du sphérier</small></button>`,
+      suiteCategorie
+        ? `<button type="button" class="audit-suite-choix${suivante ? '' : ' principal'}" data-suite="categorie">Continuer avec la suite de cette catégorie<small>${echapper(suiteCategorie.dimension.name)} · ${suiteCategorie.reste} dimension${suiteCategorie.reste > 1 ? 's' : ''} restante${suiteCategorie.reste > 1 ? 's' : ''}</small></button>`
+        : '',
+      `<button type="button" class="audit-suite-choix" data-suite="theme">Choisir une autre thématique de cette dimension<small>${echapper(dimension.name)}</small></button>`,
+      `<button type="button" class="audit-suite-choix${suivante || suiteCategorie ? '' : ' principal'}" data-suite="dimension">Choisir une autre dimension<small>Les ${etat.referentiel.dimensions.length} dimensions du sphérier</small></button>`,
       `<button type="button" class="audit-suite-choix" data-suite="arreter">M'arrêter là<small>Tes réponses sont enregistrées, tu reprendras ici</small></button>`,
     ].filter(Boolean).join('');
 
@@ -4520,6 +4673,12 @@
       bouton.addEventListener('click', () => {
         const action = bouton.dataset.suite;
         if (action === 'continuer') evaluerDimension(dimension.id);
+        else if (action === 'categorie') {
+          // Recalculé au clic : une dimension a pu se compléter depuis le dessin.
+          const suivante = suiteDeCategorie(dimension);
+          if (suivante) evaluerDimension(suivante.dimension.id);
+          else ouvrirChoixDimension();
+        }
         else if (action === 'theme') ouvrirChoixTheme(dimension.id);
         else if (action === 'dimension') ouvrirChoixDimension();
         else if (action === 'synthese') ouvrirResultatAudit(brouillon.current.length === MAX_MAINTENANT);
@@ -5889,6 +6048,7 @@
       <div class="ciel-categorie-dims"><svg class="ciel-liens" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${liens}</svg>${dimensionsHtml}</div>
       <p class="ciel-categorie-meta">${mentionCategorie.score}${mentionCategorie.compte}</p>
       <button type="button" class="ciel-categorie-cta" data-explorer-categorie="${echapper(categorie.id)}" aria-label="Explorer la catégorie ${echapper(categorie.name)}">Explorer cette catégorie →</button>
+      ${resultat ? '' : `<button type="button" class="cat-evaluer" data-evaluer-categorie="${echapper(categorie.id)}" aria-label="M'évaluer sur la catégorie ${echapper(categorie.name)}">M'évaluer sur cette catégorie</button>`}
     </section>`;
   }
 
