@@ -15,7 +15,7 @@ Un testeur juge ces deux compétences de même niveau. Elles portent aujourd’h
 
 *Piloter une transformation dans un programme*
 
-**Énoncé.** Je sais présenter le plan de coaching à mon client et l'ajuster avec ce qui est juste pour lui.
+**Énoncé.** Je sais présenter le plan de coaching à mon client et l’ajuster avec ce qui est juste pour lui.
 
 **Marqueurs.**
 
@@ -26,12 +26,12 @@ Un testeur juge ces deux compétences de même niveau. Elles portent aujourd’h
 
 *Piloter une transformation dans un programme*
 
-**Énoncé.** Je sais explorer largement pour trouver l'axe de travail du programme le plus au service de mon client.
+**Énoncé.** Je sais explorer largement pour trouver l’axe de travail du programme le plus au service de mon client.
 
 **Marqueurs.**
 
 - Tu peux montrer, sur un programme réel, plusieurs axes envisagés avant celui retenu et expliquer ton choix.
-- L'axe retenu relie l'enjeu initial du client à un enjeu plus profond identifié en exploration.
+- L’axe retenu relie l’enjeu initial du client à un enjeu plus profond identifié en exploration.
 
 ## 53 et 55 — la première serait incluse dans la seconde
 
@@ -45,20 +45,20 @@ Les deux portent sur la construction de l’axe de travail du programme.
 
 **Marqueurs.**
 
-- Tu pars de l'enjeu initial du client et tu formules une extension vers « une manière d'être » plutôt qu'un résultat.
-- Tu vérifies que le client reconnaît que l'objectif du programme transcende son enjeu de départ.
-- L'axe est court, mémorisable par cœur, chaque mot pesé, et commence par un verbe ; le plan tient sur une page, en résistant au biais d'ego du coach.
+- Tu pars de l’enjeu initial du client et tu formules une extension vers « une manière d’être » plutôt qu’un résultat.
+- Tu vérifies que le client reconnaît que l’objectif du programme transcende son enjeu de départ.
+- L’axe est court, mémorisable par cœur, chaque mot pesé, et commence par un verbe ; le plan tient sur une page, en résistant au biais d’ego du coach.
 
 ### TRA-02-04 — position 55 — A-player
 
 *Piloter une transformation dans un programme*
 
-**Énoncé.** Je sais explorer largement pour trouver l'axe de travail du programme le plus au service de mon client.
+**Énoncé.** Je sais explorer largement pour trouver l’axe de travail du programme le plus au service de mon client.
 
 **Marqueurs.**
 
 - Tu peux montrer, sur un programme réel, plusieurs axes envisagés avant celui retenu et expliquer ton choix.
-- L'axe retenu relie l'enjeu initial du client à un enjeu plus profond identifié en exploration.
+- L’axe retenu relie l’enjeu initial du client à un enjeu plus profond identifié en exploration.
 
 ## 133 et les compétences antérieures sur le refus
 
@@ -76,7 +76,7 @@ Refuser ou réorienter une demande apparaît trois fois, dans deux dimensions di
 - Tu sais formuler ton refus avec les faits de la qualification.
 - Tu sais enchaîner sur une réorientation concrète (autre professionnel, autre format).
 
-### FON-02-01 — position 5 — A-player
+### FON-02-01 — position 5 — Socle fondamental
 
 *Discerner les limites du coaching et orienter*
 
@@ -84,10 +84,10 @@ Refuser ou réorienter une demande apparaît trois fois, dans deux dimensions di
 
 **Marqueurs.**
 
-- Tu sais quelles situations relèvent d'un autre professionnel (psy, médecin, avocat) et les indices précis qui alertent.
+- Tu sais quelles situations relèvent d’un autre professionnel (psy, médecin, avocat) et les indices précis qui alertent.
 - Tu as une liste de professionnels de confiance (psy, médecin du travail, avocat) vers qui orienter, et tu la tiens à jour.
-- Tu évalues aussi ta propre limite : tu ne coaches pas un client dont le niveau d'être ou de réflexion dépasse le tien.
-- Tu es capable d'expliquer à un client, une RH les limites de ton mandat de coach.
+- Tu évalues aussi ta propre limite : tu ne coaches pas un client dont le niveau d’être ou de réflexion dépasse le tien.
+- Tu es capable d’expliquer à un client, une RH les limites de ton mandat de coach.
 
 ### FON-02-02 — position 6 — Socle fondamental
 
@@ -98,7 +98,7 @@ Refuser ou réorienter une demande apparaît trois fois, dans deux dimensions di
 **Marqueurs.**
 
 - Dans ton processus de découverte, tu as un point explicite où tu vérifies ta qualification et ta compatibilité éthique avant de proposer une suite.
-- Tu peux citer un critère qui te ferait refuser un accompagnement dès aujourd'hui (domaine, valeur, conflit d'intérêt, manque de compétence).
+- Tu peux citer un critère qui te ferait refuser un accompagnement dès aujourd’hui (domaine, valeur, conflit d’intérêt, manque de compétence).
 
 ## 145 et les premières compétences sur l’éthique
 
@@ -124,7 +124,7 @@ Le cadre éthique en entreprise recouvre en partie le cadre et la déontologie p
 **Marqueurs.**
 
 - Tu as un document ou un support type (contrat) que tu personnalises pour chaque client avec ses objectifs et le cadre convenu au démarrage de chaque accompagnement.
-- Le document type énonce clairement ce que l'accompagnement comprend, ne comprend pas, et les limites du cadre posé.
+- Le document type énonce clairement ce que l’accompagnement comprend, ne comprend pas, et les limites du cadre posé.
 
 ### FON-01-04 — position 4 — Socle fondamental
 
@@ -136,7 +136,7 @@ Le cadre éthique en entreprise recouvre en partie le cadre et la déontologie p
 
 - Tu as un superviseur.
 - Tu sais comment consulter le code de déontologie (ICF, EMCC) et tu peux citer les règles qui éclairent tes décisions éthiques.
-- Lors d'un doute éthique, tu interromps la séance ou tu diffères la décision pour prendre l'avis de ton superviseur, et tu peux décrire quand cela s'est produit.
+- Lors d’un doute éthique, tu interromps la séance ou tu diffères la décision pour prendre l’avis de ton superviseur, et tu peux décrire quand cela s’est produit.
 
 ## 176 et les compétences antérieures sur le silence
 
@@ -146,13 +146,13 @@ Le silence fait l’objet de trois compétences, dans trois dimensions.
 
 *Ajuster sa posture et confronter avec justesse*
 
-**Énoncé.** Je suis à l'aise dans le silence.
+**Énoncé.** Je suis à l’aise dans le silence.
 
 **Marqueurs.**
 
-- Tu laisses des silences s'installer sans les combler, y compris quand ils sont inconfortables.
+- Tu laisses des silences s’installer sans les combler, y compris quand ils sont inconfortables.
 - Ton non-verbal reste posé et disponible pendant le silence.
-- Tu sais instaurer des silences quand c'est nécessaire pour toi ou ton client.
+- Tu sais instaurer des silences quand c’est nécessaire pour toi ou ton client.
 - Tu peux citer trois conversations qui illustrent ta maîtrise de cette posture et expliquer en quoi elle a servi ton client.
 
 ### COM-03-01 — position 27 — Professionnel établi
@@ -164,8 +164,8 @@ Le silence fait l’objet de trois compétences, dans trois dimensions.
 **Marqueurs.**
 
 - En réécoutant une séance, tu laisses des silences après une question ou une intervention du client, sans les combler automatiquement.
-- Tu peux identifier un moment où le client a trouvé la réponse lui-même juste après un silence que tu n'as pas comblé.
-- Tu peux décrire comment tu évalues le temps de parole et l'équilibre de l'échange.
+- Tu peux identifier un moment où le client a trouvé la réponse lui-même juste après un silence que tu n’as pas comblé.
+- Tu peux décrire comment tu évalues le temps de parole et l’équilibre de l’échange.
 - Tu sais imposer un silence : quand le client répond trop vite avec sa tête, demander 30 secondes de silence avant de répondre.
 
 ### ETR-02-08 — position 172 — A-player
@@ -190,12 +190,12 @@ L’impertinence fait l’objet de deux compétences aux énoncés très proches
 
 *Ajuster sa posture et confronter avec justesse*
 
-**Énoncé.** Je suis capable d'être impertinent* : je sais questionner et travailler en dehors du champ de pertinence de mon client.
+**Énoncé.** Je suis capable d’être impertinent* : je sais questionner et travailler en dehors du champ de pertinence de mon client.
 
 **Marqueurs.**
 
-- Tes questions sortent régulièrement du cadre que le client apporte et ouvrent des angles qu'il n'avait pas envisagés.
-- Tu assumes l'impertinence* sans chercher l'approbation, et le client en retire des prises de conscience.
+- Tes questions sortent régulièrement du cadre que le client apporte et ouvrent des angles qu’il n’avait pas envisagés.
+- Tu assumes l’impertinence* sans chercher l’approbation, et le client en retire des prises de conscience.
 - Tu mets en place des pratiques (contenu, lecture, exploration) pour cultiver ta capacité à être impertinent.
 - Tu peux citer trois conversations qui illustrent ta maîtrise de cette posture et expliquer en quoi elle a servi ton client.
 
@@ -207,6 +207,7 @@ L’impertinence fait l’objet de deux compétences aux énoncés très proches
 
 **Marqueurs.**
 
-- Tu poses des questions qui sortent du cadre amené par le client et qui ouvrent un angle qu'il n'avait pas envisagé.
-- Ton impertinence* reste au service du client : elle ouvre l'exploration sans abîmer l'alliance.
+- Tu poses des questions qui sortent du cadre amené par le client et qui ouvrent un angle qu’il n’avait pas envisagé.
+- Ton impertinence* reste au service du client : elle ouvre l’exploration sans abîmer l’alliance.
 - Ton impertinence peut se manifester dans tes questions, ta posture, tes silences, tes reformulations.
+- Ton impertinence* se déploie à toutes les étapes de la conversation, de l’exploration à la clôture.

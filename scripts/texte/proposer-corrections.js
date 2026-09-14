@@ -56,6 +56,14 @@ const FAUTES_SIGNALEES = [
   [/vision de monde/g, 'vision du monde'],
   [/, paradoxe\*, incoéhrence…\)/g, ', paradoxe*…)'],
   [/émotionnelement/g, 'émotionnellement'],
+  [/à minima/g, 'a minima'],
+  [/à posteriori/g, 'a posteriori'],
+  // « \b » ne mord pas devant « é » : la limite de mot de JavaScript est en ASCII.
+  [/égo\b/g, 'ego'],
+  [/non alignement/g, 'non-alignement'],
+  [/la question "qu'est-ce qui est en train de se jouer \?"/g, 'la question « qu\'est-ce qui est en train de se jouer ? »'],
+  [/l'humour et la légèreté au service de mon client$/g, "l'humour et la légèreté au service de mon client."],
+  [/pour étendre mon business en son sein \(farming\)$/g, 'pour étendre mon business en son sein (farming).'],
   [/en pratique délibérées dans ma pratique/g, 'en pratiques délibérées'],
   [/vous vous fixer une pratique/g, 'vous vous fixez une pratique'],
   [/l'enjeux\b/g, "l'enjeu"],
@@ -132,7 +140,7 @@ const SUBSTITUTIONS = [
   [/le delivery/g, 'la prestation'],
   [/du delivery/g, 'de la prestation'],
   [/\bdelivery\b/g, 'prestation'],
-  [/, timing,/g, ', moment,'],
+  [/, timing,/g, ', moment choisi,'],
   [/onboarding sans couture/g, 'intégration fluide'],
   [/et onboarding\./g, 'et intégration.'],
   [/\bonboarding\b/g, 'intégration'],
@@ -143,11 +151,11 @@ const SUBSTITUTIONS = [
 // Difficulté revue : une compétence qui repose sur un outil ou une grille propre à une
 // approche relève du niveau avancé. Les autres compétences de ce type (ennéagramme,
 // niveaux d'être, Dilts, Ken Wilber, IFS) y sont déjà.
-const DIFFICULTES_REVUES = {
-  // Le marqueur « tu ne coaches pas un client dont le niveau d'être ou de réflexion
-  // dépasse le tien » applique une limite au sens de Flaherty.
-  'FON-02-01': 'A-player',
-};
+// Arbitrage : les compétences visées reposant sur un outil d'approche sont déjà toutes
+// en A-player, et FON-02-01 reste au socle parce que c'est une compétence de sécurité.
+// La table reste en place, vide : le mécanisme d'écriture de la difficulté est prêt si
+// un futur arbitrage en reclasse une.
+const DIFFICULTES_REVUES = {};
 
 // Énoncés réécrits en version courte et validés par le propriétaire. Ils remplacent
 // `Name`, `Énoncé N1` et `Description`, qui portent le même texte sur les 192
@@ -166,6 +174,39 @@ const RETOUCHES_ENONCES_COURTS = [
   [/dans un cadre multi-partite, et traiter les conflits d’intérêts et enjeux de pouvoir en cadre multi-partite\./g,
     'dans un cadre multipartite, et traiter les conflits d’intérêts et les enjeux de pouvoir.'],
 ];
+
+// Retouches de marqueurs issues de la relecture française, après passage au tutoiement.
+const RETOUCHES_MARQUEURS = [
+  // La faute d'accord vit dans un marqueur dont l'orthographe est corrigée plus loin :
+  // le motif ne porte que sur la partie stable de la phrase.
+  [/et ta présence ne permet pas/g, 'et ta présence ne permettent pas'],
+  [/parce que tu es convaincu\.e que cela sert le client/g, 'parce que tu es convaincu que cela sert le client'],
+  // Les paroles rapportées gardent le registre de la séance : le coach et le client s'y
+  // vouvoient. Seul le marqueur qui les entoure s'adresse au coach au tutoiement.
+  [/« Comment tu vis le fait de ne pas chercher de solution tout de suite \? »/g,
+    '« Comment vous vivez le fait de ne pas chercher de solution tout de suite ? »'],
+  [/« Et si tu savais \? »/g, '« Et si vous saviez ? »'],
+  [/« Qu'est-ce que tu ferais à ma place \? »/g, "« Qu'est-ce que vous feriez à ma place ? »"],
+];
+
+// Marqueurs ajoutés lors de la validation des énoncés courts. Ils viennent en dernière
+// puce, déjà tutoyés et ponctués.
+const MARQUEURS_AJOUTES = {
+  'COM-04-01': 'Tu métacommuniques* aussi sur la dynamique de la relation et sur le non-verbal, pas seulement sur tes ressentis.',
+  'TRA-03-09': 'Tu sais nommer la nature du blocage, qu’il s’agisse d’une croyance, d’un fantasme, d’un dilemme* ou d’un paradoxe*.',
+  'TRA-03-11': 'Ton impertinence* se déploie à toutes les étapes de la conversation, de l’exploration à la clôture.',
+  'TRA-05-11': 'Tu t’appuies sur les ressentis corporels au moment de la bascule* et de l’ancrage*.',
+  'ACT-07-03': 'Ce que tu sur-délivres ne crée pas de dépendance chez le client, et tu sais dire sur quoi tu le vérifies.',
+  'ENT-03-07': 'Tes contrats en entreprise fixent l’échéancier de paiement et les conditions applicables en cas de retard.',
+  'ETR-03-01': 'Tu distingues ce qui relève de toi, de ton client et du contexte quand quelque chose n’a pas fonctionné.',
+};
+
+// Une seule forme d'apostrophe dans tout le référentiel : la typographique. Le corpus
+// mélangeait les deux, parfois dans la même phrase. Appliquée en dernier, pour que les
+// tables ci-dessus continuent de s'écrire avec l'apostrophe droite.
+function normaliserApostrophes(texte) {
+  return String(texte).replace(/'/g, '\u2019');
+}
 
 // L'astérisque de renvoi au lexique se place après le mot entier : « basculer* », jamais
 // « bascule*r », sans quoi le mot se coupe en deux à l'écran et le renvoi tombe à côté.
@@ -207,20 +248,25 @@ function normaliserPonctuation(texte) {
       l = l.replace(/\bmots clés\b/g, 'mots-clés').replace(/\bmot clé\b/g, 'mot-clé');
       // Seuls le point, l'exclamation, l'interrogation et les points de suspension
       // ferment une puce : une parenthèse ou un guillemet fermants n'en tiennent pas
-      // lieu, et c'est exactement là que les points manquaient.
-      if (!/[.!?…]$/.test(l)) l += '.';
+      // lieu, et c'est exactement là que les points manquaient. Exception : une
+      // citation qui se termine déjà par une ponctuation se suffit à elle-même,
+      // « … ce qui se joue. ». doublerait le point.
+      const citationPonctuee = /[.!?…]\s*»$/.test(l);
+      if (!/[.!?…]$/.test(l) && !citationPonctuee) l += '.';
       return l;
     })
     .join('\n')
     .replace(/\n{3,}/g, '\n\n');
 }
 
-function motifs({ champ, avant, apres, tutoye, enonceCourt }) {
+function motifs({ champ, avant, apres, tutoye, enonceCourt, ajout }) {
   const liste = [];
+  if (ajout) liste.push('marqueur-ajoute');
   if (champ === 'difficulte') return ['difficulte'];
   if (enonceCourt) {
     liste.push('enonce-court');
     if (tableTouche(avant, SUBSTITUTIONS)) liste.push('substitution');
+    if (normaliserApostrophes(avant) !== avant) liste.push('apostrophe');
     return liste;
   }
   if (tableTouche(avant, FAUTES_SIGNALEES)) liste.push('faute');
@@ -228,7 +274,9 @@ function motifs({ champ, avant, apres, tutoye, enonceCourt }) {
   if (tableTouche(avant, SUBSTITUTIONS)) liste.push('substitution');
   if (normaliserAsterisques(avant) !== avant) liste.push('asterisque');
   if (champ === 'markers' && tutoye) liste.push('tutoiement');
+  if (champ === 'markers' && tableTouche(avant, RETOUCHES_MARQUEURS)) liste.push('relecture');
   if (normaliserPonctuation(avant) !== avant && champ === 'markers') liste.push('ponctuation');
+  if (normaliserApostrophes(avant) !== avant) liste.push('apostrophe');
   if (liste.length === 0 && avant !== apres) liste.push('reformulation');
   return liste;
 }
@@ -236,14 +284,19 @@ function motifs({ champ, avant, apres, tutoye, enonceCourt }) {
 // Texte proposé pour un champ. Les marqueurs passent d'abord par leur version tutoyée
 // quand elle existe, puis par les mêmes tables que les autres champs : une faute que la
 // réécriture aurait laissée passer est ainsi rattrapée.
-function proposerChamp(champ, valeur, tutoiement, enonceCourt) {
+function proposerChamp(champ, valeur, tutoiement, enonceCourt, code) {
   if (enonceCourt && champ !== 'markers') {
     const retouche = appliquerTable(enonceCourt, RETOUCHES_ENONCES_COURTS);
-    return normaliserAsterisques(appliquerTable(retouche, SUBSTITUTIONS)).trim();
+    return normaliserApostrophes(
+      normaliserAsterisques(appliquerTable(retouche, SUBSTITUTIONS)).trim(),
+    );
   }
-  const base = champ === 'markers' && tutoiement ? tutoiement : valeur;
-  const corrige = corrigerTexte(base);
-  return champ === 'markers' ? normaliserPonctuation(corrige) : corrige.trim();
+  if (champ !== 'markers') return normaliserApostrophes(corrigerTexte(valeur).trim());
+
+  const base = appliquerTable(tutoiement || valeur, RETOUCHES_MARQUEURS);
+  const ajout = MARQUEURS_AJOUTES[code];
+  const corrige = corrigerTexte(base) + (ajout ? `\n• ${ajout}` : '');
+  return normaliserApostrophes(normaliserPonctuation(corrige));
 }
 
 function construirePropositions(competences, tutoiements) {
@@ -261,7 +314,7 @@ function construirePropositions(competences, tutoiements) {
         : null;
       const apres = champ === 'difficulte'
         ? (DIFFICULTES_REVUES[competence.code] || avant)
-        : proposerChamp(champ, avant, tutoye, enonceCourt);
+        : proposerChamp(champ, avant, tutoye, enonceCourt, competence.code);
       if (apres === avant) continue;
       propositions.push({
         code: competence.code,
@@ -271,7 +324,8 @@ function construirePropositions(competences, tutoiements) {
         avant,
         apres,
         motifs: motifs({
-          champ, avant, apres, tutoye: Boolean(tutoye) && tutoye !== avant, enonceCourt: Boolean(enonceCourt),
+          champ, avant, apres, tutoye: Boolean(tutoye) && tutoye !== avant,
+          enonceCourt: Boolean(enonceCourt), ajout: Boolean(MARQUEURS_AJOUTES[competence.code] && champ === 'markers'),
         }),
       });
     }
@@ -365,7 +419,7 @@ function principal() {
 }
 
 module.exports = {
-  corrigerFautes, corrigerTexte, normaliserPonctuation, normaliserAsterisques,
+  corrigerFautes, corrigerTexte, normaliserPonctuation, normaliserAsterisques, normaliserApostrophes,
   proposerChamp, construirePropositions, resumer,
 };
 

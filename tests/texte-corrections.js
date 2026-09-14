@@ -9,6 +9,7 @@ const {
   corrigerTexte,
   normaliserPonctuation,
   normaliserAsterisques,
+  normaliserApostrophes,
   proposerChamp,
   construirePropositions,
   resumer,
@@ -129,5 +130,24 @@ assert.equal(
   proposerChamp('markers', '• Tu sais interroger ton marcé.', null, 'Un énoncé court validé.'),
   '• Tu sais interroger ton marché.',
 );
+
+// 9. Une citation qui se termine déjà par une ponctuation ne reçoit pas de point.
+assert.equal(
+  normaliserPonctuation('• Tu interromps : « explorons encore ce qui se joue. »'),
+  '• Tu interromps : « explorons encore ce qui se joue. »',
+);
+assert.equal(
+  normaliserPonctuation('• Tu vérifies : « Est-ce clair ? »'),
+  '• Tu vérifies : « Est-ce clair ? »',
+);
+// Une citation sans ponctuation interne, elle, ferme bien la puce par un point.
+assert.equal(
+  normaliserPonctuation('• Tu parles depuis le « je »'),
+  '• Tu parles depuis le « je ».',
+);
+
+// 10. Une seule forme d'apostrophe dans le texte écrit.
+assert.equal(normaliserApostrophes("l'ancrage et l'enjeu"), 'l\u2019ancrage et l\u2019enjeu');
+assert.equal(proposerChamp('markers', "• Tu tiens l'espace.", null), '• Tu tiens l\u2019espace.');
 
 console.log('Corrections de texte du référentiel : OK');

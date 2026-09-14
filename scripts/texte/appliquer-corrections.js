@@ -25,6 +25,9 @@ const NOMS_NOTION = {
   statement: 'Énoncé N1',
   description: 'Description',
   markers: 'Marqueurs',
+  // Aucune proposition ne porte aujourd'hui sur la difficulté : l'arbitrage a conclu
+  // que les compétences visées étaient déjà au bon niveau. Le chemin d'écriture reste
+  // en place, testé en simulation, pour le jour où un arbitrage en reclassera une.
   difficulte: 'Difficulté',
 };
 
