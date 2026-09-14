@@ -1769,6 +1769,118 @@ async function principal() {
     assert.equal(await categorie.locator('.choix-carte').count(), DIMENSIONS.length);
     await categorie.close();
 
+    // --- Lot 8.2 et 8.3 : déplier, modifier, et voir le score suivre --------------
+    const retouches = await navigateur.newPage({ viewport: { width: 1280, height: 700 } });
+    await retouches.bringToFront();
+    await retouches.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000011`);
+    await retouches.locator('#ciel:not([hidden])').waitFor();
+    await retouches.getByRole('button', { name: 'Commencer mon audit' }).dispatchEvent('click');
+    await retouches.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await retouches.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}"]`).dispatchEvent('click');
+    for (const rang of [1, 2, 3, 4]) {
+      await retouches.locator('.situer-compte', { hasText: `${rang} / 4` }).waitFor();
+      await retouches.locator('.marche[data-niveau="1"]').dispatchEvent('click');
+    }
+    await retouches.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
+    assert.equal((await retouches.locator('.audit-bilan-score .syn-pct').textContent()).trim(), '33 %');
+
+    // 8.3 : « Modifier mes positionnements » repart de la première compétence.
+    await retouches.locator('#audit-modifier-theme').dispatchEvent('click');
+    await retouches.locator('body[data-panneau="situer"]').waitFor({ state: 'attached' });
+    assert.equal((await retouches.locator('.situer-compte').textContent()).trim(), '1 / 4');
+    assert.equal(await retouches.locator('.marche[data-niveau="1"][aria-pressed="true"]').count(), 1);
+    await retouches.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    // Les trois suivantes gardent leur niveau : recliquer leur propre marche l'effacerait,
+    // on traverse donc avec « Suivante → ».
+    for (const rang of [2, 3, 4]) {
+      await retouches.locator('.situer-compte', { hasText: `${rang} / 4` }).waitFor();
+      await retouches.getByRole('button', { name: 'Suivante →' }).dispatchEvent('click');
+    }
+    await retouches.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
+    assert.equal((await retouches.locator('.audit-bilan-score .syn-pct').textContent()).trim(), '50 %',
+      'le score suit la correction faite depuis « Modifier mes positionnements »');
+
+    // On boucle la seconde thématique pour atteindre le résultat de dimension.
+    await retouches.locator('[data-suite="continuer"]').dispatchEvent('click');
+    for (const rang of [1, 2]) {
+      await retouches.locator('.situer-compte', { hasText: `${rang} / 2` }).waitFor();
+      await retouches.locator('.marche[data-niveau="2"]').dispatchEvent('click');
+    }
+    await retouches.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
+    await retouches.getByRole('button', { name: /^Voir mon résultat de dimension/ }).click();
+    await retouches.locator('body[data-panneau="resultat-dimension"]').waitFor({ state: 'attached' });
+
+    // 8.2 : les lignes sont repliées, et une seule s'ouvre à la fois.
+    assert.equal(await retouches.locator('.audit-classement-bloc').count(), 2);
+    assert.equal(await retouches.locator('.audit-detail:not([hidden])').count(), 0);
+    assert.deepEqual(await retouches.locator('[data-deplier]').evaluateAll((b) => b.map((x) => x.getAttribute('aria-expanded'))),
+      ['false', 'false']);
+    await retouches.locator(`[data-deplier="theme-${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await retouches.locator(`#detail-theme-${DIM_MULTI.id}:not([hidden])`).waitFor();
+    assert.equal(await retouches.locator('.audit-detail:not([hidden])').count(), 1);
+    assert.equal(await retouches.locator(`#detail-theme-${DIM_MULTI.id} .audit-detail-ligne`).count(), 4);
+    assert.equal(await retouches.locator(`[data-deplier="theme-${DIM_MULTI.id}"]`).getAttribute('aria-expanded'), 'true');
+    // Niveau lisible sur chaque ligne, dans les mots de l'échelle.
+    const niveaux = await retouches.locator(`#detail-theme-${DIM_MULTI.id} .audit-detail-niveau`).allTextContents();
+    assert.equal(niveaux.length, 4);
+    const libellesAttendus = [...Object.values(ECHELLE), 'Passée', 'À évaluer'];
+    assert.ok(niveaux.every((texte) => libellesAttendus.includes(texte.trim())),
+      `niveaux inattendus : ${JSON.stringify(niveaux)}`);
+    await capturer(retouches, screenshotDir, 'resultat-dimension-deplie-desktop.png');
+
+    // Ouvrir l'autre referme la première.
+    await retouches.locator(`[data-deplier="theme-${DIM_MULTI.id}-2"]`).dispatchEvent('click');
+    assert.equal(await retouches.locator('.audit-detail:not([hidden])').count(), 1);
+    assert.equal(await retouches.locator(`#detail-theme-${DIM_MULTI.id}-2:not([hidden])`).count(), 1);
+    // « Tout déplier » les ouvre toutes, puis les referme.
+    await retouches.locator('#audit-tout-deplier').dispatchEvent('click');
+    assert.equal(await retouches.locator('.audit-detail:not([hidden])').count(), 2);
+    assert.equal(await retouches.locator('#audit-tout-deplier').textContent(), 'Tout replier');
+    await retouches.locator('#audit-tout-deplier').dispatchEvent('click');
+    assert.equal(await retouches.locator('.audit-detail:not([hidden])').count(), 0);
+
+    // 8.2 : « Modifier » ouvre la fiche, la marche s'y change, le retour recalcule.
+    await retouches.locator(`[data-deplier="theme-${DIM_MULTI.id}-2"]`).dispatchEvent('click');
+    const scoreAvant = (await retouches.locator('.audit-bilan-score .syn-pct').textContent()).trim();
+    await retouches.locator(`#detail-theme-${DIM_MULTI.id}-2 [data-modifier]`).first().dispatchEvent('click');
+    await retouches.locator('#panneau-retour-audit').waitFor();
+    assert.match(await retouches.locator('#panneau-retour-audit').textContent(), /Résultat de /);
+    assert.equal(await retouches.locator('.marche[data-niveau]').count(), 3);
+    await retouches.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    await retouches.locator('#panneau-retour-audit').dispatchEvent('click');
+    await retouches.locator('body[data-panneau="resultat-dimension"]').waitFor({ state: 'attached' });
+    const scoreApres = (await retouches.locator('.audit-bilan-score .syn-pct').textContent()).trim();
+    assert.notEqual(scoreApres, scoreAvant,
+      `le score de la dimension doit suivre la correction (${scoreAvant} → ${scoreApres})`);
+    // Le dépliage a survécu à l'aller-retour.
+    assert.equal(await retouches.locator(`#detail-theme-${DIM_MULTI.id}-2:not([hidden])`).count(), 1);
+
+    // 8.3 : depuis la vue d'ensemble, corriger une marche puis enregistrer met les
+    // scores à jour partout, sans repasser par le parcours.
+    await retouches.locator('#panneau-fermer').dispatchEvent('click');
+    await retouches.locator('#btn-synthese').dispatchEvent('click');
+    await retouches.locator(`[data-aller="${DIM_MULTI.id}-01-02"]`).first().dispatchEvent('click');
+    await retouches.locator('.marche[data-niveau]').first().waitFor();
+    await retouches.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    await retouches.locator('#panneau-fermer').dispatchEvent('click');
+    await retouches.locator('#btn-enregistrer').dispatchEvent('click');
+    await retouches.getByText('Ton sphérier est enregistré.').waitFor();
+    assert.equal(dernierSnapshot.levels[`${DIM_MULTI.id}-01-02`], 3);
+    // Et le résultat de la thématique, rouvert depuis la carte, porte le nouveau score.
+    // Le retour depuis la fiche passe par la vue de dimension puis par la catégorie.
+    for (let pas = 0; pas < 3 && await retouches.locator('#ciel').isHidden(); pas += 1) {
+      await retouches.locator('#detail-retour').dispatchEvent('click');
+      await retouches.waitForTimeout(120);
+    }
+    await retouches.locator('#ciel:not([hidden])').waitFor();
+    await retouches.locator(`[data-ouvrir="${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await retouches.locator(`[data-dimension="${DIM_MULTI.id}"] .theme[data-theme]`).first().dispatchEvent('click');
+    await retouches.locator('#theme-resultat').dispatchEvent('click');
+    await retouches.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
+    assert.equal((await retouches.locator('.audit-bilan-score .syn-pct').textContent()).trim(), '67 %',
+      'le score de la thématique suit une correction faite depuis la vue d\'ensemble');
+    await retouches.close();
+
     console.log('UI desktop, mobile et sauvegarde simulée : OK');
   } finally {
     await Promise.race([
