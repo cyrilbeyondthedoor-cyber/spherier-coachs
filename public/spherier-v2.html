@@ -7355,11 +7355,36 @@
   // `libelleAuto` sert de repli quand le membre n'a rien saisi : la fin de thématique
   // en propose un. Le paramètre est ignoré s'il n'est pas une chaîne, car cette
   // fonction est aussi branchée directement sur un clic et reçoit alors un événement.
-  async function enregistrer(libelleAuto = null) {
+  // Deux enregistrements en vol se marchaient dessus : le second réécrivait `brouillon`
+  // depuis une réponse plus ancienne que la sienne. Ils se suivent désormais, et chacun
+  // photographie ce qu'il envoie au moment où il part.
+  let chaineEnregistrement = Promise.resolve();
+
+  function enregistrer(libelleAuto = null) {
+    const suite = chaineEnregistrement.catch(() => {}).then(() => enregistrerMaintenant(libelleAuto));
+    chaineEnregistrement = suite.catch(() => {});
+    return suite;
+  }
+
+  async function enregistrerMaintenant(libelleAuto = null) {
     const repli = typeof libelleAuto === 'string' ? libelleAuto.trim() : '';
     const retires = elaguerCiblesFermees();
     elBtnEnregistrer.disabled = true;
     elBtnEnregistrer.textContent = 'Enregistrement…';
+
+    // Photographie de ce qui part. En mode enchaîné, l'écran reste actif pendant le vol
+    // de la requête : le membre continue de cocher des marches qui ne sont PAS dans ce
+    // POST. À la réponse, le serveur fait autorité sur ce qu'il a reçu, jamais sur ce
+    // qui a bougé depuis, sinon ces réponses disparaissent sans un mot.
+    const memeListe = (a, b) => a.length === b.length && a.every((item, rang) => item === b[rang]);
+    const envoyes = {
+      levels: { ...brouillon.levels },
+      passees: [...(brouillon.passees || [])],
+      derniere: JSON.stringify(brouillon.derniere || null),
+      current: [...brouillon.current],
+      later: [...brouillon.later],
+      priorites: JSON.stringify(brouillon.priorites ?? null),
+    };
 
     try {
       const reponse = await fetch('/api/snapshot', {
@@ -7403,19 +7428,46 @@
       // parcours, pas une modification en attente. L'écraser ici reperdrait les
       // compétences passées à chaque fin de thématique.
       const auditEnregistre = data.audit ?? data.snapshot.blob.audit ?? {};
+
+      // Les écarts apparus depuis le départ du POST se réappliquent par-dessus la
+      // réponse : une marche cochée pendant le vol reste cochée, et le prochain
+      // enregistrement l'emporte.
+      const niveauxDepuis = {};
+      for (const [code, valeur] of Object.entries(brouillon.levels)) {
+        if (envoyes.levels[code] !== valeur) niveauxDepuis[code] = valeur;
+      }
+      const passeesActuelles = brouillon.passees || [];
+      const passeesAjoutees = passeesActuelles.filter((code) => !envoyes.passees.includes(code));
+      // Une compétence évaluée pendant le vol est sortie des passées : la liste du
+      // serveur, plus ancienne, l'y remettrait.
+      const passeesRetirees = envoyes.passees.filter((code) => !passeesActuelles.includes(code));
+      // `??` et non `||` : une réponse serveur sans `audit` retombe sur le brouillon
+      // local plutôt que d'effacer les compétences que le membre a décidé de passer.
+      // Un tableau vide renvoyé par le serveur, lui, reste une réponse à respecter.
+      const passeesServeur = auditEnregistre.passees ?? passeesActuelles;
+      const derniereBougee = JSON.stringify(brouillon.derniere || null) !== envoyes.derniere;
+      const prioritesBougees = JSON.stringify(brouillon.priorites ?? null) !== envoyes.priorites;
+      const currentBouge = !memeListe(brouillon.current, envoyes.current);
+      const laterBouge = !memeListe(brouillon.later, envoyes.later);
+
       brouillon = {
-        levels: { ...reference.levels },
-        current: [...reference.current],
-        later: [...reference.later],
-        // `??` et non `||` : une réponse serveur sans `audit` retombe sur le brouillon
-        // local plutôt que d'effacer les compétences que le membre a décidé de passer.
-        // Un tableau vide renvoyé par le serveur, lui, reste une réponse à respecter.
-        passees: [...(auditEnregistre.passees ?? brouillon.passees ?? [])],
-        derniere: auditEnregistre.derniere ?? brouillon.derniere ?? null,
-        priorites: JSON.parse(JSON.stringify(prioritesEnregistrees)),
+        levels: { ...reference.levels, ...niveauxDepuis },
+        current: currentBouge ? [...brouillon.current] : [...reference.current],
+        later: laterBouge ? [...brouillon.later] : [...reference.later],
+        passees: [...new Set([...passeesServeur, ...passeesAjoutees])]
+          .filter((code) => !passeesRetirees.includes(code)),
+        derniere: derniereBougee ? brouillon.derniere : (auditEnregistre.derniere ?? brouillon.derniere ?? null),
+        priorites: prioritesBougees
+          ? JSON.parse(JSON.stringify(brouillon.priorites))
+          : JSON.parse(JSON.stringify(prioritesEnregistrees)),
       };
 
-      try { localStorage.removeItem(cleBrouillon()); } catch {}
+      // Effacer le brouillon local alors qu'il reste des écarts les perdrait au
+      // prochain rechargement : on le réécrit dans ce cas au lieu de le supprimer.
+      try {
+        if (estModifie() || passeesDivergent()) enregistrerBrouillon();
+        else localStorage.removeItem(cleBrouillon());
+      } catch { /* stockage indisponible : on continue sans filet */ }
       elLibelle.value = '';
       majDernierPoint();
       majBarre();

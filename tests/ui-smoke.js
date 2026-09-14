@@ -2065,6 +2065,57 @@ async function principal() {
       'le score de la thématique suit une correction faite depuis la vue d\'ensemble');
     await retouches.close();
 
+    // --- Lot 9 : une réponse cochée pendant l'enregistrement ne se perd plus ------
+    // En mode enchaîné, le POST de fin de thématique part sans bloquer l'écran. Sa
+    // réponse réécrivait le brouillon depuis l'état ENVOYÉ, effaçant ce que le membre
+    // avait coché pendant le vol de la requête, sans un mot et le compteur déjà avancé.
+    delaiSnapshot = 1500;
+    const lent = await navigateur.newPage({ viewport: { width: 1280, height: 700 } });
+    await lent.bringToFront();
+    await lent.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000013`);
+    await lent.locator('#ciel:not([hidden])').waitFor();
+    await lent.locator(`#ciel [data-explorer-categorie="${DIM_MULTI.category}"]`).dispatchEvent('click');
+    await lent.locator(`[data-situer="${DIM_MULTI.id}"]:visible`).first().dispatchEvent('click');
+    await lent.locator('body[data-panneau="situer"]').waitFor({ state: 'attached' });
+    await lent.locator('.situer-compte', { hasText: '1 / 6' }).waitFor();
+
+    // Les quatre premières : la frontière de thématique tombe entre la 4e et la 5e.
+    const avantLent = nbSnapshots;
+    for (const rang of [1, 2, 3, 4]) {
+      await lent.locator('.situer-compte', { hasText: `${rang} / 6` }).waitFor();
+      await lent.locator('.marche[data-niveau="2"]').dispatchEvent('click');
+    }
+    // On est sur la 5e, le POST de la première thématique est en vol pour 1,5 s.
+    await lent.locator('.situer-compte', { hasText: '5 / 6' }).waitFor();
+
+    // Coché PENDANT le vol de la requête.
+    await lent.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    await lent.locator('.situer-compte', { hasText: '6 / 6' }).waitFor();
+    // On laisse la réponse atterrir, puis on revient voir la marche.
+    await lent.waitForTimeout(2200);
+    assert.equal(nbSnapshots - avantLent, 1, 'un seul enregistrement à la frontière');
+    await lent.locator('#situer-precedent').dispatchEvent('click');
+    await lent.locator('.situer-compte', { hasText: '5 / 6' }).waitFor();
+    assert.equal(await lent.locator('.marche[data-niveau="3"][aria-pressed="true"]').count(), 1,
+      'la marche cochée pendant l\'enregistrement doit rester cochée');
+
+    // Et elle part bien dans le POST suivant.
+    await lent.getByRole('button', { name: 'Suivante →' }).dispatchEvent('click');
+    await lent.locator('.situer-compte', { hasText: '6 / 6' }).waitFor();
+    await lent.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    await lent.getByRole('heading', { name: 'Résultat de la dimension' }).waitFor({ timeout: 15000 });
+    assert.equal(dernierSnapshot.levels[`${DIM_MULTI.id}-02-01`], 3,
+      'la réponse saisie pendant le vol doit figurer dans l\'enregistrement suivant');
+    assert.equal(dernierSnapshot.levels[`${DIM_MULTI.id}-02-02`], 3);
+    // Les six compétences sont bien toutes situées, aucune restée à zéro.
+    const restees = [1, 2, 3, 4].map((n) => `${DIM_MULTI.id}-01-0${n}`)
+      .concat([`${DIM_MULTI.id}-02-01`, `${DIM_MULTI.id}-02-02`])
+      .filter((code) => !(dernierSnapshot.levels[code] > 0));
+    assert.deepEqual(restees, [], `compétences perdues : ${JSON.stringify(restees)}`);
+    await capturer(lent, screenshotDir, 'enchaine-latence-desktop.png');
+    await lent.close();
+    delaiSnapshot = 0;
+
     console.log('UI desktop, mobile et sauvegarde simulée : OK');
   } finally {
     await Promise.race([
