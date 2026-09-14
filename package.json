@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "npm run test:server && npm run test:ui",
-    "test:server": "node tests/server-functions.js && node tests/referentiel-cache.js",
+    "test:server": "node tests/server-functions.js && node tests/referentiel-cache.js && node tests/texte-corrections.js",
     "test:ui": "node tests/ui-smoke.js",
     "test:notion": "node tests/ui-notion-smoke.js",
     "test:prospects": "node tests/prospects-notion-integration.js",
