@@ -4719,6 +4719,10 @@
       ...tete.filter((code) => !ouverte(code)),
       ...p.classement.slice(MAX_MAINTENANT),
       ...Object.values(p.themes).flat(),
+      // Ce que le membre travaillait AVANT d'avoir un classement entre ici, en tête de
+      // l'ancienne file d'attente. Sans cette ligne, les trois priorités choisies par
+      // l'ancienne synthèse sortaient du modèle au premier classement.
+      ...brouillon.current,
       ...brouillon.later,
     ])].filter((code) => !current.includes(code));
     brouillon.current = current;
@@ -6018,6 +6022,11 @@
   // aucune dimension n'a encore été bouclée.
   function ouvrirRecapDimension(dimensionId = null, suite = 'theme') {
     const dimension = dimensionId ? dimensionParId(dimensionId) : null;
+    // En mode global, la suite se joue quand même dans une dimension : celle où le membre
+    // s'est arrêté. Recopier les libellés du bloc Poursuivre ici en ferait deux à tenir
+    // à jour. Le repli à un seul bouton ne sert qu'au classement vide, cas où « une AUTRE
+    // dimension » n'aurait de toute façon aucun sens.
+    const dimensionSuite = dimension || dimensionParId(derniereDimensionEvaluee());
     const teinte = dimension ? (TEINTES_HEX[dimension.id] || '#c9a661') : '#c9a661';
     preparerEcranAudit(teinte, { plein: true });
     reinitialiserLexiqueRendu();
@@ -6051,13 +6060,12 @@
         </div>
       </section>
       </div>
-      <aside class="audit-bilan-suite">${dimension
-        ? blocPoursuivreHtml(dimension, suite)
+      <aside class="audit-bilan-suite">${dimensionSuite
+        ? blocPoursuivreHtml(dimensionSuite, suite)
         : `<div class="audit-poursuivre">
             <p class="audit-poursuivre-titre">Poursuivre</p>
             <div class="audit-suites">
-              <button type="button" class="audit-suite-choix principal" data-recap-suite="dimension">Choisir une autre dimension<small>Les ${etat.referentiel.dimensions.length} dimensions du sphérier</small></button>
-              <button type="button" class="audit-suite-choix" data-recap-suite="arreter">M'arrêter là<small>Tes réponses sont enregistrées, tu reprendras ici</small></button>
+              <button type="button" class="audit-suite-choix principal" data-recap-suite="dimension">Choisir une dimension<small>Les ${etat.referentiel.dimensions.length} dimensions du sphérier</small></button>
             </div>
           </div>`}</aside>
     </div></div>`);
@@ -6075,12 +6083,9 @@
       enregistrerClassement.textContent = 'Enregistrer mon classement';
     });
 
-    if (dimension) brancherPoursuivre(dimension);
+    if (dimensionSuite) brancherPoursuivre(dimensionSuite);
     else elPanneauCorps.querySelectorAll('[data-recap-suite]').forEach((bouton) => {
-      bouton.addEventListener('click', () => {
-        if (bouton.dataset.recapSuite === 'dimension') ouvrirChoixDimension();
-        else { majAuditInitial(); fermerPanneau(); }
-      });
+      bouton.addEventListener('click', ouvrirChoixDimension);
     });
 
     afficherPanneau();

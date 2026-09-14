@@ -81,7 +81,7 @@ function validerPriorites({ referentiel, brut, competenceParCode, erreurs }) {
   const dimensionDe = indexDimensions(referentiel);
   const themeDe = (code) => competenceParCode.get(code)?.theme ?? null;
 
-  const validerGroupe = (nom, groupeBrut, appartient) => {
+  const validerGroupe = (nom, groupeBrut, appartient, cleConnue) => {
     const resultat = {};
     if (groupeBrut === undefined) return resultat;
     if (typeof groupeBrut !== 'object' || groupeBrut === null || Array.isArray(groupeBrut)) {
@@ -89,6 +89,12 @@ function validerPriorites({ referentiel, brut, competenceParCode, erreurs }) {
       return resultat;
     }
     for (const [cle, liste] of Object.entries(groupeBrut)) {
+      // La clé est vérifiée AVANT la liste : une liste vide n'a aucun code pour trahir
+      // une clé inventée, et un objet plein de clés arbitraires grossirait le blob.
+      if (!cleConnue(cle)) {
+        erreurs.push(`priorites.${nom} contient un identifiant absent du référentiel.`);
+        continue;
+      }
       if (!Array.isArray(liste)) {
         erreurs.push(`priorites.${nom}["${cle}"] doit être un tableau de codes.`);
         continue;
@@ -116,8 +122,11 @@ function validerPriorites({ referentiel, brut, competenceParCode, erreurs }) {
     return resultat;
   };
 
-  const themes = validerGroupe('themes', brut.themes, themeDe);
-  const dimensions = validerGroupe('dimensions', brut.dimensions, (code) => dimensionDe(competenceParCode.get(code)));
+  const themesConnus = new Set((referentiel.themes ?? []).map((t) => t.id));
+  const dimensionsConnues = new Set((referentiel.dimensions ?? []).map((d) => d.id));
+  const themes = validerGroupe('themes', brut.themes, themeDe, (cle) => themesConnus.has(cle));
+  const dimensions = validerGroupe('dimensions', brut.dimensions,
+    (code) => dimensionDe(competenceParCode.get(code)), (cle) => dimensionsConnues.has(cle));
 
   let classement = [];
   if (brut.classement !== undefined) {
@@ -140,6 +149,10 @@ function validerPriorites({ referentiel, brut, competenceParCode, erreurs }) {
   return { themes, dimensions, classement };
 }
 
+// Dérive « maintenant » et « plus tard » du classement. `current` reste EXACTEMENT les
+// trois premières du classement : c'est l'invariant sur lequel Mon mois, la carte et la
+// synthèse s'appuient, et compléter le mois avec d'anciens choix le romprait. Ces anciens
+// choix ne sont pas perdus pour autant : l'appelant les met en tête de `laterExistant`.
 // Dérive « maintenant » et « plus tard » du classement. C'est ce qui permet à Mon mois,
 // à la carte et à la synthèse de continuer à lire `selections` sans rien savoir des
 // priorités : une seule source d'ordre, trois écrans qui la lisent comme avant.
@@ -181,7 +194,10 @@ function composerEtat({ referentiel, snapshot }) {
   const derivees = deriverSelections({
     priorites,
     maxMaintenant: MAX_CIBLES_MAINTENANT,
-    laterExistant: selectionsBlob.later ?? [],
+    // L'ancien « maintenant » entre dans la file d'attente avant l'ancien « plus tard ».
+    // Sans lui, les trois priorités choisies avant l'existence du classement
+    // disparaîtraient du modèle au premier classement, sans un mot.
+    laterExistant: [...(selectionsBlob.current ?? []), ...(selectionsBlob.later ?? [])],
     estOuverte: (code) => themesOuverts[competenceParCode.get(code)?.theme]?.status === 'open',
   });
   const snapshotSorti = derivees && snapshot
@@ -268,7 +284,9 @@ function validerEtNormaliser({ referentiel, corps }) {
   const derivees = deriverSelections({
     priorites,
     maxMaintenant: MAX_CIBLES_MAINTENANT,
-    laterExistant: laterBrut,
+    // Même raison qu'à la relecture : ce que le membre travaillait avant de classer
+    // passe en tête de sa file d'attente au lieu de sortir du modèle.
+    laterExistant: [...currentBrut, ...laterBrut],
     estOuverte: (code) => ouverture[competenceParCode.get(code)?.theme]?.status === 'open',
   });
   const currentFiltre = derivees ? derivees.current : currentBrut;
