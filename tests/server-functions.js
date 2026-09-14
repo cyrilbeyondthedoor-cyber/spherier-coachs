@@ -102,10 +102,77 @@ async function testerEvenements() {
   assert.ok(misesAJour.at(-1).properties['Agenda cliqué le']);
 }
 
+const { validerEtNormaliser, composerEtat } = require('../snapshot-v2.js');
+
+// Référentiel minuscule et local : la validation ne dépend que des codes qu'on lui
+// donne, inutile de faire tourner la lecture Notion pour l'éprouver.
+const referentielAudit = {
+  themes: [{ id: 'theme-un', name: 'Thématique', dimension: 'Fondations', feeds: [] }],
+  competencies: [
+    { id: 'FON-01-01', theme: 'theme-un', name: 'Poser le cadre' },
+    { id: 'FON-01-02', theme: 'theme-un', name: 'Tenir le cadre' },
+  ],
+};
+
+const corpsDeBase = {
+  uuid: UUID,
+  referential_version: 1,
+  levels: { 'FON-01-01': 2 },
+  selections: { current: [], later: [] },
+};
+
+const valider = (audit) => validerEtNormaliser({
+  referentiel: referentielAudit,
+  corps: audit === undefined ? { ...corpsDeBase } : { ...corpsDeBase, audit },
+});
+
+async function testerAuditSnapshot() {
+  // Un snapshot écrit avant l'audit modulaire reste valide : contexte vide, pas d'erreur.
+  const sansAudit = valider(undefined);
+  assert.deepEqual(sansAudit.erreurs, []);
+  assert.deepEqual(sansAudit.blob.audit.passees, []);
+  assert.equal(sansAudit.blob.audit.derniere, null);
+  assert.ok(sansAudit.blob.audit.maj, 'la date de mise à jour est posée par le serveur');
+
+  // Accepté, dédoublonné, repère de reprise conservé tel quel.
+  const accepte = valider({
+    passees: ['FON-01-02', 'FON-01-02'],
+    derniere: { dimensionId: 'FON', themeId: 'theme-un', code: 'FON-01-01' },
+  });
+  assert.deepEqual(accepte.erreurs, []);
+  assert.deepEqual(accepte.blob.audit.passees, ['FON-01-02']);
+  assert.deepEqual(accepte.blob.audit.derniere, { dimensionId: 'FON', themeId: 'theme-un', code: 'FON-01-01' });
+
+  // Un code absent du référentiel est refusé, pas filtré en silence.
+  const inconnu = valider({ passees: ['ZZZ-99-99'] });
+  assert.match(inconnu.erreurs.join(' '), /absents du référentiel/);
+
+  // Borne dure : jamais plus de codes passés qu'il n'existe de compétences.
+  const trop = valider({ passees: ['FON-01-01', 'FON-01-02', 'FON-01-03'] });
+  assert.ok(trop.erreurs.some((message) => /limité à 2 codes/.test(message)));
+
+  // Mauvais type : refusé avant même de regarder les codes.
+  const mauvaisType = valider({ passees: 'FON-01-01' });
+  assert.match(mauvaisType.erreurs.join(' '), /tableau de codes/);
+  const auditTableau = validerEtNormaliser({ referentiel: referentielAudit, corps: { ...corpsDeBase, audit: [] } });
+  assert.match(auditTableau.erreurs.join(' '), /audit doit être un objet/);
+
+  // Repère hors borne : abandonné, sans faire échouer l'enregistrement.
+  const perime = valider({ passees: [], derniere: { dimensionId: 'x'.repeat(200), themeId: 'theme-un', code: 'FON-01-01' } });
+  assert.deepEqual(perime.erreurs, []);
+  assert.equal(perime.blob.audit.derniere, null);
+
+  // Relecture : le contexte repart tel quel vers le navigateur, vide si le blob n'en a pas.
+  const relu = composerEtat({ referentiel: referentielAudit, snapshot: { blob: accepte.blob } });
+  assert.deepEqual(relu.audit.passees, ['FON-01-02']);
+  assert.deepEqual(composerEtat({ referentiel: referentielAudit, snapshot: null }).audit.passees, []);
+}
+
 Promise.resolve()
   .then(testerAcces)
   .then(testerEvenements)
-  .then(() => console.log('Fonctions accès et suivi prospect : OK'))
+  .then(testerAuditSnapshot)
+  .then(() => console.log('Fonctions accès, suivi prospect et contexte d\'audit : OK'))
   .catch((erreur) => {
     console.error(erreur);
     process.exit(1);
