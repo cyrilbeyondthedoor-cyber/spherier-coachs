@@ -1160,6 +1160,12 @@
      qu'une seule ligne sur grand écran, autant de hauteur rendue aux marches. */
   .situer-astuce { flex: 1 1 260px; min-width: 0; font-size: 14px; color: var(--stone);
     font-family: 'Inter Tight', sans-serif; font-style: normal; }
+  /* Sous 720 px les 260 px ne tiennent plus à côté des boutons : sans `order`, l'astuce
+     se glissait ENTRE eux et le pied faisait trois lignes. Elle repasse en dessous, les
+     deux boutons partagent la première. */
+  @media (max-width: 720px) {
+    .situer-astuce { order: 3; flex-basis: 100%; }
+  }
 
   /* Fin de bloc : le moment où l'on propose d'enregistrer, pour pouvoir s'y reprendre. */
   .situer-bilan { text-align: center; padding: 12px 0 4px; }
