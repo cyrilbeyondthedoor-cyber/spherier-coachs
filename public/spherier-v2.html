@@ -4502,8 +4502,7 @@
   function suiteDeCategorie(dimension) {
     const restantes = dimensionsRestantesCategorie(dimension);
     if (restantes.length === 0) return null;
-    const categorie = CATEGORIES.find((item) => item.id === parcoursCategorie.categorieId);
-    return { dimension: restantes[0], reste: restantes.length, categorie };
+    return { dimension: restantes[0], reste: restantes.length };
   }
 
   function evaluerCategorie(categorieId) {
@@ -4705,11 +4704,6 @@
     document.body.dataset.panneau = 'choix-theme';
   }
 
-  // --- Fin de thématique --------------------------------------------------------
-  // La thématique terminée est le point d'enregistrement : c'est la promesse faite sur
-  // l'accueil, et c'est la pause naturelle du parcours. Plus de coupure arbitraire
-  // toutes les trente compétences, qui tombait de toute façon au mauvais endroit dès
-  // qu'une compétence avait été passée.
   // --- Écran d'encouragement de fin de thématique --------------------------------
   // Il s'intercale entre la dernière compétence et le résultat, et seulement quand des
   // compétences ont été mises de côté.
@@ -4750,6 +4744,11 @@
     });
   }
 
+  // --- Fin de thématique --------------------------------------------------------
+  // La thématique terminée est le point d'enregistrement : c'est la promesse faite sur
+  // l'accueil, et c'est la pause naturelle du parcours. Plus de coupure arbitraire
+  // toutes les trente compétences, qui tombait de toute façon au mauvais endroit dès
+  // qu'une compétence avait été passée.
   async function terminerTheme() {
     const contexte = situer && situer.contexte;
     // `enAttente` ne couvre que les 250 ms du retour visuel : sans ce second verrou, un

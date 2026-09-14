@@ -3,8 +3,11 @@
 .local/
 .env.local
 
-# Dépendances (réinstallables via package-lock.json)
+# Dépendances (réinstallables via package-lock.json). La seconde ligne vise le LIEN
+# symbolique des worktrees : « node_modules/ » ne couvre que le vrai dossier, et un
+# lien vers un chemin local a déjà failli partir sur un dépôt public.
 node_modules/
+node_modules
 
 # Artefacts Netlify / Deno
 .netlify/
