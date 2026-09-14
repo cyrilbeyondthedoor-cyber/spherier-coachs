@@ -1550,6 +1550,162 @@
     .titre h1 { font-size: 32px; }
     .titre h1::before, .titre h1::after { margin: 0 8px; }
   }
+
+  /* ============================================================
+     AUDIT MODULAIRE — écrans de choix, de résultat et de suite
+     ============================================================
+     Classes NOUVELLES uniquement (`.choix-*` et `.audit-*` inédites) : les règles
+     existantes sont retravaillées ailleurs, rien n'est modifié ici. */
+
+  .audit-depart-texte .audit-reprise { margin-top: 5px; color: var(--gold-bright); font-size: 11.5px; }
+  .audit-depart-texte .audit-reprise[hidden] { display: none; }
+
+  .choix-ecran { display: grid; gap: 22px; padding-bottom: 8px; }
+  .choix-intro { margin-top: 8px; color: var(--paper-dim); font-size: 13px; line-height: 1.6; max-width: 62ch; }
+  .choix-groupe-titre {
+    display: flex; align-items: center; gap: 8px;
+    color: var(--cc, var(--gold)); font-size: 9.5px; letter-spacing: .2em; text-transform: uppercase;
+  }
+  .choix-groupe-titre::after { content: ''; flex: 1; height: 1px; background: var(--line-faint); }
+  .choix-grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-top: 11px; }
+  .choix-carte {
+    display: grid; gap: 7px; min-height: 44px; padding: 14px 15px; text-align: left;
+    border: 1px solid var(--line-faint); border-radius: 13px; background: rgba(240, 235, 224, .025);
+    color: inherit; font: inherit; cursor: pointer;
+    transition: border-color .18s ease, transform .18s ease, background .18s ease;
+  }
+  .choix-carte:hover { border-color: color-mix(in srgb, var(--h) 55%, transparent); background: color-mix(in srgb, var(--h) 7%, transparent); transform: translateY(-1px); }
+  .choix-carte:focus-visible { outline: 2px solid var(--h); outline-offset: 2px; }
+  .choix-carte-tete { display: flex; align-items: baseline; gap: 9px; }
+  .choix-pastille { flex-shrink: 0; width: 9px; height: 9px; border-radius: 50%; background: var(--h); }
+  .choix-carte-nom { flex: 1; font-family: 'Cormorant Garamond', serif; font-size: 18px; line-height: 1.2; }
+  .choix-carte-score, .choix-theme-meta .syn-pct { flex-shrink: 0; font-size: 11px; }
+  .choix-carte-meta { color: var(--stone); font-size: 11.5px; line-height: 1.45; }
+  .choix-jauge { display: block; height: 3px; border-radius: 2px; background: var(--line-faint); overflow: hidden; }
+  .choix-jauge i { display: block; height: 100%; background: var(--h, var(--teinte-p)); }
+
+  .choix-principal {
+    display: block; width: 100%; min-height: 44px; padding: 14px 18px; text-align: left;
+    border: 1px solid var(--teinte-p); border-radius: 13px;
+    background: color-mix(in srgb, var(--teinte-p) 14%, transparent);
+    color: var(--paper); font: inherit; font-size: 14px; cursor: pointer;
+  }
+  .choix-principal small { display: block; margin-top: 3px; color: var(--paper-dim); font-size: 11.5px; }
+  .choix-principal:hover { background: color-mix(in srgb, var(--teinte-p) 22%, transparent); }
+  .choix-acheve { color: var(--paper-dim); font-size: 13px; }
+  .choix-themes { display: grid; gap: 9px; }
+  .choix-theme {
+    display: flex; align-items: center; gap: 14px; padding: 13px 15px;
+    border: 1px solid var(--line-faint); border-radius: 13px; background: rgba(240, 235, 224, .02);
+  }
+  .choix-theme.complete { border-color: color-mix(in srgb, var(--teinte-p) 32%, transparent); }
+  .choix-theme-corps { flex: 1; min-width: 0; display: grid; gap: 5px; }
+  .choix-theme-rang { color: var(--stone); font-size: 9px; letter-spacing: .16em; text-transform: uppercase; }
+  .choix-theme-nom { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 500; line-height: 1.2; }
+  .choix-theme-def { color: var(--paper-dim); font-size: 12px; line-height: 1.5; }
+  .choix-theme-meta { color: var(--stone); font-size: 11.5px; }
+  .choix-evaluer {
+    flex-shrink: 0; min-height: 44px; padding: 10px 18px;
+    border: 1px solid var(--teinte-p); border-radius: 999px;
+    background: color-mix(in srgb, var(--teinte-p) 12%, transparent);
+    color: var(--paper); font: inherit; font-size: 12.5px; cursor: pointer;
+  }
+  .choix-evaluer:hover { background: color-mix(in srgb, var(--teinte-p) 24%, transparent); }
+  .choix-lien {
+    justify-self: start; min-height: 44px; border: 0; background: none;
+    color: var(--paper-dim); font: inherit; font-size: 12.5px; text-decoration: underline; cursor: pointer;
+  }
+  .choix-lien:hover { color: var(--paper); }
+
+  /* Sous-compteur du parcours : « Thématique 2 / 5 de Alliance ». Le membre sait où il
+     est dans le grand chapitre, pas seulement dans la page. */
+  .audit-sous-compteur { margin-top: 6px; color: var(--stone); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .audit-chapitre {
+    display: flex; align-items: center; gap: 9px; margin-bottom: 14px;
+    color: var(--teinte-p); font-size: 9.5px; letter-spacing: .2em; text-transform: uppercase;
+  }
+  .audit-chapitre::after { content: ''; flex: 1; height: 1px; background: color-mix(in srgb, var(--teinte-p) 30%, transparent); }
+
+  /* Retour visuel du clic : la marche cochée se colore avant que le parcours n'avance.
+     Sans elle, une testeuse a cru que son clic n'avait pas été pris en compte. */
+  .marche.marche-confirmee {
+    border-color: var(--teinte-p);
+    background: color-mix(in srgb, var(--teinte-p) 22%, transparent);
+  }
+
+  .audit-bilan { display: grid; gap: 18px; }
+  .audit-bilan-tete { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .audit-bilan-nom { font-family: 'Cormorant Garamond', serif; font-size: 25px; font-weight: 500; line-height: 1.15; }
+  .audit-bilan-score { font-size: 13px; }
+  .audit-bilan-score .syn-pct { font-size: 22px; }
+  .audit-bilan-chiffres { display: flex; flex-wrap: wrap; gap: 9px; }
+  .audit-bilan-chiffre {
+    flex: 1 1 120px; padding: 11px 13px; border: 1px solid var(--line-faint); border-radius: 11px;
+    background: rgba(240, 235, 224, .02);
+  }
+  .audit-bilan-chiffre dt { color: var(--stone); font-size: 9px; letter-spacing: .16em; text-transform: uppercase; }
+  .audit-bilan-chiffre dd { margin-top: 4px; font-family: 'Cormorant Garamond', serif; font-size: 23px; }
+  .audit-bilan-section { display: grid; gap: 8px; }
+  .audit-bilan-label { color: var(--gold); font-size: 9.5px; letter-spacing: .2em; text-transform: uppercase; }
+  .audit-bilan-aide { color: var(--paper-dim); font-size: 12.5px; line-height: 1.55; }
+  .audit-liste { display: grid; gap: 6px; }
+  .audit-ligne {
+    display: flex; align-items: center; gap: 12px; padding: 10px 13px;
+    border: 1px solid var(--line-faint); border-radius: 10px; background: rgba(240, 235, 224, .02);
+  }
+  .audit-ligne-nom { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.4; }
+  .audit-ligne-niveau { flex-shrink: 0; color: var(--stone); font-family: 'Cormorant Garamond', serif; font-size: 12px; font-style: italic; }
+  .audit-ligne-action {
+    flex-shrink: 0; min-height: 44px; padding: 8px 15px; border: 1px solid var(--line);
+    border-radius: 999px; background: transparent; color: var(--paper-dim); font: inherit; font-size: 11.5px; cursor: pointer;
+  }
+  .audit-ligne-action:hover { border-color: var(--teinte-p); color: var(--paper); }
+  .audit-classement { display: grid; gap: 7px; }
+  .audit-classement-ligne { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; align-items: baseline; }
+  .audit-classement-nom { font-size: 13px; }
+  .audit-classement-ligne .choix-jauge { grid-column: 1 / -1; }
+
+  .audit-echec {
+    display: grid; gap: 9px; justify-items: start; padding: 13px 15px;
+    border: 1px solid color-mix(in srgb, #e07a6a 45%, transparent); border-radius: 11px;
+    background: rgba(224, 122, 106, .08);
+  }
+  .audit-echec p { color: var(--paper-dim); font-size: 12.5px; line-height: 1.55; }
+  .audit-echec button {
+    min-height: 44px; padding: 9px 18px; border: 1px solid #e07a6a; border-radius: 999px;
+    background: transparent; color: var(--paper); font: inherit; font-size: 12.5px; cursor: pointer;
+  }
+
+  .audit-poursuivre { display: grid; gap: 10px; padding-top: 4px; border-top: 1px solid var(--line-faint); }
+  .audit-poursuivre-titre { margin-top: 14px; color: var(--gold); font-size: 9.5px; letter-spacing: .2em; text-transform: uppercase; }
+  .audit-suites { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 9px; }
+  .audit-suite-choix {
+    display: grid; gap: 3px; min-height: 44px; padding: 13px 15px; text-align: left;
+    border: 1px solid var(--line-faint); border-radius: 12px; background: rgba(240, 235, 224, .022);
+    color: var(--paper); font: inherit; font-size: 13px; cursor: pointer;
+    transition: border-color .18s ease, background .18s ease;
+  }
+  .audit-suite-choix small { color: var(--stone); font-size: 11px; line-height: 1.4; }
+  .audit-suite-choix:hover { border-color: var(--line); background: rgba(240, 235, 224, .05); }
+  .audit-suite-choix.principal {
+    border-color: var(--gold); background: rgba(201, 166, 97, .16);
+  }
+  .audit-suite-choix.principal small { color: var(--paper-dim); }
+  .audit-suite-choix.principal:hover { background: rgba(201, 166, 97, .24); }
+
+  @media (max-width: 720px) {
+    .choix-grille { grid-template-columns: 1fr; }
+    .choix-theme { flex-direction: column; align-items: stretch; }
+    .choix-evaluer { width: 100%; }
+    .audit-suites { grid-template-columns: 1fr; }
+    .audit-ligne { flex-wrap: wrap; }
+    .audit-ligne-action { width: 100%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .choix-carte, .audit-suite-choix { transition: none; }
+    .choix-carte:hover { transform: none; }
+  }
 </style>
 </head>
 <body>
@@ -1661,10 +1817,11 @@
   <section class="niveaux-accueil" id="niveaux-accueil" hidden aria-label="Progression par niveau de compétence"></section>
 
   <div class="audit-depart" id="audit-depart" hidden>
-    <p class="audit-depart-texte"><b>Commence par ton audit initial</b><span id="audit-meta">192 compétences · marque une pause toutes les 30 compétences.</span></p>
+    <p class="audit-depart-texte"><b id="audit-titre">Commence ton audit</b><span id="audit-meta"></span><span class="audit-reprise" id="audit-reprise" hidden></span></p>
     <div class="audit-actions">
       <button type="button" class="audit-rdv-secondaire" id="audit-rdv-accueil">Réserver un échange</button>
-      <button type="button" class="audit-cta" id="audit-cta">Commencer mon audit initial</button>
+      <button type="button" class="audit-rdv-secondaire" id="audit-synthese" hidden>Voir ma synthèse</button>
+      <button type="button" class="audit-cta" id="audit-cta">Commencer mon audit</button>
     </div>
   </div>
 
@@ -1808,6 +1965,9 @@
   const elAuditDepart = document.getElementById('audit-depart');
   const elAuditMeta = document.getElementById('audit-meta');
   const elAuditCta = document.getElementById('audit-cta');
+  const elAuditTitre = document.getElementById('audit-titre');
+  const elAuditReprise = document.getElementById('audit-reprise');
+  const elAuditSynthese = document.getElementById('audit-synthese');
   const elPortail = document.getElementById('portail');
   const elPortailFormulaire = document.getElementById('portail-formulaire');
   const elPortailConfirmation = document.getElementById('portail-confirmation');
@@ -3204,13 +3364,16 @@
   // au positionnement initial d'une dimension entière et aux 7 compétences du thème du
   // mois en séance. L'appelant décide ce qu'il y met.
   //
-  // L'enregistrement est proposé à la fin de chaque bloc, pour qu'un membre puisse s'y
-  // reprendre en plusieurs fois sans rien perdre.
-  const TAILLE_BLOC = 30;
-
+  // En audit modulaire, l'unité est la thématique : l'enregistrement se fait à sa fin,
+  // et c'est là que le parcours propose une suite. En exploration libre (mode
+  // standard, depuis la carte), le bilan reste une simple proposition d'enregistrer.
+  //
+  // `contexte` porte la place de la liste dans le sphérier : `{ dimensionId, themeId,
+  // suite }`. Sans lui, l'écran ne sait pas dire « Thématique 2 / 5 de Alliance » ni
+  // vers quoi enchaîner.
   let situer = null;
 
-  function ouvrirMeSituer({ codes, titre, teinte = '#c9a661', depart = 0, mode = 'standard' }) {
+  function ouvrirMeSituer({ codes, titre, teinte = '#c9a661', depart = null, mode = 'standard', contexte = null }) {
     const liste = codes.filter((c) => etat.referentiel.competencies.some((x) => x.id === c));
     if (liste.length === 0) return;
     configurerPleinEcran(false);
@@ -3220,11 +3383,14 @@
       titre,
       teinte,
       mode,
-      index: depart,
-      // Position de départ du bloc courant : sert à ne proposer l'enregistrement
-      // qu'au bout d'une portion, et à afficher un bilan de ce qui vient d'être fait.
-      debutBloc: depart,
-      situeesAuDebut: liste.filter((c) => (brouillon.levels[c] ?? 0) > 0).length,
+      contexte,
+      // Sans position imposée, on entre là où il reste quelque chose à faire : c'est la
+      // règle de reprise, et elle vaut aussi pour une première ouverture.
+      index: depart === null ? departAudit(liste) : depart,
+      situeesAuDebut: liste.filter((c) => estEvaluee(c)).length,
+      // Le passage automatique à la compétence suivante est différé de 250 ms pour
+      // laisser voir la marche cochée : pendant ce délai, un second clic est ignoré.
+      enAttente: false,
     };
     competenceAffichee = null;
     themeAffiche = null;
@@ -3234,8 +3400,13 @@
     document.body.dataset.panneau = 'situer';
   }
 
-  function finDeBloc(i) {
-    return i > situer.debutBloc && (i - situer.debutBloc) % TAILLE_BLOC === 0;
+  // Entrée dans une liste : d'abord ce qui reste à faire, puis ce qui a été passé, et
+  // à défaut la fin de la liste — ce qui mène droit au résultat.
+  function departAudit(codes) {
+    const aFaire = codes.findIndex(estAFaire);
+    if (aFaire >= 0) return aFaire;
+    const passee = codes.findIndex(estPassee);
+    return passee >= 0 ? passee : codes.length;
   }
 
   function miniCarteAudit(codeActif, agrandie = false) {
@@ -3259,9 +3430,11 @@
   function rendreMeSituer() {
     if (!situer) return;
 
-    // Fin de parcours ou fin de bloc : on s'arrête pour proposer d'enregistrer.
-    if (situer.index >= situer.codes.length || finDeBloc(situer.index)) {
-      rendreBilanMeSituer();
+    // Fin de la liste. En audit modulaire, la thématique se referme sur son résultat ;
+    // en exploration libre, on propose seulement d'enregistrer.
+    if (situer.index >= situer.codes.length) {
+      if (situer.contexte) terminerTheme();
+      else rendreBilanMeSituer();
       return;
     }
 
@@ -3269,18 +3442,31 @@
     const c = etat.referentiel.competencies.find((x) => x.id === code);
     const theme = etat.referentiel.themes.find((t) => t.id === c.theme);
     const niveau = brouillon.levels[code] ?? 0;
-    const situees = situer.codes.filter((x) => (brouillon.levels[x] ?? 0) > 0).length;
+
+    // Avancement par section : « 4 / 8 » dans la thématique, et le rang de la
+    // thématique dans sa dimension. « 12 / 192 » ne disait rien de la distance
+    // restante avant la prochaine pause possible.
+    const contexte = situer.contexte;
+    const dimension = contexte ? dimensionParId(contexte.dimensionId) : null;
+    const themesDim = dimension ? themesDeDimension(dimension) : [];
+    const rang = contexte ? themesDim.findIndex((item) => item.id === contexte.themeId) + 1 : 0;
+    noterDerniere(contexte, code);
 
     elPanneauTete.innerHTML = `
-      <p class="panneau-fil">M'évaluer <span>›</span> <b>${echapper(situer.titre)}</b></p>
+      <p class="panneau-fil">M'évaluer <span>›</span> ${dimension ? `${echapper(dimension.name)} <span>›</span> ` : ''}<b>${echapper(situer.titre)}</b></p>
       <div class="situer-progres">
         <span class="situer-jauge"><i style="width:${Math.round((situer.index / situer.codes.length) * 100)}%"></i></span>
         <span class="situer-compte">${situer.index + 1} / ${situer.codes.length}</span>
-      </div>`;
+      </div>
+      ${dimension && rang > 0
+        ? `<p class="audit-sous-compteur">Thématique ${rang} / ${themesDim.length} de ${echapper(dimension.name)}</p>`
+        : ''}`;
 
     elPanneauCorps.innerHTML = `
       <div class="situer-layout"><div class="situer">
-        <p class="situer-fil">${echapper(theme ? theme.name : '')}</p>
+        ${dimension
+          ? `<p class="audit-chapitre">${echapper(dimension.name)}</p><p class="situer-fil">${echapper(theme ? theme.name : '')}</p>`
+          : `<p class="situer-fil">${echapper(theme ? theme.name : '')}</p>`}
         <p class="situer-difficulte">Niveau de la compétence : ${pastilleDifficulte(c)}</p>
         <h2 class="situer-nom" id="panneau-titre">${echapper(c.name)}</h2>
         ${(c.statement || c.definition) && (c.statement || c.definition) !== c.name
@@ -3291,17 +3477,22 @@
           <button type="button" class="situer-btn situer-passer" id="situer-passer">
             ${niveau > 0 ? 'Suivante →' : 'Passer →'}
           </button>
-          <p class="situer-astuce">${niveau > 0
+          <p class="situer-astuce" id="situer-astuce">${niveau > 0
             ? `Déjà évalué à « ${echapper(etat.referentiel.scale[niveau])} ». Reclique sur ta marche pour l'effacer.`
-            : 'Coche une marche, ou passe : tu pourras y revenir.'}</p>
+            : (estPassee(code)
+              ? 'Tu avais passé cette compétence. Coche une marche pour la situer.'
+              : 'Coche une marche, ou passe : tu pourras y revenir.')}</p>
         </div>
       </div><aside>${miniCarteAudit(code)}</aside></div>
       <div class="audit-carte-overlay" id="audit-carte-overlay" hidden><button type="button" class="audit-carte-fermer" id="audit-carte-fermer">Revenir à la question</button>${miniCarteAudit(code, true)}</div>`;
     elPanneauCorps.scrollTop = 0;
 
     // Cocher une marche fait avancer tout seul : c'est ce qui rend le parcours fluide.
+    // Le passage est retardé de 250 ms, marche colorée et astuce explicite : sans ce
+    // retour, une testeuse a cru que son clic n'avait pas été pris en compte.
     elPanneauCorps.querySelectorAll('.marche[data-niveau]').forEach((btn) => {
       btn.addEventListener('click', () => {
+        if (situer.enAttente) return;
         const n = Number(btn.dataset.niveau);
         const avant = brouillon.levels[code] ?? 0;
         definirNiveau(code, n);
@@ -3309,11 +3500,20 @@
         if (avant !== n) retirerDesPassees(code);
         // Décocher (recliquer sur sa propre marche) ne doit pas faire avancer :
         // le membre corrige, il ne valide pas.
-        if (avant === n) rendreMeSituer();
-        else avancerMeSituer();
+        if (avant === n) { rendreMeSituer(); return; }
+        situer.enAttente = true;
+        btn.classList.add('marche-confirmee');
+        const astuce = document.getElementById('situer-astuce');
+        if (astuce) astuce.textContent = 'Enregistré, compétence suivante.';
+        setTimeout(() => {
+          if (!situer) return;
+          situer.enAttente = false;
+          avancerMeSituer();
+        }, DELAI_CONFIRMATION);
       });
     });
     document.getElementById('situer-passer').addEventListener('click', () => {
+      if (situer.enAttente) return;
       // « Passer » est une décision, pas un oubli : elle se retient, pour que la
       // reprise ne redemande pas ce que le membre a déjà mis de côté.
       if (!estEvaluee(code)) marquerPassee(code);
@@ -3338,71 +3538,40 @@
     rendreMeSituer();
   }
 
+  // Bilan de l'exploration libre : une liste ouverte depuis la carte n'appartient à
+  // aucune thématique, elle n'a donc ni score ni suite à proposer. Le parcours d'audit,
+  // lui, passe par `terminerTheme` et son écran de résultat.
   function rendreBilanMeSituer() {
-    const termine = situer.index >= situer.codes.length;
-    const situees = situer.codes.filter((x) => (brouillon.levels[x] ?? 0) > 0).length;
+    const situees = situer.codes.filter(estEvaluee).length;
     const nouvelles = Math.max(0, situees - situer.situeesAuDebut);
-    const restantes = situer.codes.length - situer.index;
-    const auditInitial = situer.mode === 'audit';
-    const nonEvaluees = auditInitial
-      ? etat.referentiel.competencies.filter((c) => (brouillon.levels[c.id] ?? 0) === 0).map((c) => c.id)
-      : [];
-    const auditComplet = auditInitial && nonEvaluees.length === 0;
 
     elPanneauTete.innerHTML = `
       <p class="panneau-fil">M'évaluer <span>›</span> <b>${echapper(situer.titre)}</b></p>
       <div class="situer-progres">
-        <span class="situer-jauge"><i style="width:${Math.round((situer.index / situer.codes.length) * 100)}%"></i></span>
+        <span class="situer-jauge"><i style="width:100%"></i></span>
         <span class="situer-compte">${situer.index} / ${situer.codes.length}</span>
       </div>`;
 
     elPanneauCorps.innerHTML = `
       <div class="situer-bilan">
         <span class="mark">✧</span>
-        <h3>${auditComplet ? 'Ton audit est complet.' : (termine ? 'Tu as parcouru toute la liste.' : 'Une pause ?')}</h3>
-        <p>${termine
-          ? (auditInitial && nonEvaluees.length
-            ? `Il te reste ${nonEvaluees.length} compétence${nonEvaluees.length > 1 ? 's' : ''} à évaluer avant d'accéder à ta synthèse.`
-            : "Rien n'est encore enregistré. Tu peux le faire maintenant, ou continuer à explorer la carte.")
-          : `Il te reste ${restantes} compétence${restantes > 1 ? 's' : ''}. Enregistre ce que tu viens de faire, tu reprendras où tu en es.`}</p>
+        <h3>Tu as parcouru toute la liste.</h3>
+        <p>Rien n'est encore enregistré. Tu peux le faire maintenant, ou continuer à explorer la carte.</p>
         <dl class="situer-bilan-chiffres">
           <div><dt>Évaluées à l'instant</dt><dd>${nouvelles}</dd></div>
           <div><dt>Évaluées en tout</dt><dd>${situees}<span style="color:var(--stone);font-size:15px"> / ${situer.codes.length}</span></dd></div>
         </dl>
         <div class="situer-pied" style="justify-content:center">
-          ${termine ? '' : '<button type="button" class="situer-btn" id="situer-continuer">Continuer →</button>'}
-          ${auditComplet
-            ? '<button type="button" class="situer-btn" id="situer-synthese" style="border-color:var(--gold);background:var(--gold);color:var(--night-deep)">Enregistrer et voir ma synthèse</button>'
-            : (auditInitial && termine
-              ? '<button type="button" class="situer-btn" id="situer-completer" style="border-color:var(--gold);background:rgba(201,166,97,.16);color:var(--gold-bright)">Terminer mon audit</button>'
-              : '<button type="button" class="situer-btn" id="situer-enregistrer" style="border-color:var(--gold);background:rgba(201,166,97,.16);color:var(--gold-bright)">Enregistrer</button>')}
+          <button type="button" class="situer-btn" id="situer-enregistrer" style="border-color:var(--gold);background:rgba(201,166,97,.16);color:var(--gold-bright)">Enregistrer</button>
           <button type="button" class="situer-btn" id="situer-fermer">Revenir à la carte</button>
         </div>
       </div>`;
     elPanneauCorps.scrollTop = 0;
 
-    const continuer = document.getElementById('situer-continuer');
-    if (continuer) continuer.addEventListener('click', () => {
-      situer.debutBloc = situer.index;
-      situer.situeesAuDebut = situer.codes.filter((x) => (brouillon.levels[x] ?? 0) > 0).length;
-      rendreMeSituer();
-    });
-    const enregistrerBloc = document.getElementById('situer-enregistrer');
-    if (enregistrerBloc) enregistrerBloc.addEventListener('click', async () => {
+    document.getElementById('situer-enregistrer').addEventListener('click', async () => {
       await enregistrer();
-      situer.situeesAuDebut = situer.codes.filter((x) => (brouillon.levels[x] ?? 0) > 0).length;
+      situer.situeesAuDebut = situer.codes.filter(estEvaluee).length;
       rendreBilanMeSituer();
-    });
-    const completer = document.getElementById('situer-completer');
-    if (completer) completer.addEventListener('click', () => ouvrirMeSituer({
-      codes: nonEvaluees,
-      titre: 'Compétences restantes',
-      mode: 'audit',
-    }));
-    const synthese = document.getElementById('situer-synthese');
-    if (synthese) synthese.addEventListener('click', async () => {
-      const ok = await enregistrer();
-      if (ok) ouvrirResultatAudit(false);
     });
     document.getElementById('situer-fermer').addEventListener('click', fermerPanneau);
   }
@@ -3423,17 +3592,24 @@
   const estPassee = (code) => !estEvaluee(code) && (brouillon.passees || []).includes(code);
   const estAFaire = (code) => !estEvaluee(code) && !estPassee(code);
 
+  // Délai avant le passage automatique à la compétence suivante, le temps de voir la
+  // marche se colorer.
+  const DELAI_CONFIRMATION = 250;
+
   // Le brouillon local est effacé dès que rien ne diffère de la référence : les
-  // compétences passées et le repère de reprise, eux, doivent survivre à ce cas.
-  // On les réécrit donc à la main quand l'enregistrement automatique les a laissés
-  // de côté.
+  // compétences passées et le repère de reprise, eux, doivent survivre à ce cas —
+  // ils décrivent un parcours, pas une modification en attente. On les réécrit donc
+  // à la main quand l'écriture automatique vient de les emporter.
+  function persisterAudit() {
+    if ((brouillon.passees || []).length === 0 && !brouillon.derniere) return;
+    try {
+      localStorage.setItem(cleBrouillon(), JSON.stringify({ ...brouillon, le: Date.now() }));
+    } catch { /* stockage indisponible : on continue sans filet */ }
+  }
+
   function memoriserAudit() {
     appliquerChangement(() => {});
-    if (!estModifie() && ((brouillon.passees || []).length > 0 || brouillon.derniere)) {
-      try {
-        localStorage.setItem(cleBrouillon(), JSON.stringify({ ...brouillon, le: Date.now() }));
-      } catch { /* stockage indisponible : on continue sans filet */ }
-    }
+    persisterAudit();
   }
 
   function marquerPassee(code) {
@@ -3448,11 +3624,15 @@
     memoriserAudit();
   }
 
-  // Repère de reprise : où le membre en était, à la compétence près.
+  // Repère de reprise : où le membre en était, à la compétence près. Simple signet,
+  // donc on l'écrit sans repasser par un redessin complet de la carte.
   function noterDerniere(contexte, code) {
     if (!contexte) return;
+    const avant = brouillon.derniere;
+    if (avant && avant.themeId === contexte.themeId && avant.code === code) return;
     brouillon.derniere = { dimensionId: contexte.dimensionId, themeId: contexte.themeId, code };
-    memoriserAudit();
+    persisterAudit();
+    majAuditInitial();
   }
 
   // --- Lecture d'une thématique et d'une dimension -----------------------------
@@ -3515,6 +3695,368 @@
     return etat.referentiel.themes.find((theme) => theme.id === themeId);
   }
 
+  // --- Entrées dans le parcours ------------------------------------------------
+  // Évaluer une thématique. `suite` dit ce que le membre a demandé en arrivant :
+  // cette thématique seule, ou la dimension entière — l'écran de résultat s'en sert
+  // pour proposer la bifurcation la plus probable en premier.
+  function evaluerTheme(dimensionId, themeId, suite = 'theme') {
+    const dimension = dimensionParId(dimensionId);
+    const theme = themeParId(themeId);
+    if (!dimension || !theme) { ouvrirChoixDimension(); return; }
+    ouvrirMeSituer({
+      codes: codesDeTheme(theme.id),
+      titre: theme.name,
+      teinte: TEINTES_HEX[dimension.id] || '#c9a661',
+      mode: 'audit',
+      contexte: { dimensionId: dimension.id, themeId: theme.id, suite },
+    });
+  }
+
+  // « Évaluer toute la dimension » : on enchaîne les thématiques non complètes dans
+  // l'ordre, une à la fois, avec un résultat entre chacune.
+  function evaluerDimension(dimensionId) {
+    const dimension = dimensionParId(dimensionId);
+    if (!dimension) { ouvrirChoixDimension(); return; }
+    const suivante = themesDeDimension(dimension).find((theme) => !etatTheme(theme).complete);
+    if (!suivante) { ouvrirResultatDimension(dimension.id); return; }
+    evaluerTheme(dimension.id, suivante.id, 'dimension');
+  }
+
+  // Reprise : on retourne là où le membre s'est arrêté, à la compétence près. Sans
+  // repère utilisable — première visite, ou thématique terminée depuis — on repose la
+  // question du départ plutôt que d'imposer un point de reprise arbitraire.
+  function reprendreAudit() {
+    const repere = brouillon.derniere;
+    const theme = repere ? themeParId(repere.themeId) : null;
+    const dimension = repere ? dimensionParId(repere.dimensionId) : null;
+    if (theme && dimension && !etatTheme(theme).complete) {
+      evaluerTheme(dimension.id, theme.id, 'theme');
+      return;
+    }
+    ouvrirChoixDimension();
+  }
+
+  // --- Écran « Choisir une dimension » -----------------------------------------
+  function preparerEcranAudit(teinte = '#c9a661') {
+    configurerPleinEcran(true);
+    situer = null;
+    competenceAffichee = null;
+    themeAffiche = null;
+    elPanneau.style.setProperty('--teinte-p', teinte);
+  }
+
+  function jauge(faits, total) {
+    const pct = total ? Math.round((faits / total) * 100) : 0;
+    return `<span class="choix-jauge" aria-hidden="true"><i style="width:${pct}%"></i></span>`;
+  }
+
+  function ouvrirChoixDimension() {
+    preparerEcranAudit();
+    const total = etat.referentiel.competencies.length;
+    const evaluees = etat.referentiel.competencies.filter((competence) => estEvaluee(competence.id)).length;
+
+    elPanneauTete.innerHTML = `
+      <p class="panneau-fil"><b>Mon audit</b></p>
+      <h2 class="panneau-titre" id="panneau-titre">Choisis une dimension</h2>
+      <p class="choix-intro">${evaluees} / ${total} compétences évaluées. Tu descendras ensuite thématique par thématique, et tu pourras t'arrêter à la fin de chacune.</p>`;
+
+    const groupes = CATEGORIES.map((categorie) => {
+      const dimensions = etat.referentiel.dimensions.filter((dimension) => dimension.category === categorie.id);
+      if (dimensions.length === 0) return '';
+      const cartes = dimensions.map((dimension) => {
+        const info = etatDimension(dimension);
+        return `<button type="button" class="choix-carte" data-choix-dimension="${echapper(dimension.id)}" style="--h:${echapper(TEINTES_HEX[dimension.id] || '#c9a661')}">
+          <span class="choix-carte-tete">
+            <span class="choix-pastille" aria-hidden="true"></span>
+            <span class="choix-carte-nom">${echapper(dimension.name)}</span>
+            ${info.complete ? `<span class="choix-carte-score">${pctHtml(info.score)}</span>` : ''}
+          </span>
+          <span class="choix-carte-meta">${info.themes.length} thématique${info.themes.length > 1 ? 's' : ''} · ${info.evaluees} / ${info.codes.length} compétences évaluées</span>
+          ${jauge(info.evaluees, info.codes.length)}
+        </button>`;
+      }).join('');
+      return `<section class="choix-groupe">
+        <p class="choix-groupe-titre" style="--cc:${echapper(categorie.couleur || '#c9a661')}">${echapper(categorie.name)}</p>
+        <div class="choix-grille">${cartes}</div>
+      </section>`;
+    }).join('');
+
+    elPanneauCorps.innerHTML = `<div class="choix-ecran">${groupes}</div>`;
+    elPanneauCorps.scrollTop = 0;
+    elPanneauCorps.querySelectorAll('[data-choix-dimension]').forEach((bouton) => {
+      bouton.addEventListener('click', () => ouvrirChoixTheme(bouton.dataset.choixDimension));
+    });
+
+    afficherPanneau();
+    document.body.dataset.panneau = 'choix-dimension';
+  }
+
+  // --- Écran « Choisir une thématique » ----------------------------------------
+  function ouvrirChoixTheme(dimensionId) {
+    const dimension = dimensionParId(dimensionId);
+    if (!dimension) { ouvrirChoixDimension(); return; }
+    const teinte = TEINTES_HEX[dimension.id] || '#c9a661';
+    preparerEcranAudit(teinte);
+    const info = etatDimension(dimension);
+    const restantes = info.themes.filter((item) => !item.complete);
+
+    elPanneauTete.innerHTML = `
+      <p class="panneau-fil">Mon audit <span>›</span> <b>${echapper(dimension.name)}</b></p>
+      <h2 class="panneau-titre" id="panneau-titre">Choisis une thématique</h2>
+      <p class="choix-intro">${echapper(dimension.definition_ui || dimension.definition || '')}</p>`;
+
+    const lignes = info.themes.map((item, index) => {
+      const avancement = item.complete
+        ? `${item.evaluees.length} / ${item.codes.length} évaluées${item.passees.length ? ` · ${item.passees.length} passée${item.passees.length > 1 ? 's' : ''}` : ''}`
+        : `${item.evaluees.length} / ${item.codes.length} évaluées`;
+      return `<article class="choix-theme${item.complete ? ' complete' : ''}">
+        <div class="choix-theme-corps">
+          <p class="choix-theme-rang">Thématique ${index + 1} / ${info.themes.length}</p>
+          <h3 class="choix-theme-nom">${echapper(item.theme.name)}</h3>
+          ${item.theme.definition ? `<p class="choix-theme-def">${echapper(item.theme.definition)}</p>` : ''}
+          <p class="choix-theme-meta">${item.codes.length} compétence${item.codes.length > 1 ? 's' : ''} · ${avancement}${item.complete ? ` · ${pctHtml(item.score)} de maîtrise` : ''}</p>
+          ${jauge(item.evaluees.length, item.codes.length)}
+        </div>
+        <button type="button" class="choix-evaluer" data-evaluer-theme="${echapper(item.theme.id)}">${item.complete ? 'Revoir' : (item.evaluees.length + item.passees.length > 0 ? 'Continuer' : 'Évaluer')}</button>
+      </article>`;
+    }).join('');
+
+    elPanneauCorps.innerHTML = `<div class="choix-ecran">
+      ${restantes.length > 0
+        ? `<button type="button" class="choix-principal" id="choix-toute-dimension">Évaluer toute la dimension<small>${restantes.length} thématique${restantes.length > 1 ? 's' : ''} restante${restantes.length > 1 ? 's' : ''}, enchaînées dans l'ordre</small></button>`
+        : `<p class="choix-acheve">Cette dimension est complète : ${pctHtml(info.score)} de maîtrise.</p>`}
+      <div class="choix-themes">${lignes}</div>
+      <button type="button" class="choix-lien" id="choix-changer-dimension">Changer de dimension</button>
+    </div>`;
+    elPanneauCorps.scrollTop = 0;
+
+    const toute = document.getElementById('choix-toute-dimension');
+    if (toute) toute.addEventListener('click', () => evaluerDimension(dimension.id));
+    elPanneauCorps.querySelectorAll('[data-evaluer-theme]').forEach((bouton) => {
+      bouton.addEventListener('click', () => evaluerTheme(dimension.id, bouton.dataset.evaluerTheme, 'theme'));
+    });
+    document.getElementById('choix-changer-dimension').addEventListener('click', ouvrirChoixDimension);
+
+    afficherPanneau();
+    document.body.dataset.panneau = 'choix-theme';
+  }
+
+  // --- Fin de thématique --------------------------------------------------------
+  // La thématique terminée est le point d'enregistrement : c'est la promesse faite sur
+  // l'accueil, et c'est la pause naturelle du parcours. Plus de coupure arbitraire
+  // toutes les trente compétences, qui tombait de toute façon au mauvais endroit dès
+  // qu'une compétence avait été passée.
+  async function terminerTheme() {
+    const contexte = situer && situer.contexte;
+    if (!contexte) return;
+    const { dimensionId, themeId, suite } = contexte;
+    const theme = themeParId(themeId);
+
+    let enregistrement = 'inutile';
+    if (estModifie()) {
+      // Libellé automatique quand le membre n'en a pas saisi : un point d'étape sans
+      // nom se retrouve mal dans l'historique.
+      if (!elLibelle.value.trim()) {
+        const jour = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+        elLibelle.value = `${theme ? theme.name : 'Thématique'}, ${jour}`;
+      }
+      enregistrement = (await enregistrer()) ? 'ok' : 'echec';
+    }
+    ouvrirResultatTheme({ dimensionId, themeId, suite, enregistrement });
+  }
+
+  function competenceParCode(code) {
+    return etat.referentiel.competencies.find((competence) => competence.id === code);
+  }
+
+  // Liste de compétences avec leur niveau, et une action facultative par ligne.
+  function listeCompetences(codes, action = null) {
+    return `<div class="audit-liste">${codes.map((code) => {
+      const competence = competenceParCode(code);
+      if (!competence) return '';
+      const niveau = brouillon.levels[code] ?? 0;
+      return `<div class="audit-ligne">
+        <span class="audit-ligne-nom">${echapper(competence.name)}</span>
+        <span class="audit-ligne-niveau">${niveau ? echapper(etat.referentiel.scale[niveau]) : 'Passée'}</span>
+        ${action ? `<button type="button" class="audit-ligne-action" data-${action.cle}="${echapper(code)}">${echapper(action.libelle)}</button>` : ''}
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  // --- Écran « Poursuivre » -----------------------------------------------------
+  // Quatre sorties, jamais un cul-de-sac : la suite de la dimension, une autre
+  // thématique, une autre dimension, ou l'arrêt. Le choix mis en avant est celui que
+  // le membre a annoncé en entrant.
+  function blocPoursuivreHtml(dimension, suite) {
+    const restantes = themesDeDimension(dimension).filter((item) => !etatTheme(item).complete);
+    const suivante = restantes[0] || null;
+    const complets = themesComplets().length;
+    const totalThemes = etat.referentiel.themes.length;
+    const enchaine = suite === 'dimension' && suivante;
+
+    const choix = [
+      suivante
+        ? `<button type="button" class="audit-suite-choix${enchaine ? ' principal' : ''}" data-suite="continuer">Continuer avec la suite de cette dimension<small>${echapper(suivante.name)}</small></button>`
+        : '',
+      `<button type="button" class="audit-suite-choix${!enchaine && suivante ? ' principal' : ''}" data-suite="theme">Choisir une autre thématique de cette dimension<small>${echapper(dimension.name)}</small></button>`,
+      `<button type="button" class="audit-suite-choix${suivante ? '' : ' principal'}" data-suite="dimension">Choisir une autre dimension<small>Les ${etat.referentiel.dimensions.length} dimensions du sphérier</small></button>`,
+      `<button type="button" class="audit-suite-choix" data-suite="arreter">M'arrêter là<small>Tes réponses sont enregistrées, tu reprendras ici</small></button>`,
+    ].filter(Boolean).join('');
+
+    return `<div class="audit-poursuivre">
+      <p class="audit-poursuivre-titre">Poursuivre</p>
+      <div class="audit-suites">${choix}</div>
+      ${complets > 0
+        ? `<button type="button" class="choix-lien" data-suite="synthese">Voir ma synthèse · ${complets} thématique${complets > 1 ? 's' : ''} sur ${totalThemes} évaluée${complets > 1 ? 's' : ''}</button>`
+        : ''}
+    </div>`;
+  }
+
+  function brancherPoursuivre(dimension) {
+    elPanneauCorps.querySelectorAll('[data-suite]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        const action = bouton.dataset.suite;
+        if (action === 'continuer') evaluerDimension(dimension.id);
+        else if (action === 'theme') ouvrirChoixTheme(dimension.id);
+        else if (action === 'dimension') ouvrirChoixDimension();
+        else if (action === 'synthese') ouvrirResultatAudit(brouillon.current.length === MAX_MAINTENANT);
+        else fermerPanneau();
+      });
+    });
+  }
+
+  // --- Écran « Résultat de la thématique » --------------------------------------
+  function ouvrirResultatTheme({ dimensionId, themeId, suite = 'theme', enregistrement = 'inutile' }) {
+    const dimension = dimensionParId(dimensionId);
+    const theme = themeParId(themeId);
+    if (!dimension || !theme) { ouvrirChoixDimension(); return; }
+    const teinte = TEINTES_HEX[dimension.id] || '#c9a661';
+    preparerEcranAudit(teinte);
+
+    const info = etatTheme(theme);
+    const themesDim = themesDeDimension(dimension);
+    const rang = themesDim.findIndex((item) => item.id === theme.id) + 1;
+    // Une dimension qui vient d'être bouclée mérite son propre écran : le résultat de
+    // la thématique y mène, l'écran de suite arrive juste après.
+    const dimensionBouclee = etatDimension(dimension).complete;
+    const maitrisees = info.codes.filter((code) => (brouillon.levels[code] ?? 0) >= NIVEAU_ACQUIS).length;
+    const aTravailler = info.codes
+      .filter((code) => estEvaluee(code) && brouillon.levels[code] < NIVEAU_ACQUIS)
+      .sort((a, b) => brouillon.levels[a] - brouillon.levels[b]
+        || ((competenceParCode(a)?.order ?? 0) - (competenceParCode(b)?.order ?? 0)));
+
+    elPanneauTete.innerHTML = `
+      <p class="panneau-fil">M'évaluer <span>›</span> ${echapper(dimension.name)} <span>›</span> <b>${echapper(theme.name)}</b></p>
+      <h2 class="panneau-titre" id="panneau-titre">Résultat de la thématique</h2>
+      <p class="audit-sous-compteur">Thématique ${rang} / ${themesDim.length} de ${echapper(dimension.name)}</p>`;
+
+    elPanneauCorps.innerHTML = `<div class="audit-bilan">
+      ${enregistrement === 'echec'
+        ? `<div class="audit-echec">
+            <p>L'enregistrement n'a pas abouti. Ton résultat ci-dessous vient de cet appareil, où tout est conservé : rien n'est perdu.</p>
+            <button type="button" id="audit-reessayer">Réessayer l'enregistrement</button>
+          </div>`
+        : ''}
+      <div class="audit-bilan-tete">
+        <h3 class="audit-bilan-nom">${echapper(theme.name)}</h3>
+        <p class="audit-bilan-score">${pctHtml(info.score)} de maîtrise</p>
+      </div>
+      ${repartition(info.codes, teinte)}
+      <dl class="audit-bilan-chiffres">
+        <div class="audit-bilan-chiffre"><dt>Compétences</dt><dd>${info.codes.length}</dd></div>
+        <div class="audit-bilan-chiffre"><dt>Évaluées</dt><dd>${info.evaluees.length}</dd></div>
+        <div class="audit-bilan-chiffre"><dt>Maîtrisées</dt><dd>${maitrisees}</dd></div>
+        ${info.passees.length ? `<div class="audit-bilan-chiffre"><dt>Passées</dt><dd>${info.passees.length}</dd></div>` : ''}
+      </dl>
+      ${aTravailler.length
+        ? `<section class="audit-bilan-section">
+            <p class="audit-bilan-label">À travailler</p>
+            ${listeCompetences(aTravailler)}
+          </section>`
+        : `<p class="audit-bilan-aide">${info.evaluees.length
+            ? 'Rien à travailler ici : tu maîtrises toutes les compétences que tu as évaluées.'
+            : "Tu n'as encore évalué aucune compétence de cette thématique."}</p>`}
+      ${info.passees.length
+        ? `<section class="audit-bilan-section">
+            <p class="audit-bilan-label">Passées</p>
+            <p class="audit-bilan-aide">Tu les as mises de côté. Elles comptent comme non maîtrisées dans le score tant que tu ne les as pas situées.</p>
+            ${listeCompetences(info.passees, { cle: 'evaluerPassee', libelle: 'Évaluer maintenant' })}
+          </section>`
+        : ''}
+      ${dimensionBouclee
+        ? `<div class="audit-poursuivre">
+            <p class="audit-poursuivre-titre">Dimension terminée</p>
+            <div class="audit-suites"><button type="button" class="audit-suite-choix principal" id="audit-voir-dimension">Voir le résultat de ${echapper(dimension.name)}<small>Toutes ses thématiques sont complètes</small></button></div>
+          </div>`
+        : blocPoursuivreHtml(dimension, suite)}
+    </div>`;
+    elPanneauCorps.scrollTop = 0;
+
+    const reessayer = document.getElementById('audit-reessayer');
+    if (reessayer) reessayer.addEventListener('click', async () => {
+      const ok = await enregistrer();
+      ouvrirResultatTheme({ dimensionId, themeId, suite, enregistrement: ok ? 'ok' : 'echec' });
+    });
+    elPanneauCorps.querySelectorAll('[data-evaluer-passee]').forEach((bouton) => {
+      bouton.addEventListener('click', () => ouvrirMeSituer({
+        codes: info.passees,
+        titre: theme.name,
+        teinte,
+        mode: 'audit',
+        depart: info.passees.indexOf(bouton.dataset.evaluerPassee),
+        contexte: { dimensionId: dimension.id, themeId: theme.id, suite },
+      }));
+    });
+    const voirDimension = document.getElementById('audit-voir-dimension');
+    if (voirDimension) voirDimension.addEventListener('click', () => ouvrirResultatDimension(dimension.id, suite));
+    brancherPoursuivre(dimension);
+
+    afficherPanneau();
+    document.body.dataset.panneau = 'resultat-theme';
+  }
+
+  // --- Écran « Résultat de la dimension » ---------------------------------------
+  function ouvrirResultatDimension(dimensionId, suite = 'theme') {
+    const dimension = dimensionParId(dimensionId);
+    if (!dimension) { ouvrirChoixDimension(); return; }
+    const teinte = TEINTES_HEX[dimension.id] || '#c9a661';
+    preparerEcranAudit(teinte);
+    const info = etatDimension(dimension);
+    // De la moins à la plus maîtrisée : ce qu'on vient chercher en fin de dimension,
+    // c'est par où continuer, pas un palmarès.
+    const classement = info.themes.slice().sort((a, b) => a.score - b.score
+      || (a.theme.order ?? 0) - (b.theme.order ?? 0));
+
+    elPanneauTete.innerHTML = `
+      <p class="panneau-fil">M'évaluer <span>›</span> <b>${echapper(dimension.name)}</b></p>
+      <h2 class="panneau-titre" id="panneau-titre">Résultat de la dimension</h2>
+      <p class="audit-sous-compteur">${info.themes.length} thématique${info.themes.length > 1 ? 's' : ''} · ${info.evaluees} / ${info.codes.length} compétences évaluées</p>`;
+
+    elPanneauCorps.innerHTML = `<div class="audit-bilan">
+      <div class="audit-bilan-tete">
+        <h3 class="audit-bilan-nom">${echapper(dimension.name)}</h3>
+        <p class="audit-bilan-score">${pctHtml(info.score)} de maîtrise</p>
+      </div>
+      ${repartition(info.codes, teinte)}
+      <section class="audit-bilan-section">
+        <p class="audit-bilan-label">Tes thématiques, de la moins à la plus maîtrisée</p>
+        <div class="audit-classement">
+          ${classement.map((item) => `<div class="audit-classement-ligne" style="--h:${echapper(teinte)}">
+            <span class="audit-classement-nom">${echapper(item.theme.name)}</span>
+            <span>${pctHtml(item.score)}</span>
+            <span class="choix-jauge" aria-hidden="true"><i style="width:${item.score}%"></i></span>
+          </div>`).join('')}
+        </div>
+      </section>
+      ${blocPoursuivreHtml(dimension, suite)}
+    </div>`;
+    elPanneauCorps.scrollTop = 0;
+    brancherPoursuivre(dimension);
+
+    afficherPanneau();
+    document.body.dataset.panneau = 'resultat-dimension';
+  }
+
   let auditToutesThemes = false;
 
   function scoreThemeAudit(theme) {
@@ -3528,6 +4070,10 @@
   function themesClassesAudit() {
     return etat.referentiel.themes
       .map(scoreThemeAudit)
+      // Une thématique dont rien n'a été évalué a un score de 0 qui ne dit rien : la
+      // faire remonter en tête des zones de progression ferait choisir des priorités
+      // sur du vide, maintenant que la synthèse s'ouvre sur un audit partiel.
+      .filter(({ competences }) => competences.some((competence) => estEvaluee(competence.id)))
       .sort((a, b) => a.score - b.score || b.decouverte - a.decouverte || (a.theme.order ?? 0) - (b.theme.order ?? 0));
   }
 
@@ -3636,12 +4182,29 @@
 
     const categories = CATEGORIES.map((categorie) => categorieCielHtml(categorie, { resultat: true })).join('');
 
+    // La synthèse s'ouvre sur un audit partiel : elle montre ce qui est évalué et dit
+    // ce qui reste, sans jamais bloquer. Attendre les 192 compétences pour laisser
+    // voir quoi que ce soit était précisément ce qui donnait envie d'abandonner.
+    const complets = themesComplets().length;
+    const totalThemes = etat.referentiel.themes.length;
+    const aAmeliorer = etat.referentiel.competencies
+      .filter((competence) => {
+        const niveau = brouillon.levels[competence.id] ?? 0;
+        return niveau > 0 && niveau < NIVEAU_ACQUIS;
+      }).length;
+    // Le choix des trois priorités demande de quoi choisir : sous cinq compétences à
+    // améliorer, le tri n'en est pas un.
+    const prioritesPossibles = aAmeliorer >= 5;
+
     elPanneauCorps.innerHTML = `<section class="carte-resultat">
-      <p class="carte-resultat-intro">Voici la carte complète de ta pratique. Les pourcentages indiquent la part des compétences que tu maîtrises dans chaque territoire.</p>
+      <p class="carte-resultat-intro">Voici la carte de ta pratique. Les pourcentages indiquent la part des compétences que tu maîtrises dans chaque territoire.${
+        complets < totalThemes
+          ? ` ${complets} thématique${complets > 1 ? 's' : ''} sur ${totalThemes} évaluée${complets > 1 ? 's' : ''} : le reste s'ajoutera au fur et à mesure.`
+          : ''}</p>
       <div class="ciel-piste">${categories}</div>
       <div class="niveaux-accueil">${contenuNiveauxAccueil(true)}</div>
       <div class="carte-resultat-actions">
-        ${prioritesChoisies
+        ${prioritesChoisies || !prioritesPossibles
           ? '<button type="button" class="carte-resultat-cta" id="resultat-retour-carte">Revenir à mon sphérier</button>'
           : '<button type="button" class="carte-resultat-cta" id="resultat-priorites">Choisir mes trois priorités</button>'}
         <button type="button" class="carte-resultat-secondaire" id="resultat-lineaire">Ouvrir la vue d’ensemble linéaire</button>
@@ -4330,10 +4893,30 @@
     const total = etat.referentiel.competencies.length;
     const evaluees = etat.referentiel.competencies
       .filter((competence) => (brouillon.levels[competence.id] ?? 0) > 0).length;
-    elAuditMeta.textContent = `${total} compétences · marque une pause toutes les ${TAILLE_BLOC} compétences.`;
-    elAuditCta.textContent = evaluees === total
-      ? 'Voir ma synthèse'
-      : (evaluees > 0 ? 'Reprendre mon audit' : 'Commencer mon audit initial');
+    const dimensions = etat.referentiel.dimensions.length;
+    const themes = etat.referentiel.themes.length;
+    // Les nombres se lisent dans le référentiel plutôt que dans une phrase figée :
+    // le contenu vit dans Notion et bouge sans déploiement.
+    elAuditMeta.textContent = `${dimensions} dimensions, ${themes} thématiques, ${total} compétences. `
+      + `Tu choisis par où commencer, thématique par thématique. `
+      + `Tes réponses sont enregistrées à la fin de chaque thématique : tu peux t'arrêter et reprendre quand tu veux.`;
+
+    const commence = evaluees > 0 || (brouillon.passees || []).length > 0;
+    const termine = etat.referentiel.competencies.every((competence) => !estAFaire(competence.id));
+    elAuditTitre.textContent = commence ? 'Reprends ton audit' : 'Commence ton audit';
+    elAuditCta.textContent = termine ? 'Voir ma synthèse' : (commence ? 'Reprendre mon audit' : 'Commencer mon audit');
+
+    // Sous-texte de reprise : dire où on en est vaut mieux qu'un bouton muet devant
+    // lequel le membre se demande s'il va repartir de zéro.
+    const derniere = brouillon.derniere ? themeParId(brouillon.derniere.themeId) : null;
+    elAuditReprise.hidden = !commence;
+    elAuditReprise.textContent = commence
+      ? `Tu en es à ${evaluees} compétences évaluées sur ${total}${derniere ? `, dernière thématique : ${derniere.name}` : ''}.`
+      : '';
+
+    // La synthèse s'ouvre dès qu'une thématique est complète : rien n'oblige à finir
+    // les 192 compétences pour lire ce qui est déjà là.
+    elAuditSynthese.hidden = termine || themesComplets().length === 0;
   }
 
   let minuteurBandeau = null;
@@ -4658,18 +5241,16 @@
   document.getElementById('audit-rdv-accueil').addEventListener('click', ouvrirReservation);
 
   elAuditCta.addEventListener('click', () => {
-    const codes = ordreDeLecture(etat.referentiel.competencies).map((competence) => competence.id);
-    if (codes.every((code) => (brouillon.levels[code] ?? 0) > 0)) {
+    // Plus rien à faire : le bouton mène au résultat. Sinon il rouvre le parcours là
+    // où le membre s'était arrêté, ou pose la question du départ.
+    if (etat.referentiel.competencies.every((competence) => !estAFaire(competence.id))) {
       ouvrirResultatAudit(brouillon.current.length === MAX_MAINTENANT);
       return;
     }
-    ouvrirMeSituer({
-      codes,
-      titre: 'Audit initial',
-      depart: premiereNonSituee(codes),
-      mode: 'audit',
-    });
+    reprendreAudit();
   });
+
+  elAuditSynthese.addEventListener('click', () => ouvrirResultatAudit(brouillon.current.length === MAX_MAINTENANT));
 
   // ============================================================
   // CHARGEMENT

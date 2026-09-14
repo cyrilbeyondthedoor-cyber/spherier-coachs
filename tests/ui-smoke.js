@@ -28,17 +28,49 @@ const themes = DIMENSIONS.map((dimension, index) => ({
   order: 1,
 }));
 
-const competencies = DIMENSIONS.map((dimension, index) => ({
-  id: `${dimension.id}-01-01`,
-  theme: `theme-${dimension.id}`,
-  name: `Je sais mobiliser la compétence ${dimension.id}.`,
-  definition: `Je sais mobiliser la compétence ${dimension.id}.`,
-  statement: `Je sais mobiliser la compétence ${dimension.id}.`,
-  markers: `Un exemple observable pour ${dimension.id}.`,
-  difficulty: DIFFICULTES[index % DIFFICULTES.length].nom,
-  order: 1,
-  resources: [],
-}));
+// La première dimension porte DEUX thématiques : c'est le minimum pour éprouver
+// l'audit modulaire — le sous-compteur « Thématique 1 / 2 », l'enchaînement d'une
+// thématique à la suivante, et le résultat de dimension qui n'arrive qu'une fois les
+// deux complètes.
+const DIM_MULTI = DIMENSIONS[0];
+themes.push({
+  id: `theme-${DIM_MULTI.id}-2`,
+  code: `${DIM_MULTI.id}-02`,
+  name: `Seconde thématique ${DIM_MULTI.id}`,
+  dimension: DIM_MULTI.name,
+  definition: `Seconde définition ${DIM_MULTI.id}`,
+  feeds: [],
+  x: 420,
+  y: 260,
+  order: 2,
+});
+
+function competence(codeTheme, code, index) {
+  return {
+    id: code,
+    theme: codeTheme,
+    name: `Je sais mobiliser la compétence ${code}.`,
+    definition: `Je sais mobiliser la compétence ${code}.`,
+    statement: `Je sais mobiliser la compétence ${code}.`,
+    markers: `Un exemple observable pour ${code}.`,
+    difficulty: DIFFICULTES[index % DIFFICULTES.length].nom,
+    order: index + 1,
+    resources: [],
+  };
+}
+
+const competencies = DIMENSIONS.map((dimension, index) =>
+  competence(`theme-${dimension.id}`, `${dimension.id}-01-01`, index));
+
+// Quatre compétences dans la première thématique : de quoi passer, évaluer, et lire
+// un pourcentage qui ne soit pas un simple 0 ou 100.
+competencies.push(
+  competence(`theme-${DIM_MULTI.id}`, `${DIM_MULTI.id}-01-02`, 1),
+  competence(`theme-${DIM_MULTI.id}`, `${DIM_MULTI.id}-01-03`, 2),
+  competence(`theme-${DIM_MULTI.id}`, `${DIM_MULTI.id}-01-04`, 3),
+  competence(`theme-${DIM_MULTI.id}-2`, `${DIM_MULTI.id}-02-01`, 0),
+  competence(`theme-${DIM_MULTI.id}-2`, `${DIM_MULTI.id}-02-02`, 1),
+);
 
 const referential = {
   club: 'coachs',
@@ -73,6 +105,7 @@ const serveur = http.createServer((requete, reponse) => {
       : niveauxVides;
     return json(reponse, {
       snapshot: null,
+      audit: { passees: [], derniere: null, maj: null },
       computed: { levels, themes: etatThemes },
       notes: {},
     });
@@ -88,6 +121,11 @@ const serveur = http.createServer((requete, reponse) => {
     requete.on('data', (morceau) => { corps += morceau; });
     requete.on('end', () => {
       dernierSnapshot = JSON.parse(corps);
+      const audit = {
+        passees: dernierSnapshot.audit?.passees ?? [],
+        derniere: dernierSnapshot.audit?.derniere ?? null,
+        maj: new Date().toISOString(),
+      };
       json(reponse, {
         snapshot: {
           id: 'snapshot-test',
@@ -96,8 +134,10 @@ const serveur = http.createServer((requete, reponse) => {
           blob: {
             levels: dernierSnapshot.levels,
             selections: dernierSnapshot.selections,
+            audit,
           },
         },
+        audit,
         computed: { levels: dernierSnapshot.levels, themes: etatThemes },
       });
     });
@@ -140,16 +180,33 @@ async function principal() {
     assert.equal(await page.getByText('Niveau TTC', { exact: true }).count(), 0);
     await page.locator('#panneau-fermer').click();
     await page.getByRole('button', { name: 'Refermer le mode d’emploi' }).click();
-    await page.getByText('marque une pause toutes les 30 compétences.').waitFor();
+    await page.getByText('Tu choisis par où commencer, thématique par thématique.', { exact: false }).waitFor();
+    assert.equal(await page.getByText('marque une pause toutes les 30 compétences.').count(), 0);
     await page.getByRole('button', { name: 'Réserver un échange', exact: true }).waitFor();
+    assert.equal(await page.locator('#audit-synthese').isVisible(), false, 'pas de synthèse tant qu\'aucune thématique n\'est complète');
     assert.equal(await page.locator('.niveau-accueil').count(), 3);
     assert.equal(await page.getByText('Finis ton audit pour afficher ton score', { exact: true }).count(), 3);
     assert.equal(await page.locator('#bar.visible').count(), 0);
     await capturer(page, screenshotDir, 'accueil-desktop.png', { fullPage: true });
-    await page.getByRole('button', { name: 'Commencer mon audit initial' }).dispatchEvent('click');
+
+    // --- Parcours modulaire : dimension → thématique → évaluation → résultat -----
+    await page.getByRole('button', { name: 'Commencer mon audit' }).dispatchEvent('click');
+    await page.locator('body[data-panneau="choix-dimension"]').waitFor({ state: 'attached' });
+    assert.equal(await page.locator('.choix-groupe').count(), 3);
+    assert.equal(await page.locator('.choix-carte').count(), DIMENSIONS.length);
+    await capturer(page, screenshotDir, 'choix-dimension-desktop.png');
+    await page.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await page.locator('body[data-panneau="choix-theme"]').waitFor({ state: 'attached' });
+    assert.equal(await page.locator('.choix-theme').count(), 2);
+    await page.getByRole('button', { name: 'Évaluer toute la dimension' }).waitFor();
+    await capturer(page, screenshotDir, 'choix-theme-desktop.png');
+    await page.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}"]`).dispatchEvent('click');
+
     const compteurAudit = page.locator('.situer-compte');
     await compteurAudit.waitFor();
-    assert.equal((await compteurAudit.textContent()).trim(), `1 / ${competencies.length}`);
+    assert.equal((await compteurAudit.textContent()).trim(), '1 / 4', 'compteur de section, pas de référentiel entier');
+    assert.equal((await page.locator('.audit-sous-compteur').textContent()).trim(),
+      `Thématique 1 / 2 de ${DIM_MULTI.name}`);
     assert.match(await page.locator('.situer-difficulte').textContent(), /Niveau de la compétence :\s*Socle fondamental/);
     await page.getByText('Je ne maîtrise pas du tout', { exact: true }).waitFor();
     await page.getByText("Je dois m'améliorer", { exact: true }).waitFor();
@@ -159,6 +216,60 @@ async function principal() {
     await page.getByRole('button', { name: 'Agrandir la carte' }).click();
     assert.equal(await page.locator('#audit-carte-overlay').isVisible(), true);
     await page.getByRole('button', { name: 'Revenir à la question' }).click();
+
+    // Trois évaluations et une compétence passée : 3 + 2 + 1 sur 12 possibles = 50 %.
+    // Le retour visuel est lu dans le même tour de boucle que le clic : il ne dure que
+    // 250 ms, un `waitFor` arriverait après le passage à la compétence suivante.
+    const retourVisuel = await page.evaluate(() => {
+      const marche = document.querySelector('.marche[data-niveau="3"]');
+      marche.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      return {
+        confirmee: marche.classList.contains('marche-confirmee'),
+        astuce: document.getElementById('situer-astuce').textContent.trim(),
+      };
+    });
+    assert.equal(retourVisuel.confirmee, true, 'la marche cochée se colore avant le passage');
+    assert.equal(retourVisuel.astuce, 'Enregistré, compétence suivante.');
+    await page.locator('.situer-compte', { hasText: '2 / 4' }).waitFor();
+    await page.locator('.marche[data-niveau="2"]').dispatchEvent('click');
+    await page.locator('.situer-compte', { hasText: '3 / 4' }).waitFor();
+    await page.locator('.marche[data-niveau="1"]').dispatchEvent('click');
+    await page.locator('.situer-compte', { hasText: '4 / 4' }).waitFor();
+    await page.getByRole('button', { name: 'Passer →' }).dispatchEvent('click');
+
+    await page.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
+    await page.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
+    assert.equal((await page.locator('.audit-bilan-score .syn-pct').textContent()).trim(), '50 %');
+    assert.deepEqual(dernierSnapshot.audit.passees, [`${DIM_MULTI.id}-01-04`],
+      'la compétence passée part bien dans le payload');
+    assert.equal(dernierSnapshot.audit.derniere.themeId, `theme-${DIM_MULTI.id}`);
+    assert.equal(await page.getByRole('button', { name: 'Évaluer maintenant' }).count(), 1);
+    await capturer(page, screenshotDir, 'resultat-theme-desktop.png');
+
+    // Le bouton principal de « Poursuivre » doit être atteignable sans défiler.
+    const hauteurPanneau = await page.locator('#panneau-corps').evaluate((element) => ({
+      visible: element.clientHeight,
+      total: element.scrollHeight,
+      principal: element.querySelector('.audit-suite-choix.principal').getBoundingClientRect().bottom
+        - element.getBoundingClientRect().top,
+    }));
+    assert.ok(hauteurPanneau.principal <= hauteurPanneau.visible,
+      `le choix principal doit tenir sans scroll (${Math.round(hauteurPanneau.principal)} > ${hauteurPanneau.visible})`);
+
+    // Poursuivre vers la thématique suivante de la dimension.
+    await page.locator('[data-suite="continuer"]').dispatchEvent('click');
+    await page.locator('.audit-sous-compteur', { hasText: `Thématique 2 / 2 de ${DIM_MULTI.name}` }).waitFor();
+    assert.equal((await page.locator('.situer-compte').textContent()).trim(), '1 / 2');
+
+    // Fermeture par la croix, puis reprise : on revient sur la bonne compétence.
+    await page.locator('#panneau-fermer').dispatchEvent('click');
+    await page.locator('#audit-reprise:not([hidden])').waitFor();
+    assert.match(await page.locator('#audit-reprise').textContent(), /dernière thématique : Seconde thématique/);
+    assert.equal(await page.locator('#audit-synthese').isVisible(), true,
+      'la synthèse s\'ouvre dès une thématique complète');
+    await page.getByRole('button', { name: 'Reprendre mon audit' }).dispatchEvent('click');
+    await page.locator('body[data-panneau="situer"]').waitFor({ state: 'attached' });
+    assert.equal(await page.locator('.situer-nom').textContent(), `Je sais mobiliser la compétence ${DIM_MULTI.id}-02-01.`);
     await page.locator('#panneau-fermer').dispatchEvent('click');
 
     assert.equal(await page.locator('.ciel-categorie').count(), 3);
@@ -213,20 +324,24 @@ async function principal() {
     const scrollApresTheme = await page.evaluate(() => window.scrollY);
     assert.ok(Math.abs(scrollAvantTheme - scrollApresTheme) <= 1);
     await page.locator('#panneau-fermer').dispatchEvent('click');
-    assert.equal(await page.locator('.etoile[data-competence="FON-01-01"] title').textContent(), 'Je sais mobiliser la compétence FON.');
+    assert.equal(await page.locator('.etoile[data-competence="FON-01-01"] title').textContent(), 'Je sais mobiliser la compétence FON-01-01.');
     await page.locator('.etoile[data-competence="FON-01-01"]').dispatchEvent('pointerenter', { pointerType: 'mouse', clientX: 300, clientY: 300 });
     await page.locator('#etoile-tooltip:not([hidden])').waitFor();
-    assert.equal(await page.locator('#etoile-tooltip').textContent(), 'Je sais mobiliser la compétence FON.');
+    assert.equal(await page.locator('#etoile-tooltip').textContent(), 'Je sais mobiliser la compétence FON-01-01.');
     await page.locator('.etoile[data-competence="FON-01-01"]').dispatchEvent('pointerleave');
-    await page.locator('.etoile[data-competence="FON-01-01"]').dispatchEvent('click');
-    await page.getByText('Un exemple observable pour FON.').waitFor();
+    // Compétence restée intacte pendant l'audit : la cocher depuis la carte doit
+    // encore fonctionner, c'est l'usage « exploration libre » du même panneau.
+    await page.locator('.etoile[data-competence="FON-02-02"]').dispatchEvent('click');
+    await page.getByText('Un exemple observable pour FON-02-02.').waitFor();
     assert.equal(await page.locator('.marche[data-niveau]').count(), 3);
 
     await page.locator('.marche[data-niveau="3"]').dispatchEvent('click');
     await page.locator('#panneau-fermer').dispatchEvent('click');
     await page.locator('#btn-enregistrer').dispatchEvent('click');
     await page.getByText('Ton sphérier est enregistré.').waitFor();
-    assert.equal(dernierSnapshot.levels['FON-01-01'], 3);
+    assert.equal(dernierSnapshot.levels['FON-02-02'], 3);
+    // Les compétences passées survivent à un enregistrement déclenché ailleurs.
+    assert.deepEqual(dernierSnapshot.audit.passees, [`${DIM_MULTI.id}-01-04`]);
 
     await page.locator('#btn-synthese').dispatchEvent('click');
     assert.equal(await page.locator('.syn-categorie-item').count(), 3);
@@ -240,7 +355,20 @@ async function principal() {
     await page.locator('.syn-maitrise-nom', { hasText: 'Professionnel établi' }).waitFor();
     assert.equal(await page.locator('[data-filtre="ouvertes"]').count(), 0);
     assert.equal(await page.locator('[data-filtre^="diff:"]').count(), 0);
-    assert.ok(await page.locator('.syn-compte', { hasText: '100 % maîtrisées' }).count() >= 2);
+    assert.ok(await page.locator('.syn-compte', { hasText: '3/4 évaluées' }).count() >= 1);
+    assert.equal(await page.locator('.syn-theme').count(), 8);
+
+    // Synthèse accessible avec une seule thématique complète : plus besoin d'avoir
+    // évalué les 192 compétences pour lire ce qui est déjà là.
+    await page.locator('#panneau-fermer').dispatchEvent('click');
+    await page.locator('#detail-retour').dispatchEvent('click');
+    await page.locator('#detail-retour').dispatchEvent('click');
+    await page.locator('#audit-synthese:not([hidden])').waitFor();
+    await page.locator('#audit-synthese').dispatchEvent('click');
+    await page.getByRole('heading', { name: 'Ton sphérier en un regard' }).waitFor();
+    await page.getByText('sur 8 évaluée', { exact: false }).waitFor();
+    await capturer(page, screenshotDir, 'synthese-partielle-desktop.png');
+    await page.locator('#panneau-fermer').dispatchEvent('click');
 
     const publicPage = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
     await publicPage.goto(`http://127.0.0.1:${adresse.port}/`);
@@ -273,7 +401,7 @@ async function principal() {
     assert.equal(await resultatPage.locator('.syn-categorie-item').count(), 3);
     assert.equal(await resultatPage.locator('.syn-maitrise-item').count(), 3);
     assert.equal(await resultatPage.locator('.syn-dim').count(), 7);
-    assert.equal(await resultatPage.locator('.syn-theme').count(), 7);
+    assert.equal(await resultatPage.locator('.syn-theme').count(), 8);
     assert.equal(await resultatPage.locator('.audit-priorite').count(), 3);
     assert.equal(await resultatPage.locator('[data-audit-rdv]').count(), 2);
     assert.equal(await resultatPage.locator('#panneau.plein-ecran').count(), 1);
@@ -320,7 +448,7 @@ async function principal() {
     assert.equal(await mobile.locator('.amas-mobile-piste').count(), 2);
     await mobile.locator('[data-toggle="FON"]').dispatchEvent('click');
     await mobile.locator('[data-dimension="FON"].ouverte .amas-mobile-piste').waitFor();
-    assert.equal(await mobile.locator('[data-dimension="FON"].ouverte .amas-mobile').count(), 1);
+    assert.equal(await mobile.locator('[data-dimension="FON"].ouverte .amas-mobile').count(), 2);
     assert.equal(await mobile.locator('#ciel').isVisible(), false);
     await capturer(mobile, screenshotDir, 'detail-mobile.png');
 
