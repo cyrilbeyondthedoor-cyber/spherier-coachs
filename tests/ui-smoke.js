@@ -148,6 +148,9 @@ function selectionsDerivees(envoi) {
   }) ?? envoi.selections;
 }
 
+// Identifiants de membres du faux serveur : les scénarios de priorités et de classement
+// occupent la plage qui commence à 0020. Deux lots ont déjà réservé le même identifiant
+// chacun de leur côté, et le second héritait en silence de l'état du premier.
 function json(reponse, valeur, statut = 200) {
   reponse.writeHead(statut, { 'Content-Type': 'application/json; charset=utf-8' });
   reponse.end(JSON.stringify(valeur));
@@ -176,9 +179,9 @@ const serveur = http.createServer((requete, reponse) => {
         notes: {},
       });
     }
-    // Membre 0012 : tout est évalué sauf UNE compétence, et un classement existe déjà.
+    // Membre 0021 : tout est évalué sauf UNE compétence, et un classement existe déjà.
     // Évaluer la dernière ferme l'audit entier.
-    if (requete.url.includes('00000000-0000-4000-8000-000000000012')) {
+    if (requete.url.includes('00000000-0000-4000-8000-000000000021')) {
       const presque = Object.fromEntries(competencies.map((competence, index) =>
         [competence.id, competence.id === DERNIERE_COMPETENCE ? 0 : (index % 3) + 1]));
       const priorites = { themes: {}, dimensions: {}, classement: [CLASSEMENT_EXISTANT] };
@@ -191,10 +194,10 @@ const serveur = http.createServer((requete, reponse) => {
         notes: {},
       });
     }
-    // Membre 0011 : un snapshot écrit AVANT que le classement n'existe, avec trois
+    // Membre 0020 : un snapshot écrit AVANT que le classement n'existe, avec trois
     // « maintenant » déjà choisis par l'ancienne synthèse. Son premier classement ne doit
     // pas les faire disparaître.
-    if (requete.url.includes('00000000-0000-4000-8000-000000000011')) {
+    if (requete.url.includes('00000000-0000-4000-8000-000000000020')) {
       const partiels = {
         ...niveauxVides,
         [`${DIM_MULTI.id}-01-01`]: 1,
@@ -1134,7 +1137,7 @@ async function principal() {
 
     // --- Lot 7 : les « maintenant » d'avant le classement ne s'évaporent pas -----
     const ancien = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
-    await ancien.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000011`);
+    await ancien.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000020`);
     await ancien.locator('#ciel:not([hidden])').waitFor();
     await ancien.locator('#audit-cta').dispatchEvent('click');
     await ancien.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
@@ -1153,7 +1156,7 @@ async function principal() {
 
     // --- Lot 8.6 : la fin complète de l'audit ouvre la synthèse ------------------
     const fin = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
-    await fin.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000012`);
+    await fin.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000021`);
     await fin.locator('#ciel:not([hidden])').waitFor();
     const derniereDim = DIMENSIONS[DIMENSIONS.length - 1];
     await fin.locator('#audit-cta').dispatchEvent('click');
