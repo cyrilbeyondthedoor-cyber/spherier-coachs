@@ -354,7 +354,21 @@ async function principal() {
     await page.locator('.situer-compte', { hasText: '3 / 4' }).waitFor();
     await page.locator('.marche[data-niveau="1"]').dispatchEvent('click');
     await page.locator('.situer-compte', { hasText: '4 / 4' }).waitFor();
-    await page.getByRole('button', { name: 'Passer →' }).dispatchEvent('click');
+    await page.getByRole('button', { name: 'Suivante →' }).dispatchEvent('click');
+
+    // --- Lot 6.2 : l'écran d'encouragement s'intercale avant le résultat --------
+    await page.locator('.encourage-passees').waitFor();
+    await page.getByText('Il te reste 1 compétence passée dans cette thématique.').waitFor();
+    await page.getByText('Le score est plus juste quand tout est évalué.').waitFor();
+    await capturer(page, screenshotDir, 'encouragement-passees-desktop.png');
+    // « Terminer la thématique » rouvre la compétence passée, là où elle a été laissée.
+    await page.getByRole('button', { name: 'Terminer la thématique' }).dispatchEvent('click');
+    await page.locator('body[data-panneau="situer"]').waitFor({ state: 'attached' });
+    assert.equal(await page.locator('.situer-nom').textContent(),
+      `Je sais mobiliser la compétence ${DIM_MULTI.id}-01-04.`);
+    await page.getByText('Tu avais passé cette compétence.', { exact: false }).waitFor();
+    // Repassée : la proposition ne revient pas une seconde fois, on va au résultat.
+    await page.getByRole('button', { name: 'Suivante →' }).dispatchEvent('click');
 
     await page.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
     await page.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
@@ -789,7 +803,11 @@ async function principal() {
     await mobile.locator('.situer-compte', { hasText: '3 / 4' }).waitFor();
     await mobile.locator('.marche[data-niveau="1"]').dispatchEvent('click');
     await mobile.locator('.situer-compte', { hasText: '4 / 4' }).waitFor();
-    await mobile.getByRole('button', { name: 'Passer →' }).dispatchEvent('click');
+    await mobile.getByRole('button', { name: 'Suivante →' }).dispatchEvent('click');
+    // Une compétence passée : l'encouragement s'intercale, ici on choisit le résultat.
+    await mobile.locator('.encourage-passees').waitFor();
+    await capturer(mobile, screenshotDir, 'encouragement-passees-mobile.png');
+    await mobile.getByRole('button', { name: 'Voir mon résultat quand même' }).dispatchEvent('click');
     await mobile.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
     await mobile.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
     // Le fil d'Ariane s'arrête avant « Agrandir » et la croix au lieu de passer dessous.
@@ -822,9 +840,11 @@ async function principal() {
     // serveur : sans cela, la reprise sur un autre appareil les redemanderait toutes.
     await mobile.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
     await mobile.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}-2"]`).dispatchEvent('click');
-    await mobile.getByRole('button', { name: 'Passer →' }).dispatchEvent('click');
+    await mobile.getByRole('button', { name: 'Suivante →' }).dispatchEvent('click');
     await mobile.locator('.situer-compte', { hasText: '2 / 2' }).waitFor();
-    await mobile.getByRole('button', { name: 'Passer →' }).dispatchEvent('click');
+    await mobile.getByRole('button', { name: 'Suivante →' }).dispatchEvent('click');
+    await mobile.getByText('Il te reste 2 compétences passées dans cette thématique.').waitFor();
+    await mobile.getByRole('button', { name: 'Voir mon résultat quand même' }).dispatchEvent('click');
     await mobile.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
     assert.deepEqual(dernierSnapshot.audit.passees.slice().sort(),
       [`${DIM_MULTI.id}-01-04`, `${DIM_MULTI.id}-02-01`, `${DIM_MULTI.id}-02-02`].sort());
@@ -873,7 +893,7 @@ async function principal() {
     await annulation.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
     await annulation.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}"]`).dispatchEvent('click');
     await annulation.locator('.situer-compte', { hasText: '1 / 4' }).waitFor();
-    await annulation.getByRole('button', { name: 'Passer →' }).dispatchEvent('click');
+    await annulation.getByRole('button', { name: 'Suivante →' }).dispatchEvent('click');
     await annulation.locator('.situer-compte', { hasText: '2 / 4' }).waitFor();
     await annulation.locator('.marche[data-niveau="2"]').dispatchEvent('click');
     await annulation.locator('.situer-compte', { hasText: '3 / 4' }).waitFor();
@@ -886,8 +906,10 @@ async function principal() {
     // est à faire ; la première reste passée, sinon la reprise ouvrirait sur elle.
     assert.equal(await annulation.locator('.situer-nom').textContent(),
       `Je sais mobiliser la compétence ${DIM_MULTI.id}-01-02.`);
-    assert.equal((await annulation.locator('#situer-astuce').textContent()).trim(),
-      'Coche une marche, ou passe : tu pourras y revenir.');
+    assert.match((await annulation.locator('#situer-astuce').textContent()).trim(),
+      /^Coche une marche, ou passe pour l'instant : tu pourras y revenir\./);
+    // L'astuce clavier accompagne l'invitation sur desktop.
+    assert.equal((await annulation.locator('.tinder-clavier').textContent()).trim(), '1, 2 ou 3 au clavier');
 
     // --- Enregistrement en échec, puis Réessayer -----------------------------
     // Le résultat reste affiché depuis le brouillon local, et le libellé automatique
@@ -898,6 +920,8 @@ async function principal() {
     await annulation.locator('.marche[data-niveau="3"]').dispatchEvent('click');
     await annulation.locator('.situer-compte', { hasText: '4 / 4' }).waitFor();
     await annulation.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    // La première compétence est restée passée : l'encouragement passe avant le résultat.
+    await annulation.getByRole('button', { name: 'Voir mon résultat quand même' }).dispatchEvent('click');
     await annulation.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
     await annulation.locator('.audit-echec').waitFor();
     await annulation.getByRole('button', { name: "Réessayer l'enregistrement" }).waitFor();
@@ -945,7 +969,7 @@ async function principal() {
     await rechargement.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
     await rechargement.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}"]`).dispatchEvent('click');
     await rechargement.locator('.situer-compte', { hasText: '1 / 4' }).waitFor();
-    await rechargement.getByRole('button', { name: 'Passer →' }).dispatchEvent('click');
+    await rechargement.getByRole('button', { name: 'Suivante →' }).dispatchEvent('click');
     await rechargement.locator('.situer-compte', { hasText: '2 / 4' }).waitFor();
     await rechargement.locator('#panneau-fermer').dispatchEvent('click');
     for (const passe of [1, 2]) {
@@ -1173,6 +1197,61 @@ async function principal() {
       await pageLisibilite.close();
     }
 
+    // --- Lot 6.2 : clavier, compteur enrichi, transition ----------------------
+    const tinder = await navigateur.newPage({ viewport: { width: 1280, height: 700 } });
+    await tinder.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000006`);
+    await tinder.locator('#ciel:not([hidden])').waitFor();
+    await tinder.getByRole('button', { name: 'Commencer mon audit' }).dispatchEvent('click');
+    await tinder.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await tinder.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await tinder.locator('.situer-compte', { hasText: '1 / 4' }).waitFor();
+    assert.equal((await tinder.locator('.tinder-reste').textContent()).trim(), '· plus que 3');
+    // Le lien discret remplace le grand bouton « Passer » du pied.
+    await tinder.locator('#situer-passer-lien').waitFor();
+    assert.equal(await tinder.getByRole('button', { name: 'Suivante →' }).count(), 1);
+
+    // Les touches 1, 2 et 3 cochent les marches, la flèche gauche revient en arrière.
+    await tinder.keyboard.press('2');
+    await tinder.locator('.situer-compte', { hasText: '2 / 4' }).waitFor();
+    await tinder.keyboard.press('3');
+    await tinder.locator('.situer-compte', { hasText: '3 / 4' }).waitFor();
+    await tinder.keyboard.press('ArrowLeft');
+    await tinder.locator('.situer-compte', { hasText: '2 / 4' }).waitFor();
+    assert.equal(await tinder.locator('.marche[data-niveau="3"][aria-pressed="true"]').count(), 1,
+      'la compétence revue porte bien le niveau saisi au clavier');
+    // La carte qui arrive porte l'animation d'entrée, côté d'où l'on vient.
+    assert.equal(await tinder.locator('.situer.tinder-entree-gauche').count(), 1);
+    await tinder.keyboard.press('1');
+    await tinder.locator('.situer-compte', { hasText: '3 / 4' }).waitFor();
+    await tinder.keyboard.press('1');
+    await tinder.locator('.situer-compte', { hasText: '4 / 4' }).waitFor();
+    assert.equal((await tinder.locator('.tinder-reste').textContent()).trim(),
+      '· Dernière compétence de la thématique');
+    // Rien n'a été passé : on va droit au résultat, sans écran d'encouragement.
+    await tinder.keyboard.press('1');
+    await tinder.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
+    assert.equal(await tinder.locator('.encourage-passees').count(), 0);
+    await tinder.close();
+
+    // Mouvement réduit : la transition ne translate plus rien.
+    const calme = await navigateur.newPage({ viewport: { width: 1280, height: 700 }, reducedMotion: 'reduce' });
+    await calme.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000007`);
+    await calme.locator('#ciel:not([hidden])').waitFor();
+    await calme.getByRole('button', { name: 'Commencer mon audit' }).dispatchEvent('click');
+    await calme.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await calme.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await calme.locator('.situer-compte', { hasText: '1 / 4' }).waitFor();
+    await calme.locator('.marche[data-niveau="2"]').dispatchEvent('click');
+    await calme.locator('.situer-compte', { hasText: '2 / 4' }).waitFor();
+    const carteCalme = await calme.locator('.situer').evaluate((el) => ({
+      classes: el.className,
+      transform: getComputedStyle(el).transform,
+    }));
+    assert.equal(/tinder-(entree|sortie)/.test(carteCalme.classes), false,
+      `aucune classe de transition en mouvement réduit (${carteCalme.classes})`);
+    assert.equal(carteCalme.transform, 'none');
+    await calme.close();
+
     // --- Lot 6.1 : la catégorie est évaluable ---------------------------------
     // L'en-tête de catégorie est une carte : elle enchaîne les dimensions de la
     // catégorie, et l'écran Poursuivre propose la suivante une fois la première finie.
@@ -1190,9 +1269,17 @@ async function principal() {
     // Le texte d'aide est masqué au repos et se révèle au survol, sans disparaître du
     // flux : c'est l'opacité qui porte la révélation.
     assert.equal(await aide.evaluate((el) => getComputedStyle(el).opacity), '0');
+    // Onglet au premier plan : une page d'arrière-plan ne produit plus d'images, et la
+    // transition d'opacité y reste figée sur sa valeur de départ.
+    await categorie.bringToFront();
     await carteCoach.hover();
-    await categorie.waitForTimeout(300);
-    assert.equal(await aide.evaluate((el) => getComputedStyle(el).opacity), '1');
+    await categorie.waitForFunction(() => {
+      const cible = document.querySelector('.cat-carte[data-evaluer-categorie="COACH"] .cat-carte-aide');
+      return cible && getComputedStyle(cible).opacity === '1';
+    }, null, { timeout: 4000 });
+    // La flèche apparaît avec l'aide, et la carte s'élève.
+    assert.equal(await carteCoach.locator('.cat-carte-fleche').evaluate((el) => getComputedStyle(el).opacity), '1');
+    assert.notEqual(await carteCoach.evaluate((el) => getComputedStyle(el).transform), 'none');
     await capturer(categorie, screenshotDir, 'categorie-survol-desktop.png');
 
     // Clic sur l'en-tête : première thématique de la première dimension de COACH.
