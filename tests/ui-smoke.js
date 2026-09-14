@@ -1216,6 +1216,26 @@ async function principal() {
           && m.top >= 0 && m.bottom <= viewport.height),
         `Les 3 marches ne sont pas toutes dégagées après scroll en bas (${viewport.width}x${viewport.height}) : ${JSON.stringify(marchesEnBas)}`
       );
+      // Le pied doit laisser respirer la dernière marche : en 390 px, l'astuce longue
+      // tenait sur deux lignes et le pied montait jusqu'à la toucher.
+      const respiration = await pageLisibilite.evaluate(() => {
+        const pied = document.querySelector('.situer-pied').getBoundingClientRect();
+        const marches = [...document.querySelectorAll('.marche')];
+        const derniere = marches[marches.length - 1].getBoundingClientRect();
+        return {
+          marge: Math.round(pied.top - derniere.bottom),
+          hauteurPied: Math.round(pied.height),
+          lignesAstuce: Math.round(document.getElementById('situer-astuce').getBoundingClientRect().height),
+        };
+      });
+      assert.ok(respiration.marge >= 6,
+        `le pied colle à la dernière marche (${respiration.marge} px) en ${viewport.width}x${viewport.height}`);
+      // Et l'astuce tient sur UNE ligne : sur deux, elle vole une vingtaine de pixels
+      // aux marches, ce qui suffit à faire disparaître la troisième sous le pied dès
+      // qu'une compétence remplit l'écran.
+      assert.ok(respiration.lignesAstuce <= 30,
+        `l'astuce du pied déborde sur une deuxième ligne en ${viewport.width}x${viewport.height} (${respiration.lignesAstuce} px)`);
+
       // Les boutons restent visibles quel que soit le défilement : le pied ne bouge pas.
       for (const id of ['#situer-precedent', '#situer-passer']) {
         const boite = await pageLisibilite.locator(id).boundingBox();
@@ -1338,6 +1358,44 @@ async function principal() {
     await constellation.locator('.encourage-progression').waitFor();
     await constellation.locator('[data-suite="continuer"]').waitFor();
     await capturer(constellation, screenshotDir, 'resultat-depuis-constellation-desktop.png');
+
+    // --- Revue du lot 6 : une thématique DÉJÀ complète ------------------------
+    // Rouverte depuis la carte, elle n'a plus rien « à faire » : la reprise filait droit
+    // au résultat, et l'étiquette du panneau écrasée après coup laissait l'écran de
+    // résultat à la largeur de l'évaluation.
+    await constellation.locator('#panneau-fermer').dispatchEvent('click');
+    await constellation.locator(`[data-dimension="${DIM_MULTI.id}"] .theme[data-theme]`).first().dispatchEvent('click');
+    await constellation.locator('body[data-panneau^="theme:"]').waitFor({ state: 'attached' });
+    const revoir = constellation.locator('#theme-evaluer');
+    assert.match((await revoir.textContent()).trim(), /^Revoir mes positionnements · 4 compétences/);
+    // « Voir le résultat » mène au résultat, et le panneau prend bien son étiquette.
+    await constellation.locator('#theme-resultat').dispatchEvent('click');
+    await constellation.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
+    assert.equal(await constellation.locator('body').getAttribute('data-panneau'), 'resultat-theme',
+      'l\'étiquette du panneau ne doit plus être écrasée par celle de l\'évaluation');
+    assert.equal(await constellation.locator('#panneau.plein-ecran').count(), 1);
+
+    // « Revoir » repart de la PREMIÈRE compétence, marche déjà cochée, compteur normal.
+    await constellation.locator('[data-suite="theme"]').dispatchEvent('click');
+    await constellation.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await constellation.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
+    assert.equal(await constellation.locator('body').getAttribute('data-panneau'), 'resultat-theme',
+      'une thématique complète rouverte depuis « Choisis une thématique » montre son résultat');
+    await constellation.locator('#panneau-fermer').dispatchEvent('click');
+    await constellation.locator(`[data-dimension="${DIM_MULTI.id}"] .theme[data-theme]`).first().dispatchEvent('click');
+    await constellation.locator('#theme-evaluer').dispatchEvent('click');
+    await constellation.locator('body[data-panneau="situer"]').waitFor({ state: 'attached' });
+    assert.equal((await constellation.locator('.situer-compte').textContent()).trim(), '1 / 4');
+    assert.equal(await constellation.locator('.marche[data-niveau="2"][aria-pressed="true"]').count(), 1,
+      'la première compétence revient avec sa marche cochée');
+    await capturer(constellation, screenshotDir, 'revoir-thematique-complete-desktop.png');
+    // Et le parcours de revue va bien jusqu'au résultat.
+    for (const rang of [1, 2, 3, 4]) {
+      await constellation.locator('.situer-compte', { hasText: `${rang} / 4` }).waitFor();
+      await constellation.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    }
+    await constellation.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
+    assert.equal((await constellation.locator('.audit-bilan-score .syn-pct').textContent()).trim(), '100 %');
     await constellation.close();
 
     // --- Lot 6.2 : clavier, compteur enrichi, transition ----------------------
@@ -1408,7 +1466,7 @@ async function principal() {
     assert.equal(await categorie.locator('.cat-carte').count(), CATEGORIES.length);
     const carteCoach = categorie.locator('.cat-carte[data-evaluer-categorie="COACH"]');
     const aide = carteCoach.locator('.cat-carte-aide');
-    assert.match((await aide.textContent()).trim(), /^Évaluer cette catégorie · 2 dimensions · \d+ compétences$/);
+    assert.match((await aide.textContent()).trim(), /^Explorer cette catégorie · 2 dimensions · \d+ compétences$/);
     // Le texte d'aide est masqué au repos et se révèle au survol, sans disparaître du
     // flux : c'est l'opacité qui porte la révélation.
     assert.equal(await aide.evaluate((el) => getComputedStyle(el).opacity), '0');
