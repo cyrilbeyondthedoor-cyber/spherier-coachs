@@ -38,10 +38,14 @@ const competencies = DIMENSIONS.map((dimension, index) => index === 1 ? {
   name: `Je sais mobiliser la compétence ${dimension.id}.`,
   definition: `Je sais mobiliser la compétence ${dimension.id}.`,
   statement: 'Je sais créer et entretenir une relation de travail suffisamment solide, sûre et vraie pour que le client ose se montrer tel qu’il est, même quand ce qu’il traverse est difficile à dire.',
+  // Marqueurs de longueur réaliste (une phrase courte chacun, comme dans le
+  // référentiel Notion) : un contenu artificiellement long faussait le contrôle de
+  // recouvrement du pied ancré (voir revue lot2 — le cas nominal du brief, pas un cas
+  // extrême, doit déjà être sans recouvrement).
   markers: [
-    '• Premier marqueur observable, rédigé assez long pour occuper plus d’une ligne complète dans le panneau.',
-    '• Deuxième marqueur observable, lui aussi sur plusieurs mots pour vérifier le retrait suspendu de la liste.',
-    '• Troisième marqueur observable, le dernier affiché sous cette compétence à l’écran.',
+    '• Premier marqueur observé chez le coach.',
+    '• Deuxième marqueur observé pendant la séance.',
+    '• Troisième marqueur observé dans le suivi.',
   ].join('\n'),
   difficulty: DIFFICULTES[index % DIFFICULTES.length].nom,
   order: 1,
@@ -387,6 +391,40 @@ async function principal() {
       assert.ok(
         taillesAstres.every((t) => Math.abs(t - taillesAstres[0]) < 0.5),
         `Les 3 points colorés de l'escalier n'ont pas la même taille (${viewport.width}x${viewport.height}) : ${taillesAstres}`
+      );
+
+      // Le pied ancré ne doit jamais recouvrir une marche : ni à l'affichage initial
+      // (sur 1280×700, les 3 marches doivent tenir au-dessus du pied sans scroll —
+      // c'est le cas nominal du brief, pas un cas extrême), ni une fois défilé tout en
+      // bas (où elles ont, par construction, déjà quitté visuellement cette zone).
+      const chevauchement = async () => pageLisibilite.evaluate(() => {
+        const pied = document.querySelector('.situer-pied').getBoundingClientRect();
+        return [...document.querySelectorAll('.marche')].map((marche) => {
+          const m = marche.getBoundingClientRect();
+          return !(m.bottom <= pied.top || m.top >= pied.bottom);
+        });
+      });
+      assert.deepEqual(
+        await chevauchement(), [false, false, false],
+        `Le pied recouvre au moins une marche à l'affichage initial (${viewport.width}x${viewport.height})`
+      );
+      if (viewport.width === 1280) {
+        const marches = await pageLisibilite.locator('.marche').evaluateAll(
+          (elements) => elements.map((element) => element.getBoundingClientRect())
+        );
+        assert.ok(
+          marches.every((m) => m.top >= 0 && m.bottom <= viewport.height),
+          `Les 3 marches ne sont pas toutes visibles sans scroll sur 1280x700 : ${JSON.stringify(marches)}`
+        );
+      }
+      await pageLisibilite.evaluate(() => {
+        const corps = document.getElementById('panneau-corps');
+        corps.scrollTop = corps.scrollHeight;
+      });
+      await pageLisibilite.waitForTimeout(50);
+      assert.deepEqual(
+        await chevauchement(), [false, false, false],
+        `Le pied recouvre au moins une marche après scroll en bas (${viewport.width}x${viewport.height})`
       );
 
       await pageLisibilite.close();
