@@ -5,6 +5,11 @@ const http = require('node:http');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { getReferentielV2 } = require('./referentiel-v2.js');
+// Les mêmes fonctions que la production : la prévisualisation doit répondre ce que
+// répondront les fonctions Netlify, contexte d'audit compris. Recopier le format à la
+// main faisait perdre le champ `audit`, donc les compétences passées, à chaque
+// enregistrement — et la répétition avant démo portait sur un comportement faux.
+const { validerEtNormaliser, composerEtat } = require('./snapshot-v2.js');
 
 const PORT = Number(process.env.PORT || 8890);
 const CLIENT_ID = '00000000-0000-4000-8000-000000000001';
@@ -55,8 +60,11 @@ async function principal() {
         const levelsServis = demoComplet
           ? Object.fromEntries(referentiel.competencies.map((competence, index) => [competence.id, (index % 3) + 1]))
           : levels;
+        // `composerEtat` porte le champ `audit` que le navigateur lit en priorité ;
+        // `computed` reste calculé ici pour garder le mode `demo=complete` et
+        // l'ouverture de toutes les thématiques propre à la prévisualisation.
         return json(reponse, {
-          snapshot,
+          ...composerEtat({ referentiel, snapshot }),
           computed: { levels: levelsServis, themes: etatThemes() },
           notes,
         });
@@ -76,15 +84,19 @@ async function principal() {
       }
       if (url.pathname === '/api/snapshot' && requete.method === 'POST') {
         const corps = await lireCorps(requete);
-        levels = { ...levels, ...(corps.levels || {}) };
-        selections = corps.selections || selections;
+        const { erreurs, libelle, blob } = validerEtNormaliser({ referentiel, corps });
+        if (erreurs.length > 0) return json(reponse, { erreur: erreurs.join(' '), details: erreurs }, 400);
+        // Les niveaux s'accumulent d'un enregistrement à l'autre, comme en base où le
+        // navigateur renvoie toujours l'état complet.
+        levels = { ...levels, ...blob.levels };
+        selections = blob.selections;
         snapshot = {
           id: `preview-${Date.now()}`,
           created_at: new Date().toISOString(),
-          label: corps.label || null,
-          blob: { levels, selections },
+          label: libelle,
+          blob: { ...blob, levels, selections },
         };
-        return json(reponse, { snapshot, computed: { levels, themes: etatThemes() } });
+        return json(reponse, composerEtat({ referentiel, snapshot }), 201);
       }
       if (url.pathname === '/api/note' && requete.method === 'POST') {
         const corps = await lireCorps(requete);
