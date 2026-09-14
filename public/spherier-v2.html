@@ -1774,6 +1774,34 @@
   const CLIENT_ID = lireClientId();
   const ACCES_CHARGE_A = Date.now();
 
+  // Reconnexion : l'UUID validé est mémorisé sur l'appareil pour éviter d'avoir à
+  // retrouver le mail à chaque visite. On n'écrit jamais un UUID qui n'a pas été
+  // confirmé par une réponse /api/state réussie (voir `memoriserClient`, appelée
+  // depuis `masquerMessage`, atteinte uniquement après ce succès).
+  const CLE_CLIENT_MEMORISE = 'spherier-coachs:client';
+
+  function lireClientMemorise() {
+    try {
+      const brut = localStorage.getItem(CLE_CLIENT_MEMORISE);
+      if (!brut) return null;
+      const valeur = JSON.parse(brut);
+      return valeur && UUID_V4_RE.test(valeur.uuid) ? String(valeur.uuid).toLowerCase() : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function memoriserClient() {
+    if (!CLIENT_ID) return;
+    try {
+      localStorage.setItem(CLE_CLIENT_MEMORISE, JSON.stringify({ uuid: CLIENT_ID }));
+    } catch { /* stockage indisponible : on continue sans filet, sans casser */ }
+  }
+
+  function oublierClient() {
+    try { localStorage.removeItem(CLE_CLIENT_MEMORISE); } catch {}
+  }
+
   // ============================================================
   // ÉTAT
   // ============================================================
@@ -1869,6 +1897,13 @@
   const elAccesSubmit = document.getElementById('acces-submit');
   const elAccesErreur = document.getElementById('acces-erreur');
   const elSpherierTitre = document.getElementById('spherier-titre');
+  const elPortailTitre = document.getElementById('portail-titre');
+  const elAccesReprise = document.getElementById('acces-reprise');
+  const elAccesRepriseBtn = document.getElementById('acces-reprise-btn');
+  const elAccesRepriseNon = document.getElementById('acces-reprise-non');
+  const elAccesBasculerMode = document.getElementById('acces-basculer-mode');
+  const elConfirmationTitre = document.getElementById('confirmation-titre');
+  const elConfirmationTexte = document.getElementById('confirmation-texte');
 
   function afficherMessage(texte, detail = '', variante = 'chargement', action = null) {
     elMessageTexte.textContent = texte;
@@ -1895,6 +1930,9 @@
   function masquerMessage() {
     elMessage.hidden = true;
     elDimensions.hidden = false;
+    // Atteint uniquement après le succès de /api/state dans `demarrer` : c'est le
+    // seul point sûr pour mémoriser l'UUID comme validé sur cet appareil.
+    memoriserClient();
     // Le ciel est le point d'arrivée par défaut.
     if (etat.vue !== 'detail') allerAuCiel();
   }
@@ -1916,18 +1954,92 @@
     document.getElementById('detail').hidden = true;
     elHeaderEtat.hidden = true;
     document.body.dataset.page = 'acces';
+
+    // Reconnexion : si un UUID validé est déjà mémorisé sur cet appareil, proposer
+    // de reprendre l'audit plutôt que de forcer une nouvelle inscription.
+    if (lireClientMemorise()) elAccesReprise.hidden = false;
+
+    desactiverSubmitTemporairement();
+  }
+
+  // Anti-spam mobile : le serveur traite silencieusement (202, sans envoi réel)
+  // toute demande soumise avant 1200 ms après le chargement du formulaire (voir
+  // `access.js`). Désactiver le bouton pendant cette fenêtre évite qu'un clic trop
+  // rapide (autofill, double-tap) reçoive un accusé de réception sans email envoyé.
+  function desactiverSubmitTemporairement() {
+    const attente = Math.max(0, 1200 - (Date.now() - ACCES_CHARGE_A));
+    elAccesSubmit.disabled = true;
+    setTimeout(() => { elAccesSubmit.disabled = false; }, attente);
+  }
+
+  elAccesRepriseBtn.addEventListener('click', () => {
+    const client = lireClientMemorise();
+    if (!client) return;
+    const params = new URLSearchParams(window.location.search);
+    params.set('c', client);
+    window.location.search = params.toString();
+  });
+
+  elAccesRepriseNon.addEventListener('click', () => {
+    oublierClient();
+    elAccesReprise.hidden = true;
+  });
+
+  // Bascule entre « inscription » et « renvoi de lien » : même point d'entrée
+  // /api/access (voir `obtenirOuCreerProspect`, qui sait déjà retrouver un email
+  // existant), seul l'habillage du formulaire change.
+  let modeRenvoiLien = false;
+  const LIBELLE_MODE_INSCRIPTION = {
+    titre: 'Accède au sphérier de compétences du coach',
+    submit: 'Recevoir mon lien personnel',
+    lien: 'J’ai déjà mon lien mais je ne le retrouve plus',
+  };
+  const LIBELLE_MODE_RENVOI = {
+    titre: 'Recevoir à nouveau mon lien',
+    submit: 'Me renvoyer mon lien',
+    lien: 'Retour',
+  };
+
+  function appliquerModeAcces() {
+    const libelles = modeRenvoiLien ? LIBELLE_MODE_RENVOI : LIBELLE_MODE_INSCRIPTION;
+    elPortailTitre.textContent = libelles.titre;
+    elAccesSubmit.textContent = libelles.submit;
+    elAccesBasculerMode.textContent = libelles.lien;
+    elAccesErreur.textContent = '';
+  }
+
+  elAccesBasculerMode.addEventListener('click', () => {
+    modeRenvoiLien = !modeRenvoiLien;
+    appliquerModeAcces();
+  });
+
+  // Les erreurs réseau du navigateur sont en anglais et techniques ; la personne lit
+  // une phrase qui lui dit quoi faire. Le message du serveur, quand il existe déjà
+  // (429, 502…), est repris tel quel : il est déjà écrit pour un humain.
+  function messageErreurAcces(erreur) {
+    const brut = String(erreur?.message || '').trim();
+    if (erreur?.name === 'AbortError' || erreur instanceof TypeError
+      || /failed to fetch|networkerror|load failed/i.test(brut)) {
+      return 'Le réseau a coupé, réessaie.';
+    }
+    if (brut) return /réessai/i.test(brut) ? brut : `${brut} Réessaie dans quelques instants.`;
+    if (erreur?.statut === 429) return 'Trop de demandes, réessaie dans une minute.';
+    if (erreur?.statut >= 500) return 'Le serveur ne répond pas pour le moment, réessaie dans une minute.';
+    return 'La demande n’a pas pu être traitée. Réessaie dans quelques instants.';
   }
 
   elFormAcces.addEventListener('submit', async (event) => {
     event.preventDefault();
-    elAccesErreur.textContent = messageErreurLisible({ message: '' });
+    elAccesErreur.textContent = '';
     elAccesSubmit.disabled = true;
+    const libelleSubmit = elAccesSubmit.textContent;
     elAccesSubmit.textContent = 'Envoi en cours…';
     const prenom = document.getElementById('acces-prenom').value.trim();
     const email = document.getElementById('acces-email').value.trim();
     const consentement = document.getElementById('acces-consentement').checked;
     try {
-      const source = new URLSearchParams(window.location.search).get('source') || 'lien-direct';
+      const sourceUrl = new URLSearchParams(window.location.search).get('source');
+      const source = sourceUrl || (modeRenvoiLien ? 'lien-oublie' : 'lien-direct');
       const reponse = await fetch('/api/access', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1939,18 +2051,30 @@
           website: document.getElementById('acces-website').value,
           dureeMs: Date.now() - ACCES_CHARGE_A,
         }),
+        signal: AbortSignal.timeout(15000),
       });
-      const data = await reponse.json().catch(() => ({}));
-      if (!reponse.ok) throw new Error(data.erreur || `Le serveur a répondu ${reponse.status}`);
-      document.getElementById('confirmation-email').textContent = email;
+      if (!reponse.ok) {
+        const data = await reponse.json().catch(() => null);
+        throw Object.assign(new Error(data?.erreur || ''), { statut: reponse.status });
+      }
+      // 202 est un succès du point de vue de la personne : le serveur accepte la
+      // demande silencieusement (anti-spam) ou après l'avoir traitée. Dans les deux
+      // cas, la confirmation normale s'affiche : `reponse.ok` couvre déjà 200-299.
+      if (modeRenvoiLien) {
+        elConfirmationTitre.textContent = 'Ton lien est en route : ouvre le mail pour reprendre ton audit.';
+        elConfirmationTexte.innerHTML = `Le mail arrive à l’adresse <b id="confirmation-email">${echapper(email)}</b>.`;
+      } else {
+        elConfirmationTitre.textContent = 'Ton lien personnel est en route';
+        elConfirmationTexte.innerHTML = `Consulte la boîte mail de <b id="confirmation-email">${echapper(email)}</b> pour commencer ton audit et le reprendre quand tu le souhaites.`;
+      }
       elPortailFormulaire.hidden = true;
       elPortailConfirmation.hidden = false;
       document.body.dataset.page = 'confirmation';
     } catch (erreur) {
-      elAccesErreur.textContent = `${erreur.message}. Réessaie dans quelques instants.`;
+      elAccesErreur.textContent = messageErreurAcces(erreur);
     } finally {
       elAccesSubmit.disabled = false;
-      elAccesSubmit.textContent = 'Recevoir mon lien personnel';
+      elAccesSubmit.textContent = libelleSubmit;
     }
   });
 
