@@ -39,11 +39,25 @@ async function principal() {
     await page.locator('#ciel:not([hidden])').waitFor();
 
     await page.getByRole('heading', { name: 'Comment utiliser le sphérier ?' }).waitFor();
-    await page.getByText('marque une pause toutes les 30 compétences.').waitFor();
-    await page.getByRole('button', { name: 'Commencer mon audit initial' }).dispatchEvent('click');
+    await page.getByText('Tu choisis par où commencer, thématique par thématique.', { exact: false }).waitFor();
+    await page.getByRole('button', { name: 'Commencer mon audit' }).dispatchEvent('click');
+    await page.locator('body[data-panneau="choix-dimension"]').waitFor({ state: 'attached' });
+    assert.equal(await page.locator('.choix-carte').count(), referentiel.dimensions.length);
+
+    // Première dimension du référentiel réel : on descend jusqu'au compteur de section.
+    const premiere = referentiel.dimensions[0];
+    const themesPremiere = referentiel.themes
+      .filter((theme) => theme.dimension === premiere.name)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    await page.locator(`[data-choix-dimension="${premiere.id}"]`).dispatchEvent('click');
+    assert.equal(await page.locator('.choix-theme').count(), themesPremiere.length);
+    await page.locator(`[data-evaluer-theme="${themesPremiere[0].id}"]`).dispatchEvent('click');
     const compteurAudit = page.locator('.situer-compte');
     await compteurAudit.waitFor();
-    assert.equal((await compteurAudit.textContent()).trim(), `1 / ${referentiel.competencies.length}`);
+    const dansLaThematique = referentiel.competencies.filter((competence) => competence.theme === themesPremiere[0].id).length;
+    assert.equal((await compteurAudit.textContent()).trim(), `1 / ${dansLaThematique}`);
+    assert.match(await page.locator('.audit-sous-compteur').textContent(),
+      new RegExp(`Thématique 1 / ${themesPremiere.length} de `));
     await page.locator('#panneau-fermer').dispatchEvent('click');
 
     assert.equal(await page.locator('.ciel-categorie').count(), 3);
