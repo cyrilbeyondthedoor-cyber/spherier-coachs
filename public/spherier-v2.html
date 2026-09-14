@@ -4377,9 +4377,25 @@
     elDernierPoint.hidden = false;
   }
 
+  // Vrai uniquement le temps du tout premier rendu de la barre après une reprise de
+  // brouillon restauré depuis localStorage (posé par `demarrer`, une ligne hors
+  // périmètre de ce lot — voir rapport). Consommé ici dès ce premier rendu : dès que
+  // la personne modifie quoi que ce soit en session, l'appel suivant à `majBarre`
+  // retombe sur le texte normal.
+  let brouillonRestaure = false;
+
   function majBarre() {
     if (!estModifie()) { elBarre.classList.remove('visible'); return; }
     const c = changements();
+    if (brouillonRestaure) {
+      brouillonRestaure = false;
+      const n = c.niveaux.length;
+      elBarreTexte.innerHTML = n > 0
+        ? `Tu as <b>${n}</b> positionnement${n > 1 ? 's' : ''} de ta dernière visite qui ${n > 1 ? 'ne sont' : "n'est"} pas encore enregistré${n > 1 ? 's' : ''}.`
+        : 'Tu as des changements de ta dernière visite qui ne sont pas encore enregistrés.';
+      elBarre.classList.add('visible');
+      return;
+    }
     const bouts = [];
     if (c.niveaux.length) bouts.push(`<b>${c.niveaux.length}</b> positionnement${c.niveaux.length > 1 ? 's' : ''}`);
     if (c.cibles) bouts.push('tes cibles du mois');
@@ -4821,6 +4837,7 @@
           later: [...(repris.later || [])],
         };
         if (estModifie()) {
+          brouillonRestaure = true;
           etat.computed.levels = { ...etat.computed.levels, ...brouillon.levels };
           etat.computed.themes = calculerOuvertureLocale(brouillon.levels);
           bandeau('Tes modifications ont été retrouvées.',
