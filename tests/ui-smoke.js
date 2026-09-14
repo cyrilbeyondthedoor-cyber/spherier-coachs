@@ -28,7 +28,25 @@ const themes = DIMENSIONS.map((dimension, index) => ({
   order: 1,
 }));
 
-const competencies = DIMENSIONS.map((dimension, index) => ({
+// La 2e compétence (ALL) porte un énoncé de 3 lignes et 3 marqueurs à puces : elle
+// sert de cas dédié au contrôle de lisibilité de l'écran d'évaluation (pied ancré,
+// astres de même hauteur — principe 2.3). Les autres compétences restent inchangées
+// car plusieurs assertions plus bas ciblent le texte exact de FON-01-01.
+const competencies = DIMENSIONS.map((dimension, index) => index === 1 ? {
+  id: `${dimension.id}-01-01`,
+  theme: `theme-${dimension.id}`,
+  name: `Je sais mobiliser la compétence ${dimension.id}.`,
+  definition: `Je sais mobiliser la compétence ${dimension.id}.`,
+  statement: 'Je sais créer et entretenir une relation de travail suffisamment solide, sûre et vraie pour que le client ose se montrer tel qu’il est, même quand ce qu’il traverse est difficile à dire.',
+  markers: [
+    '• Premier marqueur observable, rédigé assez long pour occuper plus d’une ligne complète dans le panneau.',
+    '• Deuxième marqueur observable, lui aussi sur plusieurs mots pour vérifier le retrait suspendu de la liste.',
+    '• Troisième marqueur observable, le dernier affiché sous cette compétence à l’écran.',
+  ].join('\n'),
+  difficulty: DIFFICULTES[index % DIFFICULTES.length].nom,
+  order: 1,
+  resources: [],
+} : {
   id: `${dimension.id}-01-01`,
   theme: `theme-${dimension.id}`,
   name: `Je sais mobiliser la compétence ${dimension.id}.`,
@@ -38,7 +56,7 @@ const competencies = DIMENSIONS.map((dimension, index) => ({
   difficulty: DIFFICULTES[index % DIFFICULTES.length].nom,
   order: 1,
   resources: [],
-}));
+});
 
 const referential = {
   club: 'coachs',
@@ -323,6 +341,56 @@ async function principal() {
     assert.equal(await mobile.locator('[data-dimension="FON"].ouverte .amas-mobile').count(), 1);
     assert.equal(await mobile.locator('#ciel').isVisible(), false);
     await capturer(mobile, screenshotDir, 'detail-mobile.png');
+
+    // Principe 2.3 : sur l'écran d'évaluation, avec un énoncé de 3 lignes et 3
+    // marqueurs (compétence ALL-01-01, voir plus haut), les boutons Précédente/Passer
+    // restent dans le viewport sans scroll (pied ancré), et les 3 astres de l'escalier
+    // ont la même taille — la progression se lit par la couleur, pas par la taille.
+    for (const viewport of [{ width: 1280, height: 700 }, { width: 390, height: 844 }]) {
+      const pageLisibilite = await navigateur.newPage({ viewport });
+      await pageLisibilite.goto(url);
+      await pageLisibilite.locator('#ciel:not([hidden])').waitFor();
+      await pageLisibilite.getByRole('button', { name: 'Commencer mon audit initial' }).dispatchEvent('click');
+      await pageLisibilite.locator('.situer-compte').waitFor();
+      await pageLisibilite.locator('#situer-passer').dispatchEvent('click');
+      await pageLisibilite.getByText('relation de travail suffisamment solide', { exact: false }).waitFor();
+
+      for (const id of ['#situer-precedent', '#situer-passer']) {
+        const boite = await pageLisibilite.locator(id).boundingBox();
+        assert.ok(boite, `${id} introuvable (${viewport.width}x${viewport.height})`);
+        assert.ok(
+          boite.y >= 0 && boite.y + boite.height <= viewport.height,
+          `${id} hors du viewport ${viewport.width}x${viewport.height} sans scroll (y=${boite.y}, hauteur=${boite.height})`
+        );
+        assert.ok(
+          boite.x >= 0 && boite.x + boite.width <= viewport.width,
+          `${id} hors du viewport en largeur ${viewport.width}x${viewport.height}`
+        );
+      }
+
+      const hauteursConteneur = await pageLisibilite.locator('.marche-astre').evaluateAll(
+        (elements) => elements.map((element) => element.getBoundingClientRect().height)
+      );
+      assert.equal(hauteursConteneur.length, 3);
+      assert.ok(
+        hauteursConteneur.every((h) => Math.abs(h - hauteursConteneur[0]) < 0.5),
+        `Les 3 .marche-astre n'ont pas la même hauteur (${viewport.width}x${viewport.height}) : ${hauteursConteneur}`
+      );
+
+      // Contrôle plus strict : le point coloré lui-même (dernier cercle du svg, celui
+      // du remplissage) doit avoir la même taille aux 3 crans — la taille ne doit
+      // jamais porter la progression, seule la couleur/opacité le fait.
+      const taillesAstres = await pageLisibilite.locator('.marche-astre svg circle:last-child').evaluateAll(
+        (elements) => elements.map((element) => element.getBoundingClientRect().width)
+      );
+      assert.equal(taillesAstres.length, 3);
+      assert.ok(
+        taillesAstres.every((t) => Math.abs(t - taillesAstres[0]) < 0.5),
+        `Les 3 points colorés de l'escalier n'ont pas la même taille (${viewport.width}x${viewport.height}) : ${taillesAstres}`
+      );
+
+      await pageLisibilite.close();
+    }
 
     console.log('UI desktop, mobile et sauvegarde simulée : OK');
   } finally {
