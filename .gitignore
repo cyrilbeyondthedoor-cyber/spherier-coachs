@@ -19,3 +19,12 @@ screenshot-*.png
 
 # Généré au build Netlify
 public/version.txt
+
+# Captures de recette locales, régénérables
+.captures/
+
+# Extractions de travail du référentiel, régénérables
+scripts/texte/competences.json
+scripts/texte/propositions.json
+scripts/texte/propositions.md
+scripts/texte/controle-ecriture.md

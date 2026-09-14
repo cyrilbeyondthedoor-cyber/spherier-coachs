@@ -1,0 +1,187 @@
+[
+  {
+    "code": "FON-03-02",
+    "position": 8,
+    "enonce": "Je veille à ne pas utiliser la relation de coaching pour satisfaire mes besoins émotionnels ou professionnels."
+  },
+  {
+    "code": "FON-04-02",
+    "position": 11,
+    "enonce": "Je sais identifier et signaler les conflits d’intérêt potentiels dans ma relation avec le client."
+  },
+  {
+    "code": "ALL-01-02",
+    "position": 13,
+    "enonce": "J’accueille inconditionnellement le client sans jugement, quelles que soient ses expériences, ses croyances et ses émotions."
+  },
+  {
+    "code": "ALL-01-06",
+    "position": 17,
+    "enonce": "J’aménage le cadre matériel de la séance pour que le client soit au centre dès son arrivée."
+  },
+  {
+    "code": "ALL-02-03",
+    "position": 20,
+    "enonce": "Je sais réparer un lien abîmé en nommant ce qui s’est passé et en restaurant la sécurité."
+  },
+  {
+    "code": "COM-04-01",
+    "position": 29,
+    "enonce": "Je sais métacommuniquer* sur tout ce qui se joue dans la relation, au service du client."
+  },
+  {
+    "code": "COM-05-04",
+    "position": 34,
+    "enonce": "Je sais adapter l’intensité, le volume et le timbre de ma voix à l’effet recherché."
+  },
+  {
+    "code": "COM-05-05",
+    "position": 35,
+    "enonce": "J’amène mes intuitions en questions ou en hypothèses à valider, jamais en diagnostic ni en conseil déguisé."
+  },
+  {
+    "code": "TRA-02-05",
+    "position": 56,
+    "enonce": "Je sais discerner le niveau d’être actuel de mon client et celui qu’il peut viser, pour dimensionner l’objectif."
+  },
+  {
+    "code": "TRA-02-11",
+    "position": 62,
+    "enonce": "Je conçois des pratiques inter-séances, distinctes des actions de résolution, qui nourrissent la séance suivante."
+  },
+  {
+    "code": "TRA-02-17",
+    "position": 68,
+    "enonce": "Je maintiens une base de ressources et je sélectionne après chaque séance celles adaptées à mon client, plutôt que d’expliquer la théorie en séance."
+  },
+  {
+    "code": "TRA-03-09",
+    "position": 77,
+    "enonce": "Je sais reconnaître les blocages dans la manière d’être du client et les lui refléter avec bienveillance."
+  },
+  {
+    "code": "TRA-03-11",
+    "position": 79,
+    "enonce": "Je sais faire preuve d’impertinence* et travailler en dehors du champ de pertinence de mon client."
+  },
+  {
+    "code": "TRA-03-12",
+    "position": 80,
+    "enonce": "Je sais repérer quand la séance fait miroir à l’enjeu* du client et laisser volontairement la difficulté présente pour qu’il y exerce sa nouvelle manière d’être."
+  },
+  {
+    "code": "TRA-04-03",
+    "position": 84,
+    "enonce": "Je sais utiliser la roue de la vie ou un outil similaire pour clarifier les priorités d’un client dans le flou."
+  },
+  {
+    "code": "TRA-04-07",
+    "position": 88,
+    "enonce": "Je sais tenir le leadership du processus pendant une technique et faire confiance au protocole."
+  },
+  {
+    "code": "TRA-05-11",
+    "position": 99,
+    "enonce": "Je sais faire parler les ressentis corporels de mon client et les utiliser comme information en séance."
+  },
+  {
+    "code": "TRA-05-17",
+    "position": 105,
+    "enonce": "Je sais discerner un rêve d’un fantasme et ancrer* le rêve dans la réalité sans le juger ni le réduire."
+  },
+  {
+    "code": "TRA-05-18",
+    "position": 106,
+    "enonce": "Je sais repérer le registre dominant de mon client, tête, cœur ou corps, et le faire changer de registre quand c’est au service de la conversation."
+  },
+  {
+    "code": "ACT-01-01",
+    "position": 109,
+    "enonce": "Je sais décrire ma couleur de coach et le mécanisme par lequel je produis une transformation."
+  },
+  {
+    "code": "ACT-01-03",
+    "position": 111,
+    "enonce": "Je sais définir et exprimer mon monopole personnel, ce qui me rend unique dans ma pratique de coach."
+  },
+  {
+    "code": "ACT-01-04",
+    "position": 112,
+    "enonce": "J’adapte la présentation de mon histoire et de mon activité à chaque interlocuteur pour susciter intérêt et opportunités."
+  },
+  {
+    "code": "ACT-02-01",
+    "position": 115,
+    "enonce": "Je sais donner envie d’une conversation de coaching découverte (hook) à partir de n’importe quelle rencontre."
+  },
+  {
+    "code": "ACT-02-02",
+    "position": 116,
+    "enonce": "Je sais traduire ma vision du coaching et mes objectifs de vie en choix stratégiques et commerciaux cohérents."
+  },
+  {
+    "code": "ACT-04-03",
+    "position": 122,
+    "enonce": "J’ai une offre claire qui nomme le client visé, le problème traité, le résultat et les critères d’adéquation."
+  },
+  {
+    "code": "ACT-04-04",
+    "position": 123,
+    "enonce": "Je sais itérer sur mon offre à partir des signaux de l’avant-vente, des résultats clients et du marché."
+  },
+  {
+    "code": "ACT-05-02",
+    "position": 125,
+    "enonce": "J’exploite durablement au moins un canal d’acquisition adapté à ma cible."
+  },
+  {
+    "code": "ACT-06-02",
+    "position": 132,
+    "enonce": "Je sais évaluer la motivation, la disponibilité, les attentes et la capacité d’engagement d’un prospect."
+  },
+  {
+    "code": "ACT-06-04",
+    "position": 134,
+    "enonce": "Je sais aider un prospect qualifié à voir l’intérêt d’un accompagnement pour qu’il décide de s’engager."
+  },
+  {
+    "code": "ACT-06-09",
+    "position": 139,
+    "enonce": "Je sais mener un processus d’avant-vente de bout en bout : qualification, expérience de coaching, proposition, décision, contractualisation et intégration."
+  },
+  {
+    "code": "ACT-07-01",
+    "position": 141,
+    "enonce": "Je dispose d’un statut légal, d’une assurance, de contrats et d’une facturation conformes à mon activité."
+  },
+  {
+    "code": "ACT-07-03",
+    "position": 143,
+    "enonce": "Je sais concevoir un surdelivery intentionnel qui augmente la valeur sans diluer la promesse ni fragiliser mon modèle."
+  },
+  {
+    "code": "ENT-01-03",
+    "position": 147,
+    "enonce": "Je sais tenir ma posture, défendre mes convictions professionnelles et protéger ma responsabilité dans un cadre multi-partite, et traiter les conflits d’intérêts et enjeux de pouvoir en cadre multi-partite."
+  },
+  {
+    "code": "ENT-03-07",
+    "position": 160,
+    "enonce": "Je sais contractualiser, piloter et clôturer une mission et définir les modalités de règlement dans le respect des exigences de l’entreprise."
+  },
+  {
+    "code": "ETR-01-04",
+    "position": 164,
+    "enonce": "Je sais accueillir les émotions et désaccords très intenses en tenant l’espace sans les fuir, les minimiser ni les prendre en charge."
+  },
+  {
+    "code": "ETR-03-01",
+    "position": 179,
+    "enonce": "Je tiens mes engagements et je reconnais clairement mes erreurs, omissions ou manquements."
+  },
+  {
+    "code": "ETR-04-06",
+    "position": 185,
+    "enonce": "Je sais analyser des conversations de coaching, en tirer des axes de travail et formuler des retours constructifs."
+  }
+]

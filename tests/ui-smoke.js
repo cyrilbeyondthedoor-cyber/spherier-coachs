@@ -33,8 +33,10 @@ const competencies = DIMENSIONS.map((dimension, index) => ({
   theme: `theme-${dimension.id}`,
   name: `Je sais mobiliser la compétence ${dimension.id}.`,
   definition: `Je sais mobiliser la compétence ${dimension.id}.`,
-  statement: `Je sais mobiliser la compétence ${dimension.id}.`,
-  markers: `Un exemple observable pour ${dimension.id}.`,
+  // Un mot du lexique dans l'énoncé et un autre dans les marqueurs : le renvoi au
+  // lexique doit fonctionner aux deux endroits où le membre lit du texte.
+  statement: `Je sais provoquer la bascule* : agir sur la compétence ${dimension.id}.`,
+  markers: `Un exemple observable pour ${dimension.id}. Tu sais suivre les fils* et tenir l'ancrage*.`,
   difficulty: DIFFICULTES[index % DIFFICULTES.length].nom,
   order: 1,
   resources: [],
@@ -149,8 +151,17 @@ async function principal() {
     await page.getByRole('heading', { name: 'Comment utiliser le sphérier ?' }).waitFor();
     await page.getByRole('button', { name: 'Consulter le lexique' }).click();
     await page.getByRole('heading', { name: "Lexique de l'approche des Sommets" }).waitFor();
-    await page.getByText('Niveau Professionnel établi', { exact: true }).waitFor();
+    const termesLexique = await page.locator('#lexique-liste dt').allTextContents();
+    assert.ok(termesLexique.includes('Professionnel établi'));
+    assert.ok(termesLexique.includes('A-player'));
     assert.equal(await page.getByText('Niveau TTC', { exact: true }).count(), 0);
+    // Tri alphabétique français, accents ignorés : le lexique se parcourt à l'œil.
+    const sansAccent = (texte) => texte.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    assert.deepEqual(
+      termesLexique,
+      [...termesLexique].sort((x, y) => sansAccent(x).localeCompare(sansAccent(y), 'fr')),
+    );
+    assert.ok(await page.locator('#lexique-recherche').evaluate((el) => getComputedStyle(el.parentElement).position === 'sticky'));
     await page.locator('#panneau-fermer').click();
     await page.getByRole('button', { name: 'Refermer le mode d’emploi' }).click();
     await page.getByText('marque une pause toutes les 30 compétences.').waitFor();
@@ -226,14 +237,42 @@ async function principal() {
     const scrollApresTheme = await page.evaluate(() => window.scrollY);
     assert.ok(Math.abs(scrollAvantTheme - scrollApresTheme) <= 1);
     await page.locator('#panneau-fermer').dispatchEvent('click');
-    assert.equal(await page.locator('.etoile[data-competence="FON-01-01"] title').textContent(), 'Je sais mobiliser la compétence FON.');
+    assert.equal(await page.locator('.etoile[data-competence="FON-01-01"] title').textContent(), 'Je sais provoquer la bascule* : agir sur la compétence FON.');
     await page.locator('.etoile[data-competence="FON-01-01"]').dispatchEvent('pointerenter', { pointerType: 'mouse', clientX: 300, clientY: 300 });
     await page.locator('#etoile-tooltip:not([hidden])').waitFor();
-    assert.equal(await page.locator('#etoile-tooltip').textContent(), 'Je sais mobiliser la compétence FON.');
+    assert.equal(await page.locator('#etoile-tooltip').textContent(), 'Je sais provoquer la bascule* : agir sur la compétence FON.');
     await page.locator('.etoile[data-competence="FON-01-01"]').dispatchEvent('pointerleave');
     await page.locator('.etoile[data-competence="FON-01-01"]').dispatchEvent('click');
     await page.getByText('Un exemple observable pour FON.').waitFor();
     assert.equal(await page.locator('.marche[data-niveau]').count(), 3);
+
+    // Renvois au lexique : le mot astérisqué devient un bouton, son clic ouvre la
+    // définition sur place, et l'infobulle mène au lexique complet.
+    assert.equal(await page.locator('.panneau-def .lex-mot').textContent(), 'bascule*');
+    // Typographie : une espace insécable tient le deux-points sur la ligne du mot.
+    const definitionAffichee = await page.locator('.panneau-def').textContent();
+    assert.equal(/ :/.test(definitionAffichee), false);
+    assert.ok(/\u00a0:/.test(definitionAffichee));
+    const motFils = page.locator('.marche-enonce .lex-mot').first();
+    assert.equal(await motFils.textContent(), 'fils*');
+    // Élision : seul « ancrage » est souligné, l'article reste du texte courant.
+    assert.deepEqual(await page.locator('.marche-enonce .lex-mot').allTextContents(), ['fils*', 'ancrage*']);
+    assert.match(await page.locator('.marche-enonce').textContent(), /tenir l'ancrage\*\.$/);
+    await motFils.click();
+    await page.locator('.lex-bulle[role="dialog"]').waitFor();
+    assert.equal(await page.locator('.lex-bulle-terme').textContent(), 'Fils');
+    assert.ok((await page.locator('.lex-bulle-def').textContent()).startsWith('Éléments repérés pendant une conversation'));
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('.lex-bulle').count(), 0);
+    // Échap ne referme que l'infobulle : le panneau de la compétence reste ouvert.
+    assert.equal(await page.locator('#voile.visible').count(), 1);
+    await motFils.click();
+    await page.getByRole('button', { name: 'Voir tout le lexique' }).click();
+    await page.locator('#lexique-liste').waitFor();
+    assert.equal(await page.locator('.lex-bulle').count(), 0);
+    await page.locator('#panneau-fermer').dispatchEvent('click');
+    await page.locator('.etoile[data-competence="FON-01-01"]').dispatchEvent('click');
+    await page.getByText('Un exemple observable pour FON.').waitFor();
 
     await page.locator('.marche[data-niveau="3"]').dispatchEvent('click');
     await page.locator('#panneau-fermer').dispatchEvent('click');
