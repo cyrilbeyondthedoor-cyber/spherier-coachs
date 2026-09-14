@@ -2535,11 +2535,6 @@
       .map((competence) => competence.id);
   }
 
-  function premiereNonSituee(codes) {
-    const i = codes.findIndex((c) => (brouillon.levels[c] ?? 0) === 0);
-    return i === -1 ? 0 : i;
-  }
-
   function progressionCodes(codes) {
     const total = codes.length;
     const maitrisees = codes.filter((code) => (brouillon.levels[code] ?? 0) >= NIVEAU_ACQUIS).length;
@@ -2713,18 +2708,15 @@
       bouton.addEventListener('click', () => ouvrirCategorie(bouton.dataset.tabCategorie));
     });
 
+    // « M'évaluer sur cette dimension » passe par le parcours modulaire, comme
+    // « Évaluer toute la dimension » de l'écran de choix. Ouvrir la dimension d'un bloc
+    // sans contexte de thématique n'appelait jamais `terminerTheme` : le membre pouvait
+    // positionner les 11 compétences d'une dimension sans qu'un seul enregistrement ne
+    // parte, et retombait sur l'écran « Rien n'est encore enregistré ».
     elDimensions.querySelectorAll('[data-situer]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const d = etat.referentiel.dimensions.find((x) => x.id === btn.dataset.situer);
-        ouvrirMeSituer({
-          codes: codesDeDimension(d),
-          titre: d.name,
-          teinte: TEINTES_HEX[d.id],
-          // On reprend là où il reste à faire, pas au début : réouvrir le parcours ne
-          // doit pas imposer de repasser sur ce qui est déjà évalué.
-          depart: premiereNonSituee(codesDeDimension(d)),
-        });
+        evaluerDimension(btn.dataset.situer);
       });
     });
 

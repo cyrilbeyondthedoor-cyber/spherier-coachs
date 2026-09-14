@@ -1000,6 +1000,30 @@ async function principal() {
     await mobileBarre.locator('#voile:not([hidden])').waitFor();
     await mobileBarre.close();
 
+    // --- « M'évaluer sur cette dimension » depuis le zoom de catégorie ----------
+    // Ce bouton ouvrait les compétences de la dimension d'un bloc, hors du parcours
+    // modulaire : aucune frontière de thématique, donc aucun enregistrement, et l'écran
+    // « Rien n'est encore enregistré » au bout. Il passe maintenant par
+    // `evaluerDimension`, comme « Évaluer toute la dimension ».
+    const avantZoom = nbSnapshots;
+    const zoom = await navigateur.newPage({ viewport: { width: 1280, height: 700 } });
+    await zoom.goto(url);
+    await zoom.locator('#ciel:not([hidden])').waitFor();
+    await zoom.locator(`#ciel [data-explorer-categorie="${DIM_MULTI.category}"]`).dispatchEvent('click');
+    await zoom.locator(`[data-situer="${DIM_MULTI.id}"]:visible`).first().dispatchEvent('click');
+    await zoom.locator('body[data-panneau="situer"]').waitFor({ state: 'attached' });
+    // Le contexte de thématique est là : sous-compteur présent et compteur borné à la
+    // thématique, pas à la dimension entière.
+    await zoom.locator('.audit-sous-compteur', { hasText: /^Thématique 1 \/ 2 de / }).waitFor();
+    for (const rang of [1, 2, 3, 4]) {
+      await zoom.locator('.situer-compte', { hasText: `${rang} / 4` }).waitFor();
+      await zoom.locator('.marche[data-niveau="2"]').dispatchEvent('click');
+    }
+    await zoom.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
+    assert.equal(nbSnapshots - avantZoom, 1,
+      'la fin de thématique lancée depuis le zoom de catégorie doit enregistrer');
+    await zoom.close();
+
     // --- Écran d'attente pendant l'enregistrement de fin de thématique ----------
     delaiSnapshot = 400;
     const avantAttente = nbSnapshots;
