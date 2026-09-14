@@ -759,6 +759,34 @@ async function principal() {
     await resultatPage.locator('#audit-suite').dispatchEvent('click');
     await resultatPage.getByRole('heading', { name: 'Ton sphérier en un regard' }).waitFor();
     assert.equal(await resultatPage.locator('.priorite-marque').count() > 0, true);
+
+    // --- Lot 8.4 : le badge « Priorité choisie » ne recouvre plus rien -----------
+    // Il vivait en absolu, calé en haut à droite, et passait par-dessus la ligne de
+    // score dès que la carte descendait sous 400 px.
+    for (const largeur of [320, 370, 390, 640, 900, 1280]) {
+      await resultatPage.setViewportSize({ width: largeur, height: 900 });
+      await resultatPage.waitForTimeout(120);
+      const recouvrements = await resultatPage.locator('.carte-resultat .ciel-categorie')
+        .evaluateAll((cartes) => cartes.flatMap((carte) => {
+          const badge = carte.querySelector('.priorite-marque');
+          if (!badge) return [];
+          const b = badge.getBoundingClientRect();
+          return [...carte.querySelectorAll('.ciel-categorie-meta, .ciel-categorie-titre, .ciel-categorie-cta, .ciel-categorie-dims')]
+            .map((el) => {
+              const r = el.getBoundingClientRect();
+              const recouvre = !(b.right <= r.left + 0.5 || b.left >= r.right - 0.5
+                || b.bottom <= r.top + 0.5 || b.top >= r.bottom - 0.5);
+              return { recouvre, cible: el.className };
+            })
+            .filter((item) => item.recouvre);
+        }));
+      assert.deepEqual(recouvrements, [],
+        `le badge « Priorité choisie » en recouvre un autre en ${largeur} px : ${JSON.stringify(recouvrements)}`);
+      assert.ok(await resultatPage.locator('.priorite-marque').first().isVisible(),
+        `le badge doit rester visible en ${largeur} px`);
+    }
+    await capturer(resultatPage, screenshotDir, 'priorite-marque-370.png');
+    await resultatPage.setViewportSize({ width: 1280, height: 900 });
     await resultatPage.getByRole('button', { name: 'Ouvrir la vue d’ensemble linéaire' }).click();
     assert.equal(await resultatPage.locator('.syn-categorie-item').count(), 3);
     assert.equal(await resultatPage.locator('.syn-maitrise-item').count(), 3);
@@ -1212,7 +1240,20 @@ async function principal() {
     assert.match((await annulation.locator('#situer-astuce').textContent()).trim(),
       /^Coche une marche, ou passe pour l'instant : tu pourras y revenir\./);
     // L'astuce clavier accompagne l'invitation sur desktop.
-    assert.equal((await annulation.locator('.tinder-clavier').textContent()).trim(), '1, 2 ou 3 au clavier');
+    assert.equal((await annulation.locator('.tinder-clavier').textContent()).trim(),
+      '1 · 2 · 3 au clavier, du plus bas au plus haut');
+    // Lot 8.1 : l'escalier se lit du plus haut niveau au plus bas, et la marche la plus
+    // exigeante reste la plus à droite.
+    const ordreMarches = await annulation.locator('.marche[data-niveau]').evaluateAll((marches) => marches.map((m) => ({
+      niveau: Number(m.dataset.niveau),
+      haut: Math.round(m.getBoundingClientRect().top),
+      gauche: Math.round(m.getBoundingClientRect().left),
+    })));
+    assert.deepEqual(ordreMarches.map((m) => m.niveau), [3, 2, 1]);
+    assert.ok(ordreMarches[0].haut < ordreMarches[1].haut && ordreMarches[1].haut < ordreMarches[2].haut,
+      'les marches se suivent de haut en bas dans l\'ordre 3, 2, 1');
+    assert.ok(ordreMarches[0].gauche > ordreMarches[1].gauche && ordreMarches[1].gauche > ordreMarches[2].gauche,
+      'l\'escalier descend vers la gauche');
 
     // --- Enregistrement en échec, puis Réessayer -----------------------------
     // Le résultat reste affiché depuis le brouillon local, et le libellé automatique
@@ -1790,6 +1831,118 @@ async function principal() {
     assert.equal(await categorie.locator('#panneau-titre').textContent(), 'Choisis une dimension');
     assert.equal(await categorie.locator('.choix-carte').count(), DIMENSIONS.length);
     await categorie.close();
+
+    // --- Lot 8.2 et 8.3 : déplier, modifier, et voir le score suivre --------------
+    const retouches = await navigateur.newPage({ viewport: { width: 1280, height: 700 } });
+    await retouches.bringToFront();
+    await retouches.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000011`);
+    await retouches.locator('#ciel:not([hidden])').waitFor();
+    await retouches.getByRole('button', { name: 'Commencer mon audit' }).dispatchEvent('click');
+    await retouches.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await retouches.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}"]`).dispatchEvent('click');
+    for (const rang of [1, 2, 3, 4]) {
+      await retouches.locator('.situer-compte', { hasText: `${rang} / 4` }).waitFor();
+      await retouches.locator('.marche[data-niveau="1"]').dispatchEvent('click');
+    }
+    await retouches.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
+    assert.equal((await retouches.locator('.audit-bilan-score .syn-pct').textContent()).trim(), '33 %');
+
+    // 8.3 : « Modifier mes positionnements » repart de la première compétence.
+    await retouches.locator('#audit-modifier-theme').dispatchEvent('click');
+    await retouches.locator('body[data-panneau="situer"]').waitFor({ state: 'attached' });
+    assert.equal((await retouches.locator('.situer-compte').textContent()).trim(), '1 / 4');
+    assert.equal(await retouches.locator('.marche[data-niveau="1"][aria-pressed="true"]').count(), 1);
+    await retouches.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    // Les trois suivantes gardent leur niveau : recliquer leur propre marche l'effacerait,
+    // on traverse donc avec « Suivante → ».
+    for (const rang of [2, 3, 4]) {
+      await retouches.locator('.situer-compte', { hasText: `${rang} / 4` }).waitFor();
+      await retouches.getByRole('button', { name: 'Suivante →' }).dispatchEvent('click');
+    }
+    await retouches.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
+    assert.equal((await retouches.locator('.audit-bilan-score .syn-pct').textContent()).trim(), '50 %',
+      'le score suit la correction faite depuis « Modifier mes positionnements »');
+
+    // On boucle la seconde thématique pour atteindre le résultat de dimension.
+    await retouches.locator('[data-suite="continuer"]').dispatchEvent('click');
+    for (const rang of [1, 2]) {
+      await retouches.locator('.situer-compte', { hasText: `${rang} / 2` }).waitFor();
+      await retouches.locator('.marche[data-niveau="2"]').dispatchEvent('click');
+    }
+    await retouches.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
+    await retouches.getByRole('button', { name: /^Voir mon résultat de dimension/ }).click();
+    await retouches.locator('body[data-panneau="resultat-dimension"]').waitFor({ state: 'attached' });
+
+    // 8.2 : les lignes sont repliées, et une seule s'ouvre à la fois.
+    assert.equal(await retouches.locator('.audit-classement-bloc').count(), 2);
+    assert.equal(await retouches.locator('.audit-detail:not([hidden])').count(), 0);
+    assert.deepEqual(await retouches.locator('[data-deplier]').evaluateAll((b) => b.map((x) => x.getAttribute('aria-expanded'))),
+      ['false', 'false']);
+    await retouches.locator(`[data-deplier="theme-${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await retouches.locator(`#detail-theme-${DIM_MULTI.id}:not([hidden])`).waitFor();
+    assert.equal(await retouches.locator('.audit-detail:not([hidden])').count(), 1);
+    assert.equal(await retouches.locator(`#detail-theme-${DIM_MULTI.id} .audit-detail-ligne`).count(), 4);
+    assert.equal(await retouches.locator(`[data-deplier="theme-${DIM_MULTI.id}"]`).getAttribute('aria-expanded'), 'true');
+    // Niveau lisible sur chaque ligne, dans les mots de l'échelle.
+    const niveaux = await retouches.locator(`#detail-theme-${DIM_MULTI.id} .audit-detail-niveau`).allTextContents();
+    assert.equal(niveaux.length, 4);
+    const libellesAttendus = [...Object.values(ECHELLE), 'Passée', 'À évaluer'];
+    assert.ok(niveaux.every((texte) => libellesAttendus.includes(texte.trim())),
+      `niveaux inattendus : ${JSON.stringify(niveaux)}`);
+    await capturer(retouches, screenshotDir, 'resultat-dimension-deplie-desktop.png');
+
+    // Ouvrir l'autre referme la première.
+    await retouches.locator(`[data-deplier="theme-${DIM_MULTI.id}-2"]`).dispatchEvent('click');
+    assert.equal(await retouches.locator('.audit-detail:not([hidden])').count(), 1);
+    assert.equal(await retouches.locator(`#detail-theme-${DIM_MULTI.id}-2:not([hidden])`).count(), 1);
+    // « Tout déplier » les ouvre toutes, puis les referme.
+    await retouches.locator('#audit-tout-deplier').dispatchEvent('click');
+    assert.equal(await retouches.locator('.audit-detail:not([hidden])').count(), 2);
+    assert.equal(await retouches.locator('#audit-tout-deplier').textContent(), 'Tout replier');
+    await retouches.locator('#audit-tout-deplier').dispatchEvent('click');
+    assert.equal(await retouches.locator('.audit-detail:not([hidden])').count(), 0);
+
+    // 8.2 : « Modifier » ouvre la fiche, la marche s'y change, le retour recalcule.
+    await retouches.locator(`[data-deplier="theme-${DIM_MULTI.id}-2"]`).dispatchEvent('click');
+    const scoreAvant = (await retouches.locator('.audit-bilan-score .syn-pct').textContent()).trim();
+    await retouches.locator(`#detail-theme-${DIM_MULTI.id}-2 [data-modifier]`).first().dispatchEvent('click');
+    await retouches.locator('#panneau-retour-audit').waitFor();
+    assert.match(await retouches.locator('#panneau-retour-audit').textContent(), /Résultat de /);
+    assert.equal(await retouches.locator('.marche[data-niveau]').count(), 3);
+    await retouches.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    await retouches.locator('#panneau-retour-audit').dispatchEvent('click');
+    await retouches.locator('body[data-panneau="resultat-dimension"]').waitFor({ state: 'attached' });
+    const scoreApres = (await retouches.locator('.audit-bilan-score .syn-pct').textContent()).trim();
+    assert.notEqual(scoreApres, scoreAvant,
+      `le score de la dimension doit suivre la correction (${scoreAvant} → ${scoreApres})`);
+    // Le dépliage a survécu à l'aller-retour.
+    assert.equal(await retouches.locator(`#detail-theme-${DIM_MULTI.id}-2:not([hidden])`).count(), 1);
+
+    // 8.3 : depuis la vue d'ensemble, corriger une marche puis enregistrer met les
+    // scores à jour partout, sans repasser par le parcours.
+    await retouches.locator('#panneau-fermer').dispatchEvent('click');
+    await retouches.locator('#btn-synthese').dispatchEvent('click');
+    await retouches.locator(`[data-aller="${DIM_MULTI.id}-01-02"]`).first().dispatchEvent('click');
+    await retouches.locator('.marche[data-niveau]').first().waitFor();
+    await retouches.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    await retouches.locator('#panneau-fermer').dispatchEvent('click');
+    await retouches.locator('#btn-enregistrer').dispatchEvent('click');
+    await retouches.getByText('Ton sphérier est enregistré.').waitFor();
+    assert.equal(dernierSnapshot.levels[`${DIM_MULTI.id}-01-02`], 3);
+    // Et le résultat de la thématique, rouvert depuis la carte, porte le nouveau score.
+    // Le retour depuis la fiche passe par la vue de dimension puis par la catégorie.
+    for (let pas = 0; pas < 3 && await retouches.locator('#ciel').isHidden(); pas += 1) {
+      await retouches.locator('#detail-retour').dispatchEvent('click');
+      await retouches.waitForTimeout(120);
+    }
+    await retouches.locator('#ciel:not([hidden])').waitFor();
+    await retouches.locator(`[data-ouvrir="${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await retouches.locator(`[data-dimension="${DIM_MULTI.id}"] .theme[data-theme]`).first().dispatchEvent('click');
+    await retouches.locator('#theme-resultat').dispatchEvent('click');
+    await retouches.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
+    assert.equal((await retouches.locator('.audit-bilan-score .syn-pct').textContent()).trim(), '67 %',
+      'le score de la thématique suit une correction faite depuis la vue d\'ensemble');
+    await retouches.close();
 
     console.log('UI desktop, mobile et sauvegarde simulée : OK');
   } finally {

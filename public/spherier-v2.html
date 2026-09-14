@@ -748,7 +748,8 @@
     position: relative;
     min-height: 44px;
   }
-  /* Retrait croissant : la marche la plus exigeante est aussi la plus avancée. */
+  /* Retrait croissant : la marche la plus exigeante est aussi la plus à droite. Avec
+     « Je maîtrise » en tête, l'escalier descend donc vers la gauche. */
   .marche-2 { margin-left: 14px; }
   .marche-3 { margin-left: 28px; }
   .marche-atteinte { background: rgba(240, 235, 224, 0.045); }
@@ -1440,7 +1441,14 @@
   .carte-resultat-actions { display: flex; justify-content: center; gap: 10px; margin: 28px 0 8px; flex-wrap: wrap; }
   .carte-resultat-cta { min-height: 48px; padding: 11px 22px; border: 1px solid var(--gold); border-radius: 999px; background: var(--gold); color: var(--night-deep); cursor: pointer; font: inherit; font-weight: 600; }
   .carte-resultat-secondaire { min-height: 48px; padding: 11px 22px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--paper-dim); cursor: pointer; font: inherit; }
-  .priorite-marque { position: absolute; top: 5px; right: 12px; padding: 4px 9px; border: 1px solid rgba(201,166,97,.48); border-radius: 999px; background: rgba(201,166,97,.10); color: var(--gold-bright); font-size: 11px; letter-spacing: .13em; text-transform: uppercase; }
+  /* Le badge vivait en absolu, calé en haut à droite : sous 400 px de carte, il passait
+     par-dessus la ligne de score. Il prend sa place dans le flux, entre le score et le
+     nom de la catégorie, où il ne peut recouvrir personne à aucune largeur. */
+  .priorite-marque {
+    align-self: center; max-width: 100%; margin-bottom: 7px; padding: 4px 9px;
+    border: 1px solid rgba(201,166,97,.48); border-radius: 999px; background: rgba(201,166,97,.10);
+    color: var(--gold-bright); font-size: 11px; letter-spacing: .13em; text-transform: uppercase;
+  }
 
 
   /* LE CIEL — page d'arrivée.
@@ -2209,6 +2217,50 @@
   .lex-rappel { font-size: .7em; color: var(--stone); }
   /* Le mot rendu en `span` dans un conteneur cliquable garde le geste du bouton. */
   span.lex-mot { cursor: pointer; }
+  /* --- 8.2 Résultat de dimension dépliable ------------------------------------
+     Le classement disait le score sans dire ce qu'il y avait dedans. Chaque ligne
+     s'ouvre sur ses compétences, et chacune se corrige sans quitter l'écran. */
+  .audit-modifier { justify-self: start; margin-top: -6px; }
+  .audit-bilan-entete { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .audit-tout-deplier { min-height: 32px; font-size: 12px; }
+  .audit-classement-bloc {
+    border: 1px solid transparent; border-radius: 11px;
+    transition: border-color .2s ease, background .2s ease;
+  }
+  .audit-classement-bloc.ouvert {
+    border-color: color-mix(in srgb, var(--h) 30%, transparent);
+    background: color-mix(in srgb, var(--h) 5%, transparent);
+  }
+  .audit-classement-bloc .audit-classement-ligne {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    width: 100%; min-height: 44px; padding: 8px 11px; text-align: left;
+    border: 0; background: none; color: inherit; font: inherit; cursor: pointer;
+  }
+  .audit-classement-bloc .audit-classement-ligne:focus-visible { outline: 2px solid var(--h); outline-offset: 2px; }
+  .audit-chevron { color: var(--stone); font-size: 12px; transition: transform .2s ease; }
+  .audit-classement-bloc.ouvert .audit-chevron { transform: rotate(180deg); }
+  .audit-detail { display: grid; gap: 6px; padding: 2px 11px 11px; }
+  .audit-detail[hidden] { display: none; }
+  .audit-detail-ligne {
+    display: flex; align-items: center; gap: 12px; padding: 9px 12px;
+    border: 1px solid var(--line-faint); border-radius: 10px; background: rgba(240, 235, 224, .02);
+  }
+  .audit-detail-corps { flex: 1; min-width: 0; display: grid; gap: 5px; }
+  .audit-detail-nom { font-size: 14px; line-height: 1.4; }
+  .audit-detail-marques { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .audit-detail-niveau {
+    color: var(--stone); font-family: 'Cormorant Garamond', serif; font-size: 12px; font-style: italic;
+  }
+  .audit-detail-niveau.niveau-3 { color: var(--gold-bright); }
+
+  @media (max-width: 720px) {
+    .audit-detail-ligne { flex-wrap: wrap; }
+    .audit-detail-ligne .audit-ligne-action { width: 100%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .audit-chevron, .audit-classement-bloc { transition: none; }
+  }
 </style>
 </head>
 <body>
@@ -3889,7 +3941,11 @@
   }
 
   function escalier(competence, niveau, teinte) {
-    const marches = [1, 2, 3].map((n) => {
+    // De haut en bas : « Je maîtrise », « Je dois m'améliorer », « Je ne maîtrise pas du
+    // tout ». Un escalier se monte, et son sommet se lit en premier. Le rang des
+    // touches ne bouge pas : 1 reste le bas, 3 reste le haut, et la sélection passe
+    // toujours par `data-niveau`, jamais par une position.
+    const marches = [3, 2, 1].map((n) => {
       const classes = ['marche', 'marche-' + n];
       if (n === niveau) classes.push('marche-actuelle');
       else if (n < niveau) classes.push('marche-atteinte');
@@ -4412,7 +4468,7 @@
     elPanneauPied.innerHTML = `
       <div class="situer-pied">
         <button type="button" class="situer-btn" id="situer-precedent" ${situer.index === 0 ? 'disabled' : ''}>← Précédente</button>
-        <p class="situer-astuce" id="situer-astuce">${surMobile() ? astuceCourte : `${astuceLongue}<span class="tinder-clavier">1, 2 ou 3 au clavier</span>`}</p>
+        <p class="situer-astuce" id="situer-astuce">${surMobile() ? astuceCourte : `${astuceLongue}<span class="tinder-clavier">1 · 2 · 3 au clavier, du plus bas au plus haut</span>`}</p>
         <button type="button" class="situer-btn situer-passer" id="situer-passer">Suivante →</button>
       </div>`;
     elPanneauCorps.scrollTop = 0;
@@ -4914,6 +4970,7 @@
     minuteurConfirmation = null;
     clearTimeout(minuteurTinder);
     minuteurTinder = null;
+    retourApresFiche = null;
     situer = null;
     competenceAffichee = null;
     themeAffiche = null;
@@ -5453,6 +5510,7 @@
         <p class="audit-bilan-score">${pctHtml(info.score)} de maîtrise</p>
       </div>
       ${progressionDimensionHtml(dimension, teinte)}
+      <button type="button" class="choix-lien audit-modifier" id="audit-modifier-theme">Modifier mes positionnements</button>
       ${repartition(info.codes, teinte)}
       <dl class="audit-bilan-chiffres">
         <div class="audit-bilan-chiffre"><dt>Compétences</dt><dd>${info.codes.length}</dd></div>
@@ -5500,6 +5558,11 @@
         contexte: { dimensionId: dimension.id, themeId: theme.id, suite },
       }));
     });
+    // Corriger sans attendre : on repart de la première compétence, marches cochées,
+    // plutôt que de la reprise qui chercherait ce qu'il reste à faire et n'y trouverait
+    // rien sur une thématique complète.
+    document.getElementById('audit-modifier-theme').addEventListener('click',
+      () => evaluerTheme(dimension.id, theme.id, suite, { depart: 0 }));
     const voirDimension = document.getElementById('audit-voir-dimension');
     if (voirDimension) voirDimension.addEventListener('click', () => ouvrirResultatDimension(dimension.id, suite));
     brancherPrioritesTheme(theme.id);
@@ -5671,6 +5734,42 @@
     });
   }
 
+  // --- Dépliage des thématiques sur le résultat de dimension ---------------------
+  // Le classement disait le score sans dire ce qu'il y avait dedans : il fallait ressortir
+  // et rouvrir la thématique pour voir une compétence, et plus encore pour la corriger.
+  // Une seule thématique ouverte à la fois, pour que l'écran reste lisible.
+  let deplieResultat = { dimensionId: null, themes: new Set(), tout: false };
+
+  // Où revenir après une fiche de compétence ouverte depuis un écran d'audit. Sans ce
+  // repère, « Modifier » était un aller simple : le membre corrigeait sa marche et se
+  // retrouvait devant la carte, sans son résultat ni son score recalculé.
+  let retourApresFiche = null;
+
+  function niveauLisible(code) {
+    const niveau = brouillon.levels[code] ?? 0;
+    if (niveau > 0) return etat.referentiel.scale[niveau];
+    return estPassee(code) ? 'Passée' : 'À évaluer';
+  }
+
+  function detailThemeHtml(item) {
+    const lignes = item.codes.map((code) => {
+      const competence = competenceParCode(code);
+      if (!competence) return '';
+      const niveau = brouillon.levels[code] ?? 0;
+      return `<div class="audit-detail-ligne">
+        <span class="audit-detail-corps">
+          <span class="audit-detail-nom">${lierLexique(typoFr(echapper(competence.name)))}</span>
+          <span class="audit-detail-marques">
+            ${pastilleDifficulte(competence, 'audit-pastille')}
+            <span class="audit-detail-niveau niveau-${niveau}">${echapper(niveauLisible(code))}</span>
+          </span>
+        </span>
+        <button type="button" class="audit-ligne-action" data-modifier="${echapper(code)}">Modifier</button>
+      </div>`;
+    }).join('');
+    return `<div class="audit-detail" id="detail-${echapper(item.theme.id)}" hidden>${lignes}</div>`;
+  }
+
   // --- Écran « Résultat de la dimension » ---------------------------------------
   function ouvrirResultatDimension(dimensionId, suite = 'theme') {
     const dimension = dimensionParId(dimensionId);
@@ -5679,6 +5778,11 @@
     preparerEcranAudit(teinte, { plein: true });
     reinitialiserLexiqueRendu();
     const info = etatDimension(dimension);
+    // Le dépliage suit le membre quand il part corriger une compétence et revient, mais
+    // il repart de zéro sur une autre dimension.
+    if (deplieResultat.dimensionId !== dimension.id) {
+      deplieResultat = { dimensionId: dimension.id, themes: new Set(), tout: false };
+    }
     // De la moins à la plus maîtrisée : ce qu'on vient chercher en fin de dimension,
     // c'est par où continuer, pas un palmarès.
     const classement = info.themes.slice().sort((a, b) => a.score - b.score
@@ -5697,13 +5801,24 @@
       </div>
       ${repartition(info.codes, teinte)}
       <section class="audit-bilan-section">
-        <p class="audit-bilan-label">Tes thématiques, de la moins à la plus maîtrisée</p>
+        <div class="audit-bilan-entete">
+          <p class="audit-bilan-label">Tes thématiques, de la moins à la plus maîtrisée</p>
+          <button type="button" class="choix-lien audit-tout-deplier" id="audit-tout-deplier" aria-pressed="${deplieResultat.tout}">${deplieResultat.tout ? 'Tout replier' : 'Tout déplier'}</button>
+        </div>
         <div class="audit-classement">
-          ${classement.map((item) => `<div class="audit-classement-ligne" style="--h:${echapper(teinte)}">
-            <span class="audit-classement-nom">${echapper(item.theme.name)}</span>
-            <span>${pctHtml(item.score)}</span>
-            <span class="choix-jauge" aria-hidden="true"><i style="width:${item.score}%"></i></span>
-          </div>`).join('')}
+          ${classement.map((item) => {
+            const ouvert = deplieResultat.tout || deplieResultat.themes.has(item.theme.id);
+            return `<article class="audit-classement-bloc${ouvert ? ' ouvert' : ''}" style="--h:${echapper(teinte)}">
+              <button type="button" class="audit-classement-ligne" data-deplier="${echapper(item.theme.id)}"
+                aria-expanded="${ouvert}" aria-controls="detail-${echapper(item.theme.id)}">
+                <span class="audit-classement-nom">${echapper(item.theme.name)}</span>
+                <span>${pctHtml(item.score)}</span>
+                <span class="audit-chevron" aria-hidden="true">▾</span>
+                <span class="choix-jauge" aria-hidden="true"><i style="width:${item.score}%"></i></span>
+              </button>
+              ${detailThemeHtml(item)}
+            </article>`;
+          }).join('')}
         </div>
       </section>
       ${sectionPrioritesDimension(dimension.id)}
@@ -5711,6 +5826,39 @@
       <aside class="audit-bilan-suite">${blocPoursuivreHtml(dimension, suite)}</aside>
     </div></div>`);
     elPanneauCorps.scrollTop = 0;
+    elPanneauCorps.querySelectorAll('.audit-detail').forEach((detail) => {
+      const id = detail.id.replace(/^detail-/, '');
+      detail.hidden = !(deplieResultat.tout || deplieResultat.themes.has(id));
+    });
+    elPanneauCorps.querySelectorAll('[data-deplier]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        const id = bouton.dataset.deplier;
+        const ouvert = deplieResultat.tout || deplieResultat.themes.has(id);
+        // Replier depuis « tout déplier » ne referme que celle-là : on bascule alors
+        // en dépliage manuel, avec toutes les autres encore ouvertes.
+        if (deplieResultat.tout) {
+          deplieResultat.tout = false;
+          deplieResultat.themes = new Set(info.themes.map((item) => item.theme.id));
+        }
+        if (ouvert) deplieResultat.themes.delete(id);
+        else deplieResultat.themes = new Set([id]);
+        ouvrirResultatDimension(dimension.id, suite);
+      });
+    });
+    const toutDeplier = document.getElementById('audit-tout-deplier');
+    if (toutDeplier) toutDeplier.addEventListener('click', () => {
+      deplieResultat.tout = !deplieResultat.tout;
+      deplieResultat.themes = new Set();
+      ouvrirResultatDimension(dimension.id, suite);
+    });
+    elPanneauCorps.querySelectorAll('[data-modifier]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        // Le repère de retour est posé AVANT l'ouverture : c'est lui que la fiche lit
+        // pour afficher son bouton de retour.
+        retourApresFiche = { dimensionId: dimension.id, suite, libelle: `Résultat de ${dimension.name}` };
+        ouvrirCompetence(bouton.dataset.modifier, dimension.id);
+      });
+    });
     brancherPrioritesDimension(dimension.id);
     brancherPoursuivre(dimension);
 
@@ -6583,9 +6731,14 @@
     configurerPleinEcran(false);
 
     elPanneau.style.setProperty('--teinte-p', teinte);
-    const retour = themeAffiche && themeAffiche.id === competence.theme;
+    // Un retour vers un écran d'audit prime sur le retour vers la thématique : c'est de
+    // là que le membre vient, et c'est son score qu'il attend au retour.
+    const retourAudit = retourApresFiche;
+    const retour = !retourAudit && themeAffiche && themeAffiche.id === competence.theme;
     elPanneauTete.innerHTML = `
-      ${retour ? `<button type="button" class="panneau-retour" id="panneau-retour">← ${echapper(theme ? theme.name : '')}</button>` : ''}
+      ${retourAudit
+        ? `<button type="button" class="panneau-retour" id="panneau-retour-audit">← ${echapper(retourAudit.libelle)}</button>`
+        : (retour ? `<button type="button" class="panneau-retour" id="panneau-retour">← ${echapper(theme ? theme.name : '')}</button>` : '')}
       <p class="panneau-fil">${echapper(dimension ? dimension.name : '')} <span>›</span> <b>${echapper(theme ? theme.name : '')}</b></p>
       <h2 class="panneau-titre" id="panneau-titre">${lierLexique(typoFr(echapper(competence.name)))}</h2>
       ${(competence.statement || competence.definition) && (competence.statement || competence.definition) !== competence.name
@@ -6602,6 +6755,15 @@
 
     const btnRetour = document.getElementById('panneau-retour');
     if (btnRetour) btnRetour.addEventListener('click', () => ouvrirTheme(themeAffiche.id, themeAffiche.dimension));
+    const btnRetourAudit = document.getElementById('panneau-retour-audit');
+    if (btnRetourAudit) btnRetourAudit.addEventListener('click', () => {
+      const cible = retourApresFiche;
+      retourApresFiche = null;
+      // L'écran est redessiné de bout en bout : le score, la barre et le dépliage
+      // repartent des niveaux du brouillon, corrections comprises.
+      if (cible.themeId) ouvrirResultatTheme({ dimensionId: cible.dimensionId, themeId: cible.themeId, suite: cible.suite });
+      else ouvrirResultatDimension(cible.dimensionId, cible.suite);
+    });
 
     afficherPanneau();
     document.body.dataset.panneau = code;
@@ -6610,6 +6772,7 @@
   function fermerPanneau() {
     competenceAffichee = null;
     themeAffiche = null;
+    retourApresFiche = null;
     clearTimeout(minuteurConfirmation);
     minuteurConfirmation = null;
     situer = null;
