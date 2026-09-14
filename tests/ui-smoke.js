@@ -1318,7 +1318,7 @@ async function principal() {
     assert.equal(await categorie.locator('.cat-carte').count(), CATEGORIES.length);
     const carteCoach = categorie.locator('.cat-carte[data-evaluer-categorie="COACH"]');
     const aide = carteCoach.locator('.cat-carte-aide');
-    assert.match((await aide.textContent()).trim(), /^Évaluer toute la catégorie · 2 dimensions · \d+ compétences$/);
+    assert.match((await aide.textContent()).trim(), /^Évaluer cette catégorie · 2 dimensions · \d+ compétences$/);
     // Le texte d'aide est masqué au repos et se révèle au survol, sans disparaître du
     // flux : c'est l'opacité qui porte la révélation.
     assert.equal(await aide.evaluate((el) => getComputedStyle(el).opacity), '0');
@@ -1335,33 +1335,34 @@ async function principal() {
     assert.notEqual(await carteCoach.evaluate((el) => getComputedStyle(el).transform), 'none');
     await capturer(categorie, screenshotDir, 'categorie-survol-desktop.png');
 
-    // Clic sur l'en-tête : première thématique de la première dimension de COACH.
+    // Clic sur l'en-tête : l'écran se resserre sur les dimensions de la catégorie, il ne
+    // lance rien tout seul. Le membre choisit sa dimension, puis sa thématique.
     await carteCoach.dispatchEvent('click');
-    await categorie.locator('body[data-panneau="situer"]').waitFor({ state: 'attached' });
-    await categorie.locator('.audit-sous-compteur', { hasText: 'Thématique 1 / 2 de Fondations du coach' }).waitFor();
-
-    // On boucle la dimension FON : 4 compétences puis 2, et la file de catégorie doit
-    // alors proposer « Être du coach » en premier choix.
+    await categorie.locator('.choix-carte').first().waitFor();
+    assert.equal(await categorie.locator('body').getAttribute('data-panneau'), 'choix-dimension');
+    assert.equal(await categorie.locator('#panneau-titre').textContent(), 'Moi en tant que coach');
+    assert.equal(await categorie.locator('.choix-carte').count(), 2);
+    assert.deepEqual(await categorie.locator('.choix-carte-nom').allTextContents(),
+      ['Fondations du coach', 'Être du coach']);
+    assert.equal(await categorie.locator('.cat-carte').count(), 0,
+      'une fois dans la catégorie, plus de cartes de catégorie');
+    await capturer(categorie, screenshotDir, 'categorie-resserree-desktop.png');
+    // Aucune file : l'écran Poursuivre ne propose jamais « la suite de cette catégorie ».
+    await categorie.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await categorie.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}"]`).dispatchEvent('click');
     for (const rang of [1, 2, 3, 4]) {
       await categorie.locator('.situer-compte', { hasText: `${rang} / 4` }).waitFor();
       await categorie.locator('.marche[data-niveau="2"]').dispatchEvent('click');
     }
     await categorie.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
-    await categorie.locator('[data-suite="continuer"]').dispatchEvent('click');
-    for (const rang of [1, 2]) {
-      await categorie.locator('.situer-compte', { hasText: `${rang} / 2` }).waitFor();
-      await categorie.locator('.marche[data-niveau="3"]').dispatchEvent('click');
-    }
-    await categorie.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
-    await categorie.getByRole('button', { name: /^Voir mon résultat de dimension/ }).click();
-    await categorie.locator('body[data-panneau="resultat-dimension"]').waitFor({ state: 'attached' });
-    const suiteCategorie = categorie.locator('[data-suite="categorie"]');
-    await suiteCategorie.waitFor();
-    assert.match(await suiteCategorie.textContent(), /Être du coach/);
-    assert.ok(await suiteCategorie.evaluate((el) => el.classList.contains('principal')),
-      'la suite de catégorie est le choix mis en avant une fois la dimension bouclée');
-    await suiteCategorie.dispatchEvent('click');
-    await categorie.locator('.audit-sous-compteur', { hasText: 'Thématique 1 / 1 de Être du coach' }).waitFor();
+    assert.equal(await categorie.locator('[data-suite="categorie"]').count(), 0);
+    // « Toutes les dimensions » ramène à l'écran complet.
+    await categorie.locator('[data-suite="dimension"]').dispatchEvent('click');
+    await categorie.locator('.cat-carte').first().waitFor();
+    await categorie.locator('.cat-carte[data-evaluer-categorie="CLIENTS"]').dispatchEvent('click');
+    await categorie.locator('#choix-toutes-dimensions').dispatchEvent('click');
+    assert.equal(await categorie.locator('#panneau-titre').textContent(), 'Choisis une dimension');
+    assert.equal(await categorie.locator('.choix-carte').count(), DIMENSIONS.length);
     await categorie.close();
 
     console.log('UI desktop, mobile et sauvegarde simulée : OK');
