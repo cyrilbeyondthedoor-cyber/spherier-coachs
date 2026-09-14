@@ -4106,7 +4106,6 @@
   function ligneSelection(code, options = {}) {
     const c = etat.referentiel.competencies.find((x) => x.id === code);
     if (!c) return '';
-    const t = etat.referentiel.themes.find((x) => x.id === c.theme);
     const niveau = brouillon.levels[code] ?? 0;
     const ouverte = estOuverte(c.theme);
     const etatTexte = options.cible

@@ -258,14 +258,18 @@ function validerEtNormaliser({ referentiel, corps }) {
   const priorites = validerPriorites({ referentiel, brut: corps.priorites, competenceParCode, erreurs });
   if (erreurs.length > 0) return { erreurs };
 
+  // L'ouverture est évaluée sur les niveaux SOUMIS, pas sur ceux du snapshot précédent :
+  // monter une compétence et sélectionner la thématique ainsi débloquée doit pouvoir se
+  // faire en un seul enregistrement.
+  const ouverture = calculerOuverture({ referentiel, levels });
+
   // Le classement écrase les sélections envoyées : c'est lui que le membre a ordonné,
   // et deux sources d'ordre finiraient par diverger. Sans classement, rien ne change.
-  const ouvertureProvisoire = calculerOuverture({ referentiel, levels });
   const derivees = deriverSelections({
     priorites,
     maxMaintenant: MAX_CIBLES_MAINTENANT,
     laterExistant: laterBrut,
-    estOuverte: (code) => ouvertureProvisoire[competenceParCode.get(code)?.theme]?.status === 'open',
+    estOuverte: (code) => ouverture[competenceParCode.get(code)?.theme]?.status === 'open',
   });
   const currentFiltre = derivees ? derivees.current : currentBrut;
   const laterFiltre = derivees ? derivees.later : laterBrut;
@@ -274,10 +278,6 @@ function validerEtNormaliser({ referentiel, corps }) {
     erreurs.push(`selections.current est limité à ${MAX_CIBLES_MAINTENANT} compétences (reçu ${currentFiltre.length}).`);
   }
 
-  // L'ouverture est évaluée sur les niveaux SOUMIS, pas sur ceux du snapshot précédent :
-  // monter une compétence et sélectionner la thématique ainsi débloquée doit pouvoir se
-  // faire en un seul enregistrement.
-  const ouverture = ouvertureProvisoire;
   const horsThematiqueOuverte = currentFiltre.filter((code) => {
     const themeId = competenceParCode.get(code).theme;
     return ouverture[themeId]?.status !== 'open';
