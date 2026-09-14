@@ -287,6 +287,23 @@ async function principal() {
     assert.equal(await page429.getByRole('heading', { name: 'Ton lien personnel est en route' }).count(), 0);
     await page429.close();
 
+    // --- Lot 1 : message serveur sans ponctuation finale (502) -------------------
+    // Le message d'access.js pour ce cas ("L'envoi du lien n'a pas abouti") ne se
+    // termine pas par un point : on vérifie qu'il en reçoit un avant la suite.
+    const page502 = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
+    await page502.goto(`http://127.0.0.1:${adresse.port}/`);
+    await page502.getByRole('heading', { name: 'Accède au sphérier de compétences du coach' }).waitFor();
+    await page502.locator('#acces-prenom').fill('Eve');
+    await page502.locator('#acces-email').fill('envoi-impossible@example.com');
+    await page502.locator('#acces-consentement').check();
+    const [reponse502] = await Promise.all([
+      page502.waitForResponse('**/api/access'),
+      page502.getByRole('button', { name: 'Recevoir mon lien personnel' }).click(),
+    ]);
+    assert.equal(reponse502.status(), 502);
+    await page502.getByText("L'envoi du lien n'a pas abouti. Réessaie dans quelques instants.").waitFor();
+    await page502.close();
+
     // --- Lot 1 : mémorisation de l'UUID et reprise d'audit sur le même appareil -
     const repriseUuid = '00000000-0000-4000-8000-000000000001';
     const reprisePage = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
@@ -322,8 +339,34 @@ async function principal() {
       reprisePage.getByRole('button', { name: 'Me renvoyer mon lien' }).click(),
     ]);
     assert.equal(reponseRenvoi.status(), 202);
-    await reprisePage.getByText('Ton lien est en route : ouvre le mail pour reprendre ton audit.').waitFor();
+    await reprisePage.getByRole('heading', { name: 'Ton lien est en route' }).waitFor();
+    await reprisePage.getByText('Ouvre le mail envoyé à', { exact: false }).waitFor();
     await reprisePage.close();
+
+    // --- Lot 1 : timeout réseau sur /api/access ----------------------------------
+    // AbortSignal.timeout() rejette avec name: 'TimeoutError' (vérifié en Node), pas
+    // 'AbortError' ni une TypeError : on le simule en stubbant fetch pour rester
+    // rapide et déterministe plutôt que d'attendre un vrai timeout de 15 s.
+    const timeoutPage = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
+    await timeoutPage.addInitScript(() => {
+      const fetchOriginal = window.fetch.bind(window);
+      window.fetch = (entree, options) => {
+        const cible = typeof entree === 'string' ? entree : entree?.url;
+        if (cible && cible.includes('/api/access')) {
+          return Promise.reject(new DOMException('The operation was aborted due to timeout', 'TimeoutError'));
+        }
+        return fetchOriginal(entree, options);
+      };
+    });
+    await timeoutPage.goto(`http://127.0.0.1:${adresse.port}/`);
+    await timeoutPage.getByRole('heading', { name: 'Accède au sphérier de compétences du coach' }).waitFor();
+    await timeoutPage.locator('#acces-prenom').fill('Iris');
+    await timeoutPage.locator('#acces-email').fill('iris@example.com');
+    await timeoutPage.locator('#acces-consentement').check();
+    await timeoutPage.getByRole('button', { name: 'Recevoir mon lien personnel' }).click();
+    await timeoutPage.getByText('Le réseau a coupé, réessaie.').waitFor();
+    assert.equal(await timeoutPage.getByRole('heading', { name: 'Ton lien personnel est en route' }).count(), 0);
+    await timeoutPage.close();
 
     const resultatPage = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
     await resultatPage.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000002`);

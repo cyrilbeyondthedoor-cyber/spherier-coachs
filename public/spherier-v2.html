@@ -2018,11 +2018,17 @@
   // (429, 502…), est repris tel quel : il est déjà écrit pour un humain.
   function messageErreurAcces(erreur) {
     const brut = String(erreur?.message || '').trim();
-    if (erreur?.name === 'AbortError' || erreur instanceof TypeError
+    // AbortSignal.timeout() rejette avec name: 'TimeoutError' (pas 'AbortError', pas
+    // une TypeError) : vérifié en Node, c'est le cas d'un vrai timeout réseau.
+    if (erreur?.name === 'AbortError' || erreur?.name === 'TimeoutError' || erreur instanceof TypeError
       || /failed to fetch|networkerror|load failed/i.test(brut)) {
       return 'Le réseau a coupé, réessaie.';
     }
-    if (brut) return /réessai/i.test(brut) ? brut : `${brut} Réessaie dans quelques instants.`;
+    if (brut) {
+      if (/réessai/i.test(brut)) return brut;
+      const phrase = /[.!?…]$/.test(brut) ? brut : `${brut}.`;
+      return `${phrase} Réessaie dans quelques instants.`;
+    }
     if (erreur?.statut === 429) return 'Trop de demandes, réessaie dans une minute.';
     if (erreur?.statut >= 500) return 'Le serveur ne répond pas pour le moment, réessaie dans une minute.';
     return 'La demande n’a pas pu être traitée. Réessaie dans quelques instants.';
@@ -2061,8 +2067,8 @@
       // demande silencieusement (anti-spam) ou après l'avoir traitée. Dans les deux
       // cas, la confirmation normale s'affiche : `reponse.ok` couvre déjà 200-299.
       if (modeRenvoiLien) {
-        elConfirmationTitre.textContent = 'Ton lien est en route : ouvre le mail pour reprendre ton audit.';
-        elConfirmationTexte.innerHTML = `Le mail arrive à l’adresse <b id="confirmation-email">${echapper(email)}</b>.`;
+        elConfirmationTitre.textContent = 'Ton lien est en route';
+        elConfirmationTexte.innerHTML = `Ouvre le mail envoyé à <b id="confirmation-email">${echapper(email)}</b> pour reprendre ton audit.`;
       } else {
         elConfirmationTitre.textContent = 'Ton lien personnel est en route';
         elConfirmationTexte.innerHTML = `Consulte la boîte mail de <b id="confirmation-email">${echapper(email)}</b> pour commencer ton audit et le reprendre quand tu le souhaites.`;
