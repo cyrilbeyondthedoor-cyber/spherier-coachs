@@ -779,6 +779,61 @@ async function principal() {
       'une compétence jamais située ne peut pas devenir une priorité');
     assert.equal(await priorites.getByText(`Je sais mobiliser la compétence ${DIM_MULTI.id}-02-02.`).count(), 0);
 
+    // --- Lot 7 : priorités de thématique ---------------------------------------
+    // Le membre 0004 a quatre compétences situées entre 1 et 2 dans sa première
+    // thématique : de quoi cocher trois priorités et se voir refuser la quatrième.
+    const prioTheme = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
+    await prioTheme.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000004`);
+    await prioTheme.locator('#ciel:not([hidden])').waitFor();
+    await prioTheme.locator('#audit-cta').dispatchEvent('click');
+    await prioTheme.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await prioTheme.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}"]`).dispatchEvent('click');
+    // La thématique est déjà complète : on arrive droit sur son résultat.
+    await prioTheme.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
+    await prioTheme.getByText('Tes priorités pour cette thématique', { exact: true }).waitFor();
+    const casesTheme = prioTheme.locator('#priorites-theme .audit-priorite-case');
+    assert.equal(await casesTheme.count(), 4, 'les quatre compétences non maîtrisées sont proposées');
+    // De la moins maîtrisée à la plus maîtrisée : les deux « Je ne maîtrise pas du
+    // tout » passent devant les deux « Je dois m'améliorer ».
+    assert.deepEqual(
+      (await prioTheme.locator('#priorites-theme .audit-priorite-niveau').allTextContents()).map((t) => t.trim()),
+      ['Je ne maîtrise pas du tout', 'Je ne maîtrise pas du tout', "Je dois m'améliorer", "Je dois m'améliorer"],
+    );
+    await casesTheme.nth(0).check();
+    assert.match(await prioTheme.locator('#priorites-theme-compteur').textContent(), /^1 \/ 3/);
+    await casesTheme.nth(1).check();
+    await casesTheme.nth(2).check();
+    assert.match(await prioTheme.locator('#priorites-theme-compteur').textContent(), /^3 \/ 3/);
+    // La quatrième est refusée, la case revient d'elle-même et le message le dit.
+    // `.check()` exigerait que la case reste cochée : ici elle doit revenir seule.
+    await casesTheme.nth(3).click();
+    assert.equal(await casesTheme.nth(3).isChecked(), false, 'la quatrième coche est refusée');
+    await prioTheme.getByText('Trois priorités au maximum.', { exact: false }).waitFor();
+    assert.match(await prioTheme.locator('#priorites-theme-compteur').textContent(), /^3 \/ 3/);
+    // La fiche se déplie sur place, sans quitter l'écran de résultat.
+    await prioTheme.locator('#priorites-theme summary').first().click();
+    await prioTheme.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
+    assert.ok(await prioTheme.locator('#priorites-theme .audit-priorite-detail').first().isVisible());
+    await capturer(prioTheme, screenshotDir, 'priorites-theme-desktop.png', { fullPage: true });
+    // « Je choisirai plus tard » replie la section sans perdre les coches.
+    await prioTheme.getByRole('button', { name: 'Je choisirai plus tard' }).click();
+    assert.equal(await prioTheme.locator('#priorites-theme .audit-priorite-case').count(), 0);
+    await prioTheme.getByRole('button', { name: 'Choisir maintenant' }).click();
+    assert.equal(await prioTheme.locator('#priorites-theme .audit-priorite-case:checked').count(), 3);
+
+    // Poursuivre déclenche l'enregistrement sans attendre le délai de deux secondes.
+    const avantPriorites = nbSnapshots;
+    await prioTheme.locator('[data-suite="theme"]').dispatchEvent('click');
+    await prioTheme.waitForTimeout(500);
+    assert.ok(nbSnapshots > avantPriorites, 'poursuivre enregistre les priorités cochées');
+    assert.equal(dernierSnapshot.priorites.themes[`theme-${DIM_MULTI.id}`].length, 3);
+    assert.deepEqual(dernierSnapshot.priorites.classement.slice().sort(),
+      dernierSnapshot.priorites.themes[`theme-${DIM_MULTI.id}`].slice().sort(),
+      'le classement reprend les priorités de thématique tant qu\'aucune dimension n\'est consolidée');
+    assert.deepEqual(dernierSnapshot.selections.current.slice().sort(),
+      dernierSnapshot.priorites.classement.slice().sort(),
+      'les trois du classement deviennent les trois cibles du mois');
+
     const publicMobile = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
     await publicMobile.goto(`http://127.0.0.1:${adresse.port}/`);
     await publicMobile.getByRole('heading', { name: 'Accède au sphérier de compétences du coach' }).waitFor();

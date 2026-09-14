@@ -1877,6 +1877,50 @@
     border-radius: 999px; background: transparent; color: var(--paper-dim); font: inherit; font-size: 13px; cursor: pointer;
   }
   .audit-ligne-action:hover { border-color: var(--teinte-p); color: var(--paper); }
+  /* Priorités : une case à cocher par compétence à travailler, et un compteur qui dit
+     combien il en reste. La case et son libellé forment une seule cible de 44 px. */
+  .audit-priorites { display: grid; gap: 10px; }
+  .audit-priorites-tete { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .audit-priorites-compteur { color: var(--paper-dim); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .audit-priorites-liste { display: grid; gap: 6px; }
+  .audit-priorite {
+    display: grid; gap: 4px; padding: 8px 13px;
+    border: 1px solid var(--line-faint); border-radius: 10px; background: rgba(240, 235, 224, .02);
+  }
+  .audit-priorite.retenue { border-color: var(--gold); background: rgba(201, 166, 97, .12); }
+  .audit-priorite-choix {
+    display: flex; align-items: center; gap: 12px; min-height: 44px; cursor: pointer;
+  }
+  .audit-priorite-case { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--gold); cursor: pointer; }
+  .audit-priorite-texte { display: grid; gap: 5px; justify-items: start; min-width: 0; }
+  .audit-priorite-nom { font-size: 14px; line-height: 1.4; }
+  .audit-priorite-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .audit-priorite-niveau {
+    padding: 2px 9px; border: 1px solid var(--line); border-radius: 999px;
+    color: var(--paper-dim); font-size: 11px; white-space: nowrap;
+  }
+  .audit-priorite-niveau.niveau-1 { border-color: color-mix(in srgb, #e07a6a 55%, transparent); }
+  .audit-priorite-niveau.niveau-2 { border-color: color-mix(in srgb, var(--gold) 55%, transparent); }
+  .audit-priorite-origine { color: var(--stone); font-size: 12px; }
+  .audit-priorite-proposee { color: var(--stone); font-size: 11px; font-style: italic; }
+  .audit-priorite-fiche > summary {
+    display: flex; align-items: center; min-height: 44px; padding: 4px 0 4px 32px;
+    color: var(--paper-dim); font-size: 13px; text-decoration: underline; cursor: pointer;
+  }
+  .audit-priorite-fiche > summary:hover { color: var(--paper); }
+  .audit-priorite-detail { padding: 4px 0 8px 32px; color: var(--paper-dim); font-size: 13px; line-height: 1.55; }
+  .audit-priorite-detail p + p, .audit-priorite-detail ul { margin-top: 7px; }
+  .audit-priorite-detail li { margin-left: 17px; }
+  .audit-priorites-alerte { color: var(--gold-bright); font-size: 13px; }
+  .audit-priorites-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .audit-priorites-valider {
+    min-height: 44px; padding: 11px 20px; border: 1px solid var(--gold); border-radius: 999px;
+    background: rgba(201, 166, 97, .16); color: var(--paper); font: inherit; font-size: 14px; cursor: pointer;
+  }
+  .audit-priorites-valider:hover { background: rgba(201, 166, 97, .26); }
+  .audit-priorites-valider:disabled { opacity: .45; cursor: not-allowed; }
+  .audit-priorites-repliee { color: var(--paper-dim); font-size: 14px; line-height: 1.55; }
+
   .audit-classement { display: grid; gap: 7px; }
   .audit-classement-ligne { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; align-items: baseline; }
   .audit-classement-nom { font-size: 14px; }
@@ -5065,6 +5109,180 @@
     </div>`;
   }
 
+  // --- Priorités de thématique (section insérée dans l'écran de résultat) --------
+  // Les sections repliées par « Je choisirai plus tard » le restent le temps de la
+  // session : le membre a dit non, on ne le lui redemande pas à chaque aller-retour.
+  const prioritesRepliees = new Set();
+  let minuteurPriorites = null;
+
+  // Cocher une priorité ne déclenche pas un appel réseau par clic : l'enregistrement
+  // part deux secondes après le dernier geste, et tout de suite si le membre poursuit.
+  function planifierEnregistrementPriorites() {
+    clearTimeout(minuteurPriorites);
+    minuteurPriorites = setTimeout(() => { minuteurPriorites = null; void enregistrer(); }, 2000);
+  }
+
+  function enregistrerPrioritesMaintenant() {
+    if (minuteurPriorites === null) return;
+    clearTimeout(minuteurPriorites);
+    minuteurPriorites = null;
+    void enregistrer();
+  }
+
+  // Candidates d'une thématique : les compétences situées qui ne sont pas maîtrisées,
+  // de la moins maîtrisée à la plus maîtrisée. Une compétence jamais située ne peut pas
+  // devenir une priorité, une maîtrisée n'a plus rien à donner.
+  function candidatesPrioritesTheme(themeId) {
+    return codesDeTheme(themeId)
+      .filter((code) => estEvaluee(code) && brouillon.levels[code] < NIVEAU_ACQUIS)
+      .sort((a, b) => brouillon.levels[a] - brouillon.levels[b]
+        || ((competenceParCode(a)?.order ?? 0) - (competenceParCode(b)?.order ?? 0)));
+  }
+
+  function pastilleNiveau(code) {
+    const niveau = brouillon.levels[code] ?? 0;
+    return `<span class="audit-priorite-niveau niveau-${niveau}">${echapper(etat.referentiel.scale[niveau] || 'Non évaluée')}</span>`;
+  }
+
+  // La fiche est dépliée SUR PLACE et non ouverte dans le panneau de compétence :
+  // quitter l'écran de résultat pour lire un énoncé ferait perdre les cases cochées et
+  // le fil du parcours. Le membre lit, referme, et continue où il en était.
+  function ficheRepliee(code) {
+    const competence = competenceParCode(code);
+    if (!competence) return '';
+    const enonce = competence.statement || competence.definition || '';
+    return `<details class="audit-priorite-fiche">
+      <summary>Voir la fiche</summary>
+      <div class="audit-priorite-detail">
+        ${enonce ? `<p>${lierLexique(typoFr(echapper(enonce)))}</p>` : ''}
+        ${competence.markers ? marqueursListe(competence.markers) : ''}
+      </div>
+    </details>`;
+  }
+
+  function ligneChoixPriorite(code, { cle, retenue, origine = '', proposee = false }) {
+    const competence = competenceParCode(code);
+    if (!competence) return '';
+    return `<div class="audit-priorite${retenue ? ' retenue' : ''}" data-ligne-priorite="${echapper(code)}">
+      <label class="audit-priorite-choix">
+        <input type="checkbox" class="audit-priorite-case" data-${cle}="${echapper(code)}"${retenue ? ' checked' : ''}>
+        <span class="audit-priorite-texte">
+          <span class="audit-priorite-nom">${echapper(competence.name)}</span>
+          <span class="audit-priorite-meta">
+            ${pastilleNiveau(code)}
+            ${origine ? `<span class="audit-priorite-origine">${echapper(origine)}</span>` : ''}
+            ${proposee ? '<span class="audit-priorite-proposee">proposée</span>' : ''}
+          </span>
+        </span>
+      </label>
+      ${ficheRepliee(code)}
+    </div>`;
+  }
+
+  function sectionPrioritesTheme(themeId) {
+    const theme = themeParId(themeId);
+    if (!theme) return '';
+    const candidates = candidatesPrioritesTheme(themeId);
+    const retenues = prioritesDuTheme(themeId);
+
+    let corps;
+    if (prioritesRepliees.has(themeId)) {
+      corps = `<p class="audit-priorites-repliee">Tu choisiras plus tard. Tes priorités t'attendront à la fin de la dimension.</p>
+        <div class="audit-priorites-actions">
+          <button type="button" class="choix-lien" data-priorites-deplier="${echapper(themeId)}">Choisir maintenant</button>
+        </div>`;
+    } else if (candidates.length === 0) {
+      corps = `<p class="audit-bilan-aide">${codesDeTheme(themeId).some(estEvaluee)
+        ? 'Tout est maîtrisé ici, rien à prioriser.'
+        : "Tu n'as encore situé aucune compétence de cette thématique : rien à prioriser."}</p>`;
+    } else {
+      corps = `<p class="audit-bilan-aide">Parmi ce qu'il te reste à travailler, retiens jusqu'à trois priorités. Tu les consolideras à la fin de la dimension.</p>
+        <div class="audit-priorites-liste">
+          ${candidates.map((code) => ligneChoixPriorite(code, { cle: 'priorite-theme', retenue: retenues.includes(code) })).join('')}
+        </div>
+        <p class="audit-priorites-alerte" id="priorites-theme-alerte" role="status"></p>
+        <div class="audit-priorites-actions">
+          <button type="button" class="choix-lien" data-priorites-replier="${echapper(themeId)}">Je choisirai plus tard</button>
+        </div>`;
+    }
+
+    return `<section class="audit-bilan-section audit-priorites" id="priorites-theme" data-theme-priorites="${echapper(themeId)}">
+      <p class="audit-bilan-label">Tes priorités pour cette thématique</p>
+      <div class="audit-priorites-tete">
+        <p class="audit-priorites-compteur" id="priorites-theme-compteur" role="status">${retenues.length} / ${PRIORITES_MAX} choisie${retenues.length > 1 ? 's' : ''}</p>
+      </div>
+      ${corps}
+    </section>`;
+  }
+
+  function rafraichirSectionPrioritesTheme(themeId) {
+    const section = document.getElementById('priorites-theme');
+    if (!section) return;
+    section.outerHTML = sectionPrioritesTheme(themeId);
+    brancherSectionPrioritesTheme(themeId);
+  }
+
+  function brancherSectionPrioritesTheme(themeId) {
+    const section = document.getElementById('priorites-theme');
+    if (!section) return;
+    const compteur = document.getElementById('priorites-theme-compteur');
+    const alerte = document.getElementById('priorites-theme-alerte');
+
+    section.querySelectorAll('[data-priorite-theme]').forEach((case_) => {
+      case_.addEventListener('change', () => {
+        const code = case_.dataset.prioriteTheme;
+        const p = etatPriorites();
+        const retenues = prioritesDuTheme(themeId);
+        if (case_.checked && retenues.length >= PRIORITES_MAX) {
+          // Refus sur place plutôt que case grisée : le membre voit pourquoi, et sait
+          // quoi faire. La case revient d'elle-même à son état précédent.
+          case_.checked = false;
+          if (alerte) alerte.textContent = `Trois priorités au maximum. Décoche-en une pour en choisir une autre.`;
+          return;
+        }
+        if (alerte) alerte.textContent = '';
+        p.themes[themeId] = case_.checked
+          ? [...retenues, code]
+          : retenues.filter((item) => item !== code);
+        // Décocher sort la compétence du classement : sans cela, la recomposition la
+        // garderait et elle réapparaîtrait en fin de dimension.
+        if (!case_.checked && !codesAttendusAuClassement().includes(code)) {
+          p.classement = p.classement.filter((item) => item !== code);
+          brouillon.later = brouillon.later.filter((item) => item !== code);
+        }
+        memoriserPriorites();
+        const total = prioritesDuTheme(themeId).length;
+        if (compteur) compteur.textContent = `${total} / ${PRIORITES_MAX} choisie${total > 1 ? 's' : ''}`;
+        const ligne = section.querySelector(`[data-ligne-priorite="${CSS.escape(code)}"]`);
+        if (ligne) ligne.classList.toggle('retenue', case_.checked);
+        planifierEnregistrementPriorites();
+      });
+    });
+
+    section.querySelectorAll('[data-priorites-replier]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        prioritesRepliees.add(bouton.dataset.prioritesReplier);
+        rafraichirSectionPrioritesTheme(themeId);
+      });
+    });
+    section.querySelectorAll('[data-priorites-deplier]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        prioritesRepliees.delete(bouton.dataset.prioritesDeplier);
+        rafraichirSectionPrioritesTheme(themeId);
+      });
+    });
+  }
+
+  function brancherPrioritesTheme(themeId) {
+    brancherSectionPrioritesTheme(themeId);
+    // Poursuivre sans attendre les deux secondes : le membre quitte l'écran, ce qu'il
+    // vient de cocher part avec lui. Branché avant les gestionnaires de navigation,
+    // qui réécrivent le corps du panneau.
+    elPanneauCorps.querySelectorAll('[data-suite], #audit-voir-dimension').forEach((bouton) => {
+      bouton.addEventListener('click', enregistrerPrioritesMaintenant);
+    });
+  }
+
   // --- Écran « Résultat de la thématique » --------------------------------------
   function ouvrirResultatTheme({ dimensionId, themeId, suite = 'theme', enregistrement = 'inutile', libelleAuto = null }) {
     const dimension = dimensionParId(dimensionId);
@@ -5128,6 +5346,7 @@
             ${listeCompetences(info.passees, { cle: 'evaluerPassee', libelle: 'Évaluer maintenant' })}
           </section>`
         : ''}
+      ${sectionPrioritesTheme(theme.id)}
       </div>
       <aside class="audit-bilan-suite">${dimensionBouclee
         ? `<div class="audit-poursuivre">
@@ -5154,6 +5373,7 @@
     });
     const voirDimension = document.getElementById('audit-voir-dimension');
     if (voirDimension) voirDimension.addEventListener('click', () => ouvrirResultatDimension(dimension.id, suite));
+    brancherPrioritesTheme(theme.id);
     brancherPoursuivre(dimension);
 
     afficherPanneau();
