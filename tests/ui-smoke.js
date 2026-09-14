@@ -120,6 +120,11 @@ const referential = {
 // dans la file d'attente après l'arrivée d'un classement.
 const ANCIENNES_CIBLES = [DIMENSIONS[1], DIMENSIONS[2], DIMENSIONS[3]].map((d) => `${d.id}-01-01`);
 
+// La compétence laissée de côté pour éprouver la fin complète de l'audit, et la priorité
+// déjà classée qui doit rester le bouton primaire de la synthèse.
+const DERNIERE_COMPETENCE = `${DIMENSIONS[DIMENSIONS.length - 1].id}-01-01`;
+const CLASSEMENT_EXISTANT = `${DIMENSIONS[1].id}-01-01`;
+
 const niveauxVides = Object.fromEntries(competencies.map((competence) => [competence.id, 0]));
 const etatThemes = Object.fromEntries(themes.map((theme) => [theme.id, { status: 'open', unlock_hint: '' }]));
 let dernierSnapshot = null;
@@ -168,6 +173,21 @@ const serveur = http.createServer((requete, reponse) => {
         snapshot: null,
         audit: { passees: [], derniere: null, maj: null },
         computed: { levels: partiels, themes: etatThemes },
+        notes: {},
+      });
+    }
+    // Membre 0012 : tout est évalué sauf UNE compétence, et un classement existe déjà.
+    // Évaluer la dernière ferme l'audit entier.
+    if (requete.url.includes('00000000-0000-4000-8000-000000000012')) {
+      const presque = Object.fromEntries(competencies.map((competence, index) =>
+        [competence.id, competence.id === DERNIERE_COMPETENCE ? 0 : (index % 3) + 1]));
+      const priorites = { themes: {}, dimensions: {}, classement: [CLASSEMENT_EXISTANT] };
+      return json(reponse, {
+        snapshot: { id: 'snapshot-presque', cree_le: new Date().toISOString(), libelle: null,
+          blob: { levels: presque, selections: { current: [CLASSEMENT_EXISTANT], later: [] }, priorites } },
+        audit: { passees: [], derniere: null, maj: null },
+        priorites,
+        computed: { levels: presque, themes: etatThemes },
         notes: {},
       });
     }
@@ -307,7 +327,7 @@ async function mesurerColonnes(page) {
 
 async function capturer(page, dossier, nom, options = {}) {
   if (!dossier) return;
-  await page.addStyleTag({ content: '#bar:not(.visible) { display: none !important; }' });
+  await page.addStyleTag({ content: '#barre:not(.visible) { display: none !important; }' });
   await page.waitForTimeout(350);
   await page.screenshot({ path: path.join(dossier, nom), ...options });
 }
@@ -355,7 +375,7 @@ async function principal() {
     assert.equal(await page.locator('#audit-synthese').isVisible(), false, 'pas de synthèse tant qu\'aucune thématique n\'est complète');
     assert.equal(await page.locator('.niveau-accueil').count(), 3);
     assert.equal(await page.getByText('Évalue au moins une thématique pour voir ton score', { exact: true }).count(), 3);
-    assert.equal(await page.locator('#bar.visible').count(), 0);
+    assert.equal(await page.locator('#barre.visible').count(), 0);
     await capturer(page, screenshotDir, 'accueil-desktop.png', { fullPage: true });
 
     // --- Parcours modulaire : dimension → thématique → évaluation → résultat -----
@@ -840,7 +860,7 @@ async function principal() {
     assert.equal(await resultatPage.locator('#panneau.plein-ecran').count(), 0);
     await resultatPage.locator('#panneau-plein-ecran').dispatchEvent('click');
     assert.equal(await resultatPage.locator('#panneau.plein-ecran').count(), 1);
-    assert.equal(await resultatPage.locator('#bar.visible').count(), 0);
+    assert.equal(await resultatPage.locator('#barre.visible').count(), 0);
 
     await resultatPage.locator('[data-scope-categorie="CLIENTS"]').dispatchEvent('click');
     await resultatPage.locator('#panneau-titre', { hasText: 'Moi et mes clients' }).waitFor();
@@ -911,7 +931,7 @@ async function principal() {
     assert.deepEqual(dernierSnapshot.selections.current.slice().sort(),
       dernierSnapshot.priorites.classement.slice().sort(),
       'les trois du classement deviennent les trois cibles du mois');
-    assert.equal(await prioTheme.locator('#bar.visible').count(), 0,
+    assert.equal(await prioTheme.locator('#barre.visible').count(), 0,
       'la barre d\'enregistrement se referme après l\'envoi différé');
     // La fiche se déplie sur place, sans quitter l'écran de résultat.
     await prioTheme.locator('#priorites-theme summary').first().click();
@@ -1024,7 +1044,7 @@ async function principal() {
       'les trois premières du classement sont les trois cibles du mois');
     // Aller-retour complet : ce que le serveur renvoie doit annuler « modifié ». Une
     // normalisation qui diffère d'un côté laisserait la barre allumée pour toujours.
-    assert.equal(await prioTheme.locator('#bar.visible').count(), 0,
+    assert.equal(await prioTheme.locator('#barre.visible').count(), 0,
       'après enregistrement, plus rien n\'est signalé comme modifié');
 
     // --- Lot 7 : Mon mois et synthèse globale ----------------------------------
@@ -1131,6 +1151,29 @@ async function principal() {
       'les anciennes cibles passent en tête de la file d\'attente au lieu de disparaître');
     await ancien.close();
 
+    // --- Lot 8.6 : la fin complète de l'audit ouvre la synthèse ------------------
+    const fin = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
+    await fin.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000012`);
+    await fin.locator('#ciel:not([hidden])').waitFor();
+    const derniereDim = DIMENSIONS[DIMENSIONS.length - 1];
+    await fin.locator('#audit-cta').dispatchEvent('click');
+    await fin.locator(`[data-choix-dimension="${derniereDim.id}"]`).dispatchEvent('click');
+    await fin.locator(`[data-evaluer-theme="theme-${derniereDim.id}"]`).dispatchEvent('click');
+    await fin.locator('.situer-compte', { hasText: '1 / 1' }).waitFor();
+    await fin.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    // Plus de résultat de thématique : la dernière thématique du référentiel ouvre la
+    // carte entière.
+    await fin.getByRole('heading', { name: 'Ton sphérier en un regard' }).waitFor();
+    assert.equal(await fin.getByRole('heading', { name: 'Résultat de la thématique' }).count(), 0);
+    assert.match(await fin.locator('.carte-resultat-complet').textContent(),
+      /^Audit complet · \d+ % de maîtrise$/);
+    // Le classement existe : c'est lui que le bouton primaire ouvre.
+    await fin.getByRole('button', { name: 'Voir mon classement' }).click();
+    await fin.getByRole('heading', { name: 'Ton classement', exact: true }).waitFor();
+    assert.equal(await fin.locator('#recap-classement .rang').count(), 1);
+    await capturer(fin, screenshotDir, 'audit-complet-desktop.png', { fullPage: true });
+    await fin.close();
+
     const publicMobile = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
     await publicMobile.goto(`http://127.0.0.1:${adresse.port}/`);
     await publicMobile.getByRole('heading', { name: 'Accède au sphérier de compétences du coach' }).waitFor();
@@ -1150,7 +1193,7 @@ async function principal() {
     await mobile.getByRole('button', { name: 'Comprendre comment fonctionne le sphérier' }).waitFor();
     assert.equal(await mobile.getByRole('heading', { name: 'À quoi sert le sphérier ?' }).isVisible(), false);
     assert.equal(await mobile.locator('.ciel-categorie').count(), 3);
-    assert.equal(await mobile.locator('#bar.visible').count(), 0);
+    assert.equal(await mobile.locator('#barre.visible').count(), 0);
     await capturer(mobile, screenshotDir, 'accueil-mobile.png', { fullPage: true });
     await mobile.locator('[data-categorie="COACH"]').dispatchEvent('click');
     assert.equal(await mobile.locator('.dimension').count(), 2);
@@ -1430,8 +1473,9 @@ async function principal() {
     // --- « M'évaluer sur cette dimension » depuis le zoom de catégorie ----------
     // Ce bouton ouvrait les compétences de la dimension d'un bloc, hors du parcours
     // modulaire : aucune frontière de thématique, donc aucun enregistrement, et l'écran
-    // « Rien n'est encore enregistré » au bout. Il passe maintenant par
-    // `evaluerDimension`, comme « Évaluer toute la dimension ».
+    // « Rien n'est encore enregistré » au bout. Il ouvre maintenant le mode « dimension
+    // d'un coup » : une seule liste pour toute la dimension, un enregistrement silencieux
+    // à chaque frontière de thématique, et le résultat de dimension au bout.
     const avantZoom = nbSnapshots;
     const zoom = await navigateur.newPage({ viewport: { width: 1280, height: 700 } });
     await zoom.goto(url);
@@ -1446,23 +1490,41 @@ async function principal() {
     await zoom.locator(`#ciel [data-explorer-categorie="${DIM_MULTI.category}"]`).dispatchEvent('click');
     await zoom.locator(`[data-situer="${DIM_MULTI.id}"]:visible`).first().dispatchEvent('click');
     await zoom.locator('body[data-panneau="situer"]').waitFor({ state: 'attached' });
-    // Le contexte de thématique est là : sous-compteur présent et compteur borné à la
-    // thématique, pas à la dimension entière.
+    // Le compteur couvre la dimension entière, et le sous-compteur dit dans quelle
+    // thématique on se trouve. La première compétence porte son intertitre de chapitre.
     await zoom.locator('.audit-sous-compteur', { hasText: /^Thématique 1 \/ 2 de / }).waitFor();
-    for (const rang of [1, 2, 3, 4]) {
-      await zoom.locator('.situer-compte', { hasText: `${rang} / 4` }).waitFor();
+    await zoom.locator('.situer-compte', { hasText: '1 / 6' }).waitFor();
+    assert.match(await zoom.locator('.situer-chapitre').textContent(),
+      new RegExp(`^Thématique 1 / 2 · Thématique ${DIM_MULTI.id}$`));
+    for (const rang of [1, 2, 3, 4, 5, 6]) {
+      await zoom.locator('.situer-compte', { hasText: `${rang} / 6` }).waitFor();
+      // Au passage d'une thématique à la suivante, l'intertitre annonce le chapitre.
+      if (rang === 5) {
+        await zoom.locator('.audit-sous-compteur', { hasText: /^Thématique 2 \/ 2 de / }).waitFor();
+        assert.match(await zoom.locator('.situer-chapitre').textContent(),
+          new RegExp(`^Thématique 2 / 2 · Seconde thématique ${DIM_MULTI.id}$`));
+      }
+      // Ailleurs, aucun intertitre : le chapitre ne se répète pas à chaque compétence.
+      if (rang === 2 || rang === 6) assert.equal(await zoom.locator('.situer-chapitre').count(), 0);
       await zoom.locator('.marche[data-niveau="2"]').dispatchEvent('click');
     }
-    await zoom.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
-    assert.equal(nbSnapshots - avantZoom, 1,
-      'la fin de thématique lancée depuis le zoom de catégorie doit enregistrer');
+    // Pas d'écran de résultat de thématique en chemin : la dimension va au bout d'un
+    // trait, puis s'ouvre sur son résultat.
+    await zoom.getByRole('heading', { name: 'Résultat de la dimension' }).waitFor();
+    assert.equal(nbSnapshots - avantZoom, 2,
+      'un enregistrement à la frontière de thématique, un à la fin de la dimension');
+    // La section priorités est alimentée par les compétences les plus faibles : aucune
+    // priorité de thématique n'a pu être cochée, elles arrivent donc toutes « proposée ».
+    await zoom.locator('#priorites-dimension').waitFor();
+    assert.equal(await zoom.locator('#priorites-dimension .prio-proposee').count(), 3);
+    assert.equal(await zoom.locator('#priorites-dimension .prio-case:checked').count(), 3,
+      'trois propositions, donc trois cases déjà cochées à confirmer');
 
     // Le bandeau de confirmation se pose sous l'en-tête du panneau : il recouvrait le
-    // titre « Résultat de la thématique », le fil d'Ariane et la croix de fermeture
-    // pendant ses quatre secondes. Et il annonce la thématique, pas la fin de la visite.
+    // titre, le fil d'Ariane et la croix de fermeture pendant ses quatre secondes.
     await zoom.locator('.bandeau.visible').waitFor();
     assert.match(await zoom.locator('.bandeau.visible b').textContent(),
-      /^Thématique enregistrée · \d+ % de maîtrise$/);
+      /^Dimension enregistrée · \d+ % de maîtrise$/);
     const bandeauVsTete = await zoom.evaluate(() => {
       const b = document.getElementById('bandeau').getBoundingClientRect();
       const t = document.getElementById('panneau-tete').getBoundingClientRect();

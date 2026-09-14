@@ -1840,6 +1840,21 @@
     background: color-mix(in srgb, var(--teinte-p) 22%, transparent);
   }
 
+  /* Intertitre de changement de chapitre, en mode « dimension d'un coup ». Discret :
+     il marque le passage sans voler la place de l'énoncé. */
+  .situer-chapitre {
+    margin-bottom: 9px; color: var(--gold); font-size: 11px; letter-spacing: .18em;
+    text-transform: uppercase;
+  }
+  .situer-chapitre span { opacity: .55; }
+
+  .carte-resultat-complet {
+    margin-bottom: 14px; padding: 11px 16px; border: 1px solid var(--gold); border-radius: 999px;
+    justify-self: start; display: inline-block;
+    background: rgba(201, 166, 97, .16); color: var(--paper); font-size: 14px;
+  }
+  .carte-resultat-complet span { opacity: .55; }
+
   .audit-attente { padding: 46px 0; text-align: center; }
   .audit-attente .mark { display: block; margin-bottom: 14px; font-size: 34px; color: var(--gold); opacity: .55; }
   .audit-attente-titre { font-family: 'Cormorant Garamond', serif; font-size: 21px; }
@@ -3077,7 +3092,7 @@
     elDimensions.querySelectorAll('[data-situer]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        evaluerDimension(btn.dataset.situer);
+        evaluerDimensionEnchainee(btn.dataset.situer);
       });
     });
 
@@ -4373,6 +4388,15 @@
     if (surUneCompetence) document.body.dataset.panneau = 'situer';
   }
 
+  // Première compétence de sa thématique dans la liste enchaînée : c'est là, et là
+  // seulement, que l'intertitre annonce le changement de chapitre.
+  function premiereDuTheme(index) {
+    if (index === 0) return true;
+    const ici = competenceParCode(situer.codes[index]);
+    const avant = competenceParCode(situer.codes[index - 1]);
+    return Boolean(ici && avant && ici.theme !== avant.theme);
+  }
+
   // Entrée dans une liste : d'abord ce qui reste à faire, puis ce qui a été passé, et
   // à défaut la fin de la liste — ce qui mène droit au résultat.
   function departAudit(codes) {
@@ -4410,8 +4434,14 @@
       // Le score se lit sur TOUTES les compétences de la thématique : une passée y pèse
       // comme un zéro. Repartir sur elles avant le résultat, c'est la différence entre
       // un score subi et un score choisi. Proposé une fois, jamais en boucle.
-      const oubliees = codesDeTheme(situer.contexte.themeId).filter(estPassee);
+      //
+      // En mode enchaîné, la question se pose une seule fois, à la fin de la dimension :
+      // sept relances sur un parcours d'un seul tenant, c'est sept interruptions.
+      const oubliees = situer.contexte.enchaine
+        ? situer.codes.filter(estPassee)
+        : codesDeTheme(situer.contexte.themeId).filter(estPassee);
       if (oubliees.length > 0 && !situer.contexte.encourageVu) { rendreEncouragementPassees(oubliees); return; }
+      if (situer.contexte.enchaine) { terminerDimension(); return; }
       terminerTheme();
       return;
     }
@@ -4424,6 +4454,10 @@
     const c = etat.referentiel.competencies.find((x) => x.id === code);
     const theme = etat.referentiel.themes.find((t) => t.id === c.theme);
     const niveau = brouillon.levels[code] ?? 0;
+    // Changement de chapitre : la thématique qu'on vient de finir part vers le serveur,
+    // et la compétence suivante s'ouvre sous un intertitre qui nomme la nouvelle.
+    const themeFini = suivreThemeEnchaine();
+    if (themeFini) void enregistrerThemeSilencieux(themeFini);
     // « plus que 4 » dit la distance restante mieux que « 4 / 8 » : le membre sait
     // combien de fois il va encore cliquer avant de voir son score.
     const restantes = situer.codes.length - (situer.index + 1);
@@ -4443,7 +4477,7 @@
         <span class="situer-jauge"><i style="width:${Math.round((situer.index / situer.codes.length) * 100)}%"></i></span>
         <span class="situer-compte">${situer.index + 1} / ${situer.codes.length}</span>
         <span class="tinder-reste">${restantes === 0
-          ? `· Dernière compétence ${dimension ? 'de la thématique' : 'de la liste'}`
+          ? `· Dernière compétence ${contexte && contexte.enchaine ? 'de la dimension' : (dimension ? 'de la thématique' : 'de la liste')}`
           : `· plus que ${restantes}`}</span>
       </div>
       ${dimension && rang > 0
@@ -4462,6 +4496,9 @@
     ecrireCorps(`
       <div class="situer-layout tinder-piste"><div class="situer${entree}">
         ${dimension ? '' : `<p class="situer-fil">${echapper(theme ? theme.name : '')}</p>`}
+        ${contexte && contexte.enchaine && premiereDuTheme(situer.index)
+          ? `<p class="situer-chapitre">Thématique ${rang} / ${themesDim.length} <span>·</span> ${echapper(theme ? theme.name : '')}</p>`
+          : ''}
         <h2 class="situer-nom" id="panneau-titre">${lierLexique(typoFr(echapper(c.name)))}</h2>
         ${(c.statement || c.definition) && (c.statement || c.definition) !== c.name
           ? `<p class="situer-def">${lierLexique(typoFr(echapper(c.statement || c.definition)))}</p>` : ''}
@@ -4863,6 +4900,12 @@
 
   const themesComplets = () => etat.referentiel.themes.filter((theme) => etatTheme(theme).complete);
 
+  // « Toutes les thématiques complètes », et non « toutes les compétences évaluées » :
+  // passer une compétence est une décision, elle ne doit pas retenir le membre au seuil
+  // de sa synthèse pour l'éternité.
+  const auditModulaireComplet = () => etat.referentiel.themes.length > 0
+    && themesComplets().length === etat.referentiel.themes.length;
+
   // Ce qu'il reste à faire dans une thématique, en compétences et en minutes. 20 s par
   // compétence, arrondi à la minute : annoncer « 2 min 40 » promettrait une précision
   // que personne ne tient. Une passée compte comme restante, elle est encore à situer.
@@ -5111,7 +5154,7 @@
     elPanneauCorps.scrollTop = 0;
 
     const toute = document.getElementById('choix-toute-dimension');
-    if (toute) toute.addEventListener('click', () => evaluerDimension(dimension.id));
+    if (toute) toute.addEventListener('click', () => evaluerDimensionEnchainee(dimension.id));
     elPanneauCorps.querySelectorAll('[data-evaluer-theme]').forEach((bouton) => {
       bouton.addEventListener('click', () => evaluerTheme(dimension.id, bouton.dataset.evaluerTheme, 'theme'));
     });
@@ -5129,7 +5172,8 @@
     const contexte = situer.contexte;
     const theme = themeParId(contexte.themeId);
     const dimension = dimensionParId(contexte.dimensionId);
-    const nom = theme ? theme.name : situer.titre;
+    const enchaine = Boolean(contexte.enchaine);
+    const nom = enchaine && dimension ? dimension.name : (theme ? theme.name : situer.titre);
 
     elPanneauTete.innerHTML = `
       <p class="panneau-fil audit-fil-court">M'évaluer <span>›</span> ${dimension ? `${echapper(dimension.name)} <span>›</span> ` : ''}<b>${echapper(nom)}</b></p>
@@ -5140,11 +5184,11 @@
 
     ecrireCorps(`<div class="encourage-passees">
       <span class="mark">✧</span>
-      <h3 class="encourage-titre" id="panneau-titre">Il te reste ${oubliees.length} compétence${oubliees.length > 1 ? 's' : ''} passée${oubliees.length > 1 ? 's' : ''} dans cette thématique.</h3>
+      <h3 class="encourage-titre" id="panneau-titre">Il te reste ${oubliees.length} compétence${oubliees.length > 1 ? 's' : ''} passée${oubliees.length > 1 ? 's' : ''} dans cette ${enchaine ? 'dimension' : 'thématique'}.</h3>
       <p class="encourage-texte">Le score est plus juste quand tout est évalué.</p>
       ${listeCompetences(oubliees)}
       <div class="encourage-boutons">
-        <button type="button" class="encourage-primaire" id="encourage-terminer">Terminer la thématique</button>
+        <button type="button" class="encourage-primaire" id="encourage-terminer">Terminer ${enchaine ? 'la dimension' : 'la thématique'}</button>
         <button type="button" class="situer-btn" id="encourage-resultat">Voir mon résultat quand même</button>
       </div>
     </div>`);
@@ -5158,8 +5202,79 @@
     });
     document.getElementById('encourage-resultat').addEventListener('click', () => {
       contexte.encourageVu = true;
-      terminerTheme();
+      if (enchaine) terminerDimension(); else terminerTheme();
     });
+  }
+
+  // `estModifie()` ne regarde que les niveaux et les sélections : une thématique
+  // entièrement passée ne changerait rien à ses yeux, et ne partirait jamais vers le
+  // serveur. On compare donc aussi les compétences passées à celles du dernier snapshot,
+  // sinon la reprise sur un autre appareil les redemanderait toutes.
+  function passeesDivergent() {
+    const envoyees = etat.snapshot?.blob?.audit?.passees ?? [];
+    const locales = brouillon.passees || [];
+    return locales.length !== envoyees.length || locales.some((code) => !envoyees.includes(code));
+  }
+
+  // --- Dimension d'un coup ------------------------------------------------------
+  // Une seule liste pour toute la dimension, thématiques enchaînées dans l'ordre. Le
+  // contexte suit la compétence affichée : c'est lui qui dit, à chaque instant, dans
+  // quelle thématique on se trouve, et c'est son changement qui déclenche
+  // l'enregistrement silencieux de celle qu'on vient de finir.
+  function codesEnchaines(dimension) {
+    return themesDeDimension(dimension)
+      .filter((theme) => !etatTheme(theme).complete)
+      .flatMap((theme) => codesDeTheme(theme.id));
+  }
+
+  function evaluerDimensionEnchainee(dimensionId) {
+    const dimension = dimensionParId(dimensionId);
+    if (!dimension) { ouvrirChoixDimension(); return; }
+    const codes = codesEnchaines(dimension);
+    if (codes.length === 0) { ouvrirResultatDimension(dimension.id, 'dimension'); return; }
+    const premier = competenceParCode(codes[0]);
+    ouvrirMeSituer({
+      codes,
+      titre: dimension.name,
+      teinte: TEINTES_HEX[dimension.id] || '#c9a661',
+      contexte: {
+        dimensionId: dimension.id,
+        themeId: premier ? premier.theme : null,
+        suite: 'dimension',
+        // Ce drapeau est tout ce qui distingue les deux modes : même écran, même
+        // enregistrement, seule la longueur de la liste et les bornes changent.
+        enchaine: true,
+      },
+    });
+  }
+
+  // Met le contexte à jour sur la compétence affichée. Renvoie la thématique qu'on
+  // vient de quitter, ou `null` si l'on est toujours dans la même.
+  function suivreThemeEnchaine() {
+    const contexte = situer && situer.contexte;
+    if (!contexte || !contexte.enchaine) return null;
+    const competence = competenceParCode(situer.codes[situer.index]);
+    const courant = competence ? competence.theme : contexte.themeId;
+    if (!courant || courant === contexte.themeId) return null;
+    const precedent = contexte.themeId;
+    contexte.themeId = courant;
+    return precedent;
+  }
+
+  // Enregistrement de fin de thématique en mode enchaîné : pas d'écran de résultat, pas
+  // d'interruption, un bandeau et c'est tout. La promesse « tes réponses sont
+  // enregistrées à la fin de chaque thématique » tient aussi dans ce mode.
+  async function enregistrerThemeSilencieux(themeId) {
+    if (!estModifie() && !passeesDivergent()) return;
+    const theme = themeParId(themeId);
+    const jour = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    const ok = await enregistrer(`${theme ? theme.name : 'Thématique'}, ${jour}`);
+    // Une seule ligne : le bandeau se pose sous l'en-tête du panneau, donc sur la
+    // compétence suivante, et deux lignes en recouvraient l'énoncé pendant quatre
+    // secondes. La confirmation tient en une phrase, le parcours continue dessous.
+    if (ok && theme) {
+      bandeau(`Thématique enregistrée · ${etatTheme(theme).score} % de maîtrise`, '', 'succes');
+    }
   }
 
   // --- Fin de thématique --------------------------------------------------------
@@ -5177,14 +5292,7 @@
     const { dimensionId, themeId, suite } = contexte;
     const theme = themeParId(themeId);
 
-    // `estModifie()` ne regarde que les niveaux et les sélections : une thématique
-    // entièrement passée ne changerait rien à ses yeux, et ne partirait jamais vers le
-    // serveur. On compare donc aussi les compétences passées à celles du dernier
-    // snapshot, sinon la reprise sur un autre appareil les redemanderait toutes.
-    const passeesEnvoyees = etat.snapshot?.blob?.audit?.passees ?? [];
-    const passeesLocales = brouillon.passees || [];
-    const passeesChangees = passeesLocales.length !== passeesEnvoyees.length
-      || passeesLocales.some((code) => !passeesEnvoyees.includes(code));
+    const passeesChangees = passeesDivergent();
 
     // Libellé automatique quand le membre n'en a pas saisi : un point d'étape sans nom
     // se retrouve mal dans l'historique. Il part directement dans le payload, sans
@@ -5207,7 +5315,32 @@
           'Tes réponses sont en sécurité. Tu peux continuer ou t\'arrêter là.', 'succes');
       }
     }
+    // Dernière thématique du référentiel : le parcours ne renvoie pas vers un résultat
+    // de thématique de plus, il s'ouvre sur la carte entière.
+    if (auditModulaireComplet()) { ouvrirResultatAudit(true); return; }
     ouvrirResultatTheme({ dimensionId, themeId, suite, enregistrement, libelleAuto });
+  }
+
+  // Fin d'un enchaînement de dimension. La dernière thématique n'a pas encore été
+  // enregistrée : elle ne l'est qu'au passage à la suivante, et il n'y en a pas.
+  async function terminerDimension() {
+    const contexte = situer && situer.contexte;
+    if (!contexte || situer.enregistrementEnCours) return;
+    situer.enregistrementEnCours = true;
+    const dimension = dimensionParId(contexte.dimensionId);
+    const jour = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    if (estModifie() || passeesDivergent()) {
+      attendreEnregistrement(themeParId(contexte.themeId));
+      const ok = await enregistrer(`${dimension ? dimension.name : 'Dimension'}, ${jour}`);
+      // Le bandeau posé par `enregistrer` annonce une thématique : ici c'est la dimension
+      // entière qui vient de se refermer, et c'est son score que le membre attend.
+      if (ok && dimension) {
+        bandeau(`Dimension enregistrée · ${etatDimension(dimension).score} % de maîtrise`,
+          'Tes réponses sont en sécurité.', 'succes');
+      }
+    }
+    if (auditModulaireComplet()) { ouvrirResultatAudit(true); return; }
+    ouvrirResultatDimension(contexte.dimensionId, 'dimension');
   }
 
   // Écran d'attente de fin de thématique. Il remplace la question en cours, donc les
@@ -6260,6 +6393,9 @@
     const aClassement = etatPriorites().classement.length > 0;
 
     ecrireCorps(`<section class="carte-resultat">
+      ${auditModulaireComplet()
+        ? `<p class="carte-resultat-complet">Audit complet <span>·</span> ${scoreGlobalPartiel().pct} % de maîtrise</p>`
+        : ''}
       <p class="carte-resultat-intro">Voici la carte de ta pratique. Les pourcentages portent sur ce que tu as déjà évalué, et chaque territoire dit sur combien de ses thématiques il repose.${
         complets < totalThemes
           ? ` ${complets} thématique${complets > 1 ? 's' : ''} sur ${totalThemes} évaluée${complets > 1 ? 's' : ''} : le reste s'ajoutera au fur et à mesure.`
