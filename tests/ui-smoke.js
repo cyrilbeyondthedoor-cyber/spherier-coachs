@@ -101,6 +101,14 @@ competencies.push(
   competence(`theme-${DIM_MULTI.id}-2`, `${DIM_MULTI.id}-02-02`, 1),
 );
 
+// Un terme du lexique dans un ÉNONCÉ, et pas seulement dans les marqueurs. Sur l'écran
+// de consolidation, la colonne au-dessus ne montre que des noms de thématiques : le
+// terme y apparaît donc pour la première fois, et il y est un vrai bouton posé à
+// l'intérieur du `<label>` d'une case à cocher. C'est le seul endroit où le conflit
+// entre « lire la définition » et « cocher la priorité » peut se produire.
+competencies.find((competence) => competence.id === `${DIM_MULTI.id}-01-03`).name =
+  `Je sais mobiliser la compétence ${DIM_MULTI.id}-01-03 en tenant l'ancrage*.`;
+
 const referential = {
   club: 'coachs',
   version: 1,
@@ -877,6 +885,21 @@ async function principal() {
     assert.equal(await prioTheme.locator('#priorites-dimension .audit-priorites-groupe').count(), 2);
     assert.equal(await prioTheme.locator('#priorites-dimension .audit-priorite-proposee').count(), 0);
     assert.match(await prioTheme.locator('#priorites-dimension-compteur').textContent(), /^0 \/ 3/);
+
+    // Lire une définition ne coche pas la priorité : le mot est dans le label de la case,
+    // et c'est le comportement natif du label qu'il faut désamorcer, pas un gestionnaire.
+    const motLexique = prioTheme.locator('#priorites-dimension .audit-priorite-nom .lex-mot').first();
+    await motLexique.waitFor();
+    const ligneLexique = prioTheme.locator('#priorites-dimension .audit-priorite')
+      .filter({ has: prioTheme.locator('.lex-mot') }).first();
+    assert.equal(await ligneLexique.locator('.audit-priorite-case').isChecked(), false);
+    await motLexique.click();
+    await prioTheme.locator('.lex-bulle').waitFor();
+    assert.equal(await ligneLexique.locator('.audit-priorite-case').isChecked(), false,
+      'lire une définition ne coche pas la priorité');
+    await prioTheme.keyboard.press('Escape');
+    await prioTheme.locator('.lex-bulle').waitFor({ state: 'detached' });
+
     await casesDim.nth(0).check();
     await casesDim.nth(1).check();
     await casesDim.nth(2).check();

@@ -5284,7 +5284,7 @@
       <label class="audit-priorite-choix">
         <input type="checkbox" class="audit-priorite-case" data-${cle}="${echapper(code)}"${retenue ? ' checked' : ''}>
         <span class="audit-priorite-texte">
-          <span class="audit-priorite-nom">${echapper(competence.name)}</span>
+          <span class="audit-priorite-nom">${lierLexique(typoFr(echapper(competence.name)), { dansBouton: true })}</span>
           <span class="audit-priorite-meta">
             ${pastilleNiveau(code)}
             ${origine ? `<span class="audit-priorite-origine">${echapper(origine)}</span>` : ''}
@@ -5332,6 +5332,17 @@
     </section>`;
   }
 
+  // Un mot du lexique vit à l'intérieur du `<label>` qui porte la case. Cliquer dessus
+  // pour lire la définition cocherait la priorité par-dessus le marché : c'est le
+  // comportement natif du label, aucun `return` dans un gestionnaire ne l'arrête.
+  function protegerMotsLexique(section) {
+    section.querySelectorAll('.audit-priorite-choix').forEach((etiquette) => {
+      etiquette.addEventListener('click', (evenement) => {
+        if (evenement.target.closest('.lex-mot')) evenement.preventDefault();
+      });
+    });
+  }
+
   function rafraichirSectionPrioritesTheme(themeId) {
     const section = document.getElementById('priorites-theme');
     if (!section) return;
@@ -5342,6 +5353,7 @@
   function brancherSectionPrioritesTheme(themeId) {
     const section = document.getElementById('priorites-theme');
     if (!section) return;
+    protegerMotsLexique(section);
     const compteur = document.getElementById('priorites-theme-compteur');
     const alerte = document.getElementById('priorites-theme-alerte');
 
@@ -5565,7 +5577,7 @@
     } else {
       corps = `<p class="audit-bilan-aide">Voici ce que tu as coché thématique par thématique${proposees.length ? ', complété par tes compétences les plus faibles' : ''}. Retiens-en trois pour cette dimension. Les autres passent en « pour plus tard ».</p>
         <div class="audit-priorites-liste">
-          ${groupes.map((groupe) => `<p class="audit-priorites-groupe">${echapper(groupe.theme.name)}</p>
+          ${groupes.map((groupe) => `<p class="audit-priorites-groupe">${lierLexique(typoFr(echapper(groupe.theme.name)))}</p>
             ${groupe.codes.map((code) => ligneChoixPriorite(code, {
               cle: 'priorite-dimension',
               retenue: retenues.includes(code),
@@ -5612,6 +5624,7 @@
   function brancherPrioritesDimension(dimensionId) {
     const section = document.getElementById('priorites-dimension');
     if (!section) return;
+    protegerMotsLexique(section);
     const compteur = document.getElementById('priorites-dimension-compteur');
     const alerte = document.getElementById('priorites-dimension-alerte');
 
@@ -5738,7 +5751,7 @@
     return `<li class="rang${ceMois ? ' rang-mois' : ''}" data-rang="${echapper(code)}"${glissable ? ' draggable="true"' : ''}>
       <span class="rang-numero" aria-hidden="true">${index + 1}</span>
       <span class="rang-corps">
-        <span class="rang-nom">${echapper(competence.name)}</span>
+        <span class="rang-nom">${lierLexique(typoFr(echapper(competence.name)))}</span>
         <span class="audit-priorite-meta">
           ${pastilleNiveau(code)}
           <span class="audit-priorite-origine">${echapper(origineDe(code))}</span>
@@ -5859,6 +5872,7 @@
     const dimension = dimensionId ? dimensionParId(dimensionId) : null;
     const teinte = dimension ? (TEINTES_HEX[dimension.id] || '#c9a661') : '#c9a661';
     preparerEcranAudit(teinte, { plein: true });
+    reinitialiserLexiqueRendu();
     const global = scoreGlobalPartiel();
 
     elPanneauTete.innerHTML = `
@@ -5872,7 +5886,7 @@
       <div class="audit-bilan-colonne">
       <div class="recap-scores">
         ${infoDim ? `<div class="recap-score">
-          <p class="recap-score-label">${echapper(dimension.name)}</p>
+          <p class="recap-score-label">${lierLexique(typoFr(echapper(dimension.name)))}</p>
           <p class="audit-bilan-score">${pctHtml(infoDim.score)} de maîtrise</p>
         </div>` : ''}
         <div class="recap-score">
