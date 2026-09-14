@@ -327,7 +327,7 @@ async function mesurerColonnes(page) {
 
 async function capturer(page, dossier, nom, options = {}) {
   if (!dossier) return;
-  await page.addStyleTag({ content: '#bar:not(.visible) { display: none !important; }' });
+  await page.addStyleTag({ content: '#barre:not(.visible) { display: none !important; }' });
   await page.waitForTimeout(350);
   await page.screenshot({ path: path.join(dossier, nom), ...options });
 }
@@ -375,7 +375,7 @@ async function principal() {
     assert.equal(await page.locator('#audit-synthese').isVisible(), false, 'pas de synthèse tant qu\'aucune thématique n\'est complète');
     assert.equal(await page.locator('.niveau-accueil').count(), 3);
     assert.equal(await page.getByText('Évalue au moins une thématique pour voir ton score', { exact: true }).count(), 3);
-    assert.equal(await page.locator('#bar.visible').count(), 0);
+    assert.equal(await page.locator('#barre.visible').count(), 0);
     await capturer(page, screenshotDir, 'accueil-desktop.png', { fullPage: true });
 
     // --- Parcours modulaire : dimension → thématique → évaluation → résultat -----
@@ -830,7 +830,7 @@ async function principal() {
     assert.equal(await resultatPage.locator('#panneau.plein-ecran').count(), 0);
     await resultatPage.locator('#panneau-plein-ecran').dispatchEvent('click');
     assert.equal(await resultatPage.locator('#panneau.plein-ecran').count(), 1);
-    assert.equal(await resultatPage.locator('#bar.visible').count(), 0);
+    assert.equal(await resultatPage.locator('#barre.visible').count(), 0);
 
     await resultatPage.locator('[data-scope-categorie="CLIENTS"]').dispatchEvent('click');
     await resultatPage.locator('#panneau-titre', { hasText: 'Moi et mes clients' }).waitFor();
@@ -901,7 +901,7 @@ async function principal() {
     assert.deepEqual(dernierSnapshot.selections.current.slice().sort(),
       dernierSnapshot.priorites.classement.slice().sort(),
       'les trois du classement deviennent les trois cibles du mois');
-    assert.equal(await prioTheme.locator('#bar.visible').count(), 0,
+    assert.equal(await prioTheme.locator('#barre.visible').count(), 0,
       'la barre d\'enregistrement se referme après l\'envoi différé');
     // La fiche se déplie sur place, sans quitter l'écran de résultat.
     await prioTheme.locator('#priorites-theme summary').first().click();
@@ -1014,7 +1014,7 @@ async function principal() {
       'les trois premières du classement sont les trois cibles du mois');
     // Aller-retour complet : ce que le serveur renvoie doit annuler « modifié ». Une
     // normalisation qui diffère d'un côté laisserait la barre allumée pour toujours.
-    assert.equal(await prioTheme.locator('#bar.visible').count(), 0,
+    assert.equal(await prioTheme.locator('#barre.visible').count(), 0,
       'après enregistrement, plus rien n\'est signalé comme modifié');
 
     // --- Lot 7 : Mon mois et synthèse globale ----------------------------------
@@ -1163,7 +1163,7 @@ async function principal() {
     await mobile.getByRole('button', { name: 'Comprendre comment fonctionne le sphérier' }).waitFor();
     assert.equal(await mobile.getByRole('heading', { name: 'À quoi sert le sphérier ?' }).isVisible(), false);
     assert.equal(await mobile.locator('.ciel-categorie').count(), 3);
-    assert.equal(await mobile.locator('#bar.visible').count(), 0);
+    assert.equal(await mobile.locator('#barre.visible').count(), 0);
     await capturer(mobile, screenshotDir, 'accueil-mobile.png', { fullPage: true });
     await mobile.locator('[data-categorie="COACH"]').dispatchEvent('click');
     assert.equal(await mobile.locator('.dimension').count(), 2);
