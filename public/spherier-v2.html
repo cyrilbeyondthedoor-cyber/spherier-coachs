@@ -733,11 +733,14 @@
     display: grid;
     grid-template-columns: 30px 1fr;
     gap: 14px;
-    padding: 14px 16px;
+    /* 11px et non 14px : l'écran d'évaluation gagne en compacité sur cette rangée
+       répétée 3 fois, tout en restant au-dessus du plancher de cible tactile 44px. */
+    padding: 11px 16px;
     border: 1px solid var(--line-faint);
     border-radius: 12px;
     background: rgba(240, 235, 224, 0.018);
     position: relative;
+    min-height: 44px;
   }
   /* Retrait croissant : la marche la plus exigeante est aussi la plus avancée. */
   .marche-2 { margin-left: 14px; }
@@ -952,6 +955,17 @@
   .comp-item:hover { border-color: var(--line); }
   .comp-item:focus-visible { outline: 2px solid var(--teinte-p); outline-offset: 2px; }
   .comp-astre { display: flex; align-items: center; justify-content: center; }
+  /* Second signal, en plus de l'opacité : les astres de la liste des compétences
+     d'une thématique sont désormais de taille fixe (comme dans l'escalier), la
+     progression n'y tient donc plus qu'à l'opacité du remplissage. Un anneau qui
+     s'affirme avec le niveau (absent → pointillé fin → plein → plein et clair)
+     rend les 4 crans distinguables même sur un petit point, sans dépendre de la
+     seule perception du contraste. Ciblé par la valeur exacte de fill-opacity déjà
+     écrite en attribut SVG par astreCran(), sans toucher au JS/HTML. */
+  .comp-astre circle[fill-opacity="0.22"] { stroke: var(--stone); stroke-width: .6; stroke-dasharray: 1.4 1.4; }
+  .comp-astre circle[fill-opacity="0.5"] { stroke: var(--stone); stroke-width: .6; }
+  .comp-astre circle[fill-opacity="0.78"] { stroke: var(--paper-dim); stroke-width: .8; }
+  .comp-astre circle[fill-opacity="1"] { stroke: var(--paper); stroke-width: 1; }
   .comp-nom { font-size: 14px; line-height: 1.4; }
   .comp-palier { font-family: 'Inter Tight', sans-serif; font-style: normal;
     font-size: 12px; color: var(--stone); white-space: nowrap; }
@@ -1050,7 +1064,25 @@
   /* M'ÉVALUER — parcours compétence par compétence.
      Personne ne se positionne sur 152 compétences en cliquant étoile par étoile. */
   .situer { display: flex; flex-direction: column; min-height: 0; }
-  body[data-panneau="situer"] .panneau { max-width: 980px; }
+  /* Plus de hauteur que les autres panneaux : c'est l'écran où le pied (Précédente/
+     Passer) doit rester ancré sans jamais recouvrir les marches qui le précèdent
+     (principe 2.3). Calé sur l'espace réel disponible dans le voile plutôt qu'un
+     pourcentage de viewport, pour rester exact aux petites hauteurs (ex. 700px). */
+  body[data-panneau="situer"] .panneau { max-width: 980px; max-height: calc(100dvh - 12px); }
+  @media (min-width: 641px) {
+    body[data-panneau="situer"] .panneau { max-height: calc(100dvh - 14px); }
+  }
+  /* Corps un peu moins de marge basse que les autres panneaux : le pied lui-même
+     porte déjà sa propre marge et sa bordure supérieure. Escalier et marches un peu
+     plus compacts sur cet écran précis pour laisser le plus de place possible aux
+     3 marches au-dessus du pied ancré (principe 2.3). */
+  body[data-panneau="situer"] .panneau-corps { padding-bottom: 10px; }
+  body[data-panneau="situer"] .escalier { gap: 4px; }
+  body[data-panneau="situer"] .marche { padding: 7px 14px; gap: 10px; }
+  body[data-panneau="situer"] .situer-pied {
+    padding-top: 12px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    margin-top: 12px; gap: 8px;
+  }
   .situer-layout { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 28px; align-items: start; }
   .audit-mini-carte { position: sticky; top: 0; padding: 16px; border: 1px solid var(--line-faint); border-radius: 14px; background: rgba(240,235,224,.02); }
   .audit-mini-repere { color: var(--gold); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; }
@@ -1081,8 +1113,6 @@
 
   .situer-fil { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--stone); }
   .situer-fil b { color: var(--teinte-p); font-weight: 500; }
-  .situer-difficulte { display: flex; align-items: center; gap: 8px; margin: 9px 0 12px; color: var(--stone); font-size: 12px; }
-  .situer-difficulte .pastille-diff { margin: 0; }
   .situer-nom {
     font-family: 'Cormorant Garamond', serif; font-weight: 500;
     /* Enonce de competence : 22px minimum sur mobile, 26px sur desktop (principe 2.1). */
