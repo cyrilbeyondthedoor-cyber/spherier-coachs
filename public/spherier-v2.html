@@ -1771,11 +1771,6 @@
 
   .choix-ecran { display: grid; gap: 22px; padding-bottom: 8px; }
   .choix-intro { margin-top: 8px; color: var(--paper-dim); font-size: 14px; line-height: 1.6; max-width: 62ch; }
-  .choix-groupe-titre {
-    display: flex; align-items: center; gap: 8px;
-    color: var(--cc, var(--gold)); font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
-  }
-  .choix-groupe-titre::after { content: ''; flex: 1; height: 1px; background: var(--line-faint); }
   .choix-grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-top: 11px; }
   .choix-carte {
     display: grid; gap: 7px; min-height: 44px; padding: 14px 15px; text-align: left;
@@ -1950,6 +1945,164 @@
     .choix-carte, .audit-suite-choix { transition: none; }
     .choix-carte:hover { transform: none; }
   }
+  /* ============================================================
+     LOT 6 — MOTION DES CATÉGORIES, TINDER DES COMPÉTENCES, ENCOURAGEMENT
+     ============================================================ */
+
+  /* --- 6.1 La catégorie devient évaluable -------------------------------------
+     L'en-tête « Moi en tant que coach » était une étiquette : rien ne disait qu'on
+     pouvait s'évaluer à ce niveau-là. Elle devient une carte, et le survol la fait
+     bouger juste assez pour qu'on comprenne qu'elle répond au clic. */
+  .cat-carte {
+    display: grid; gap: 5px; width: 100%; min-height: 44px; padding: 8px 12px;
+    text-align: left; border: 1px solid transparent; border-radius: 13px;
+    background: transparent; color: inherit; font: inherit; cursor: pointer;
+    transition: transform .22s ease, border-color .22s ease, background .22s ease, box-shadow .22s ease;
+  }
+  .cat-carte-tete {
+    display: flex; align-items: center; gap: 9px;
+    color: var(--cc, var(--gold)); font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
+  }
+  .cat-carte-titre { flex-shrink: 0; }
+  /* Le filet qui prolongeait l'ancien titre de groupe : il tient le rythme de l'écran. */
+  .cat-carte-tete::after { content: ''; order: 2; flex: 1; height: 1px; background: var(--line-faint); }
+  .cat-carte-fleche {
+    order: 3; flex-shrink: 0; opacity: 0; transform: translateX(-5px);
+    transition: opacity .22s ease, transform .22s ease;
+  }
+  .cat-carte-aide {
+    color: var(--stone); font-size: 12px; line-height: 1.4;
+    opacity: 0; max-height: 0; overflow: hidden;
+    transition: opacity .22s ease, max-height .22s ease;
+  }
+  .cat-carte:hover, .cat-carte:focus-visible {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--cc) 45%, transparent);
+    background: color-mix(in srgb, var(--cc) 6%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--cc) 12%, transparent), 0 10px 26px rgba(0, 0, 0, .3);
+  }
+  .cat-carte:focus-visible { outline: 2px solid var(--cc); outline-offset: 2px; }
+  .cat-carte:hover .cat-carte-fleche, .cat-carte:focus-visible .cat-carte-fleche { opacity: 1; transform: translateX(0); }
+  .cat-carte:hover .cat-carte-aide, .cat-carte:focus-visible .cat-carte-aide { opacity: 1; max-height: 48px; }
+
+  /* Sur le ciel, la carte de catégorie prend le même mouvement, et son second bouton
+     ne se montre franchement qu'au survol : « Explorer » reste l'entrée principale. */
+  .ciel-piste .ciel-categorie {
+    border-radius: 20px;
+    transition: transform .22s ease, background .22s ease, box-shadow .22s ease;
+  }
+  .ciel-piste .ciel-categorie:hover, .ciel-piste .ciel-categorie:focus-visible {
+    transform: translateY(-4px);
+    background: color-mix(in srgb, var(--sphere-color) 5%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--sphere-color) 26%, transparent), 0 18px 44px rgba(0, 0, 0, .32);
+  }
+  .cat-evaluer {
+    margin-top: 8px; min-height: 44px; padding: 9px 16px;
+    border: 1px solid transparent; border-radius: 999px; background: none;
+    color: var(--stone); font: inherit; font-size: 13px; cursor: pointer;
+    opacity: .6; transition: opacity .22s ease, color .22s ease, border-color .22s ease;
+  }
+  .ciel-piste .ciel-categorie:hover .cat-evaluer,
+  .ciel-piste .ciel-categorie:focus-within .cat-evaluer { opacity: 1; }
+  .cat-evaluer:hover, .cat-evaluer:focus-visible {
+    opacity: 1; color: var(--paper);
+    border-color: color-mix(in srgb, var(--sphere-color) 38%, transparent);
+  }
+
+  /* Sans survol, rien ne se révèle : la carte porte alors le bouton en clair. */
+  @media (hover: none), (max-width: 720px) {
+    .cat-carte-aide {
+      justify-self: start; opacity: 1; max-height: none; padding: 9px 15px;
+      min-height: 44px; display: flex; align-items: center;
+      border: 1px solid color-mix(in srgb, var(--cc) 38%, transparent); border-radius: 999px;
+      background: color-mix(in srgb, var(--cc) 8%, transparent); color: var(--paper-dim);
+    }
+    .cat-carte-fleche { opacity: 1; transform: none; }
+    .cat-evaluer { opacity: 1; border-color: color-mix(in srgb, var(--sphere-color) 32%, transparent); }
+  }
+
+  /* Mouvement réduit : l'élévation et le glissement tombent, l'opacité reste. */
+  @media (prefers-reduced-motion: reduce) {
+    .cat-carte:hover, .cat-carte:focus-visible,
+    .ciel-piste .ciel-categorie:hover, .ciel-piste .ciel-categorie:focus-visible { transform: none; }
+    .cat-carte-fleche, .cat-carte:hover .cat-carte-fleche { transform: none; }
+    .cat-carte-aide { max-height: 48px; }
+  }
+  /* --- 6.2 Tinder des compétences ---------------------------------------------
+     La carte sort d'un côté, la suivante entre de l'autre. Le glissement est court et
+     la piste le rogne : un vrai balayage hors écran ferait défiler le panneau
+     horizontalement, ce que la recette mobile interdit. */
+  .tinder-piste { overflow-x: clip; }
+  .tinder-reste { color: var(--stone); white-space: nowrap; }
+  .tinder-clavier {
+    display: inline-block; margin-left: 10px; padding: 2px 9px;
+    border: 1px solid var(--line-faint); border-radius: 999px;
+    color: var(--stone); font-size: 12px; white-space: nowrap;
+  }
+  /* Lien discret, sous les marches, là où l'œil se trouve au moment de renoncer. La
+     surface cliquable atteint 44 px sans grossir le texte. */
+  .tinder-passer {
+    display: inline-flex; align-items: center; min-height: 44px; margin-top: 2px;
+    padding: 0; border: 0; background: none; color: var(--stone);
+    font: inherit; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+  }
+  .tinder-passer:hover { color: var(--paper-dim); }
+
+  @keyframes tinder-entree-droite { from { opacity: 0; transform: translateX(44px); } to { opacity: 1; transform: none; } }
+  @keyframes tinder-entree-gauche { from { opacity: 0; transform: translateX(-44px); } to { opacity: 1; transform: none; } }
+  @keyframes tinder-sortie-gauche { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(-44px); } }
+  @keyframes tinder-sortie-droite { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(44px); } }
+  .tinder-entree-droite { animation: tinder-entree-droite 220ms ease both; }
+  .tinder-entree-gauche { animation: tinder-entree-gauche 220ms ease both; }
+  .tinder-sortie-gauche { animation: tinder-sortie-gauche 220ms ease both; }
+  .tinder-sortie-droite { animation: tinder-sortie-droite 220ms ease both; }
+
+  /* --- 6.2 Écran d'encouragement de fin de thématique -------------------------- */
+  .encourage-passees { max-width: 62ch; margin: 0 auto; padding: 26px 0 6px; text-align: center; }
+  .encourage-passees .mark { display: block; margin-bottom: 14px; font-size: 34px; color: var(--gold); opacity: .55; }
+  .encourage-titre { font-family: 'Cormorant Garamond', serif; font-size: 23px; font-weight: 500; line-height: 1.2; }
+  .encourage-texte { margin-top: 9px; color: var(--paper-dim); font-size: 14px; line-height: 1.6; }
+  .encourage-passees .audit-liste { margin-top: 18px; text-align: left; }
+  .encourage-boutons { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 20px; }
+  .encourage-primaire {
+    min-height: 44px; padding: 10px 22px; border: 1px solid var(--teinte-p); border-radius: 999px;
+    background: color-mix(in srgb, var(--teinte-p) 18%, transparent); color: var(--paper);
+    font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 14px; cursor: pointer;
+    transition: background .22s ease;
+  }
+  .encourage-primaire:hover { background: color-mix(in srgb, var(--teinte-p) 28%, transparent); }
+
+  @media (max-width: 720px) {
+    .encourage-boutons { flex-direction: column; align-items: stretch; }
+    .tinder-clavier { display: none; }
+  }
+  /* --- 6.3 Encouragement à finir la dimension ---------------------------------
+     Le score d'une thématique ne dit rien de la dimension : la barre segmentée replace
+     ce score dans sa carte et nomme ce qui manque. */
+  .encourage-dimension {
+    display: grid; gap: 7px; padding: 13px 15px;
+    border: 1px solid color-mix(in srgb, var(--h) 28%, transparent); border-radius: 12px;
+    background: color-mix(in srgb, var(--h) 6%, transparent);
+  }
+  .encourage-progression { color: var(--paper-dim); font-size: 13px; line-height: 1.45; }
+  .encourage-barre { display: flex; gap: 4px; }
+  .encourage-segment {
+    flex: 1; height: 5px; border-radius: 3px;
+    background: var(--line-faint); transition: background .22s ease;
+  }
+  .encourage-segment.faite { background: var(--h); }
+  .encourage-suite { color: var(--stone); font-size: 13px; line-height: 1.45; }
+
+  /* Le premier choix de Poursuivre prend la teinte de la dimension : c'est le geste
+     que le parcours recommande, il doit se voir avant les trois autres. */
+  .poursuivre-primaire.audit-suite-choix.principal {
+    border-color: var(--h); background: color-mix(in srgb, var(--h) 20%, transparent);
+  }
+  .poursuivre-primaire.audit-suite-choix.principal:hover { background: color-mix(in srgb, var(--h) 30%, transparent); }
+  /* --- 6.5 La constellation lance le parcours --------------------------------
+     Le bouton primaire de l'écran de thématique : même parcours que l'écran
+     « Choisis une thématique », pour que la carte ne soit pas une impasse. */
+  .parcours-evaluer { margin-bottom: 4px; }
 </style>
 </head>
 <body>
@@ -3589,6 +3742,7 @@
       <p class="panneau-label">Où tu en es</p>
       <div class="escalier">${marches}</div>
       <p class="escalier-note">${note}</p>
+      ${situer && niveau === 0 && situer.codes.includes(competence.id) ? '<button type="button" class="tinder-passer" id="situer-passer-lien">Passer pour l\'instant</button>' : ''}
     </section>`;
   }
 
@@ -3710,13 +3864,29 @@
         </div>
       </section>`;
 
-    ecrireCorps(horizon + `
+    // Une thématique ouverte depuis la constellation mène au MÊME parcours que l'écran
+    // « Choisis une thématique » : contexte complet, reprise à la première compétence à
+    // faire, enregistrement en fin de thématique, résultat puis écran Poursuivre. C'est
+    // le chemin naturel depuis la carte, et il s'arrêtait jusqu'ici sur une liste sans
+    // sortie. La liste, elle, reste consultable : c'est le mode exploration.
+    const aSituer = competences.filter((competence) => !estEvaluee(competence.id)).length;
+    const boutonEvaluer = dimension
+      ? `<section class="panneau-section">
+          <button type="button" class="choix-principal parcours-evaluer" id="theme-evaluer">Évaluer cette thématique · ${competences.length} compétence${competences.length > 1 ? 's' : ''}<small>${aSituer === 0
+            ? 'Toutes situées. Tu peux revoir tes positionnements.'
+            : `${aSituer} encore à situer · ton score arrive à la fin`}</small></button>
+        </section>`
+      : '';
+
+    ecrireCorps(horizon + boutonEvaluer + `
       <section class="panneau-section">
         <p class="panneau-label">${competences.length} compétence${competences.length > 1 ? 's' : ''}</p>
         <div class="liste-comp">${items}</div>
       </section>`);
     elPanneauCorps.scrollTop = 0;
 
+    const evaluer = document.getElementById('theme-evaluer');
+    if (evaluer) evaluer.addEventListener('click', () => evaluerTheme(idDimension, themeId, 'theme'));
     elPanneauCorps.querySelectorAll('.comp-item[data-competence]').forEach((btn) => {
       btn.addEventListener('click', () => ouvrirCompetence(btn.dataset.competence, idDimension));
     });
@@ -3940,15 +4110,26 @@
     // Fin de la liste. En audit modulaire, la thématique se referme sur son résultat ;
     // en exploration libre, on propose seulement d'enregistrer.
     if (situer.index >= situer.codes.length) {
-      if (situer.contexte) terminerTheme();
-      else rendreBilanMeSituer();
+      if (!situer.contexte) { rendreBilanMeSituer(); return; }
+      // Le score se lit sur TOUTES les compétences de la thématique : une passée y pèse
+      // comme un zéro. Repartir sur elles avant le résultat, c'est la différence entre
+      // un score subi et un score choisi. Proposé une fois, jamais en boucle.
+      const oubliees = codesDeTheme(situer.contexte.themeId).filter(estPassee);
+      if (oubliees.length > 0 && !situer.contexte.encourageVu) { rendreEncouragementPassees(oubliees); return; }
+      terminerTheme();
       return;
     }
 
+    // Le verrou posé pendant le retour visuel et la transition tombe ici, et nulle part
+    // ailleurs : c'est l'arrivée de la compétence suivante qui rouvre les clics.
+    situer.enAttente = false;
     const code = situer.codes[situer.index];
     const c = etat.referentiel.competencies.find((x) => x.id === code);
     const theme = etat.referentiel.themes.find((t) => t.id === c.theme);
     const niveau = brouillon.levels[code] ?? 0;
+    // « plus que 4 » dit la distance restante mieux que « 4 / 8 » : le membre sait
+    // combien de fois il va encore cliquer avant de voir son score.
+    const restantes = situer.codes.length - (situer.index + 1);
 
     // Avancement par section : « 4 / 8 » dans la thématique, et le rang de la
     // thématique dans sa dimension. « 12 / 192 » ne disait rien de la distance
@@ -3964,6 +4145,9 @@
       <div class="situer-progres">
         <span class="situer-jauge"><i style="width:${Math.round((situer.index / situer.codes.length) * 100)}%"></i></span>
         <span class="situer-compte">${situer.index + 1} / ${situer.codes.length}</span>
+        <span class="tinder-reste">${restantes === 0
+          ? `· Dernière compétence ${dimension ? 'de la thématique' : 'de la liste'}`
+          : `· plus que ${restantes}`}</span>
       </div>
       ${dimension && rang > 0
         ? `<p class="audit-sous-compteur">Thématique ${rang} / ${themesDim.length} de ${echapper(dimension.name)}</p>`
@@ -3974,8 +4158,12 @@
     // coûtait 37 px de hauteur pour zéro information. En exploration libre, en
     // revanche, la liste traverse plusieurs thématiques et le fil d'Ariane ne porte que
     // le titre de la liste : le nom de la thématique reste alors le seul repère.
+    // La carte entre depuis le côté d'où l'on vient : à droite quand on avance, à
+    // gauche quand on revient. `tinder-piste` rogne le glissement, jamais de
+    // défilement horizontal dans le panneau.
+    const entree = mouvementReduit() ? '' : ` tinder-entree-${(situer.sens ?? 1) > 0 ? 'droite' : 'gauche'}`;
     ecrireCorps(`
-      <div class="situer-layout"><div class="situer">
+      <div class="situer-layout tinder-piste"><div class="situer${entree}">
         ${dimension ? '' : `<p class="situer-fil">${echapper(theme ? theme.name : '')}</p>`}
         <h2 class="situer-nom" id="panneau-titre">${lierLexique(typoFr(echapper(c.name)))}</h2>
         ${(c.statement || c.definition) && (c.statement || c.definition) !== c.name
@@ -3986,6 +4174,8 @@
     // L'astuce est placée ENTRE les deux boutons : sur un écran large elle tient sur la
     // même ligne qu'eux et le pied ne fait plus qu'une ligne, ce qui rend une quarantaine
     // de pixels aux marches. Sur écran étroit elle repasse en dessous.
+    // « Passer » n'est plus le grand bouton du pied : il est passé sous les marches, en
+    // lien discret. Le pied ne porte plus que la navigation, d'où le libellé neutre.
     elPanneauPied.innerHTML = `
       <div class="situer-pied">
         <button type="button" class="situer-btn" id="situer-precedent" ${situer.index === 0 ? 'disabled' : ''}>← Précédente</button>
@@ -3993,10 +4183,9 @@
           ? `Déjà évalué à « ${echapper(etat.referentiel.scale[niveau])} ». Reclique sur ta marche pour l'effacer.`
           : (estPassee(code)
             ? 'Tu avais passé cette compétence. Coche une marche pour la situer.'
-            : 'Coche une marche, ou passe : tu pourras y revenir.')}</p>
-        <button type="button" class="situer-btn situer-passer" id="situer-passer">
-          ${niveau > 0 ? 'Suivante →' : 'Passer →'}
-        </button>
+            : 'Coche une marche, ou passe pour l\'instant : tu pourras y revenir.')}${
+          surMobile() ? '' : '<span class="tinder-clavier">1, 2 ou 3 au clavier</span>'}</p>
+        <button type="button" class="situer-btn situer-passer" id="situer-passer">Suivante →</button>
       </div>`;
     elPanneauCorps.scrollTop = 0;
 
@@ -4021,22 +4210,26 @@
         clearTimeout(minuteurConfirmation);
         minuteurConfirmation = setTimeout(() => {
           minuteurConfirmation = null;
-          if (!situer) return;
-          situer.enAttente = false;
-          avancerMeSituer();
+          // Le verrou reste posé pendant la transition : il ne tombe qu'au rendu de la
+          // compétence suivante, sinon un clic dans l'intervalle en sautait une.
+          if (situer) avancerMeSituer();
         }, DELAI_CONFIRMATION);
       });
     });
-    document.getElementById('situer-passer').addEventListener('click', () => {
+    // « Passer » est une décision, pas un oubli : elle se retient, pour que la reprise
+    // ne redemande pas ce que le membre a déjà mis de côté. Deux portes vers le même
+    // geste : le lien sous les marches, là où l'œil est, et le bouton du pied.
+    const passer = () => {
       if (situer.enAttente) return;
-      // « Passer » est une décision, pas un oubli : elle se retient, pour que la
-      // reprise ne redemande pas ce que le membre a déjà mis de côté.
       if (!estEvaluee(code)) marquerPassee(code);
       avancerMeSituer();
-    });
+    };
+    document.getElementById('situer-passer').addEventListener('click', passer);
+    const lienPasser = document.getElementById('situer-passer-lien');
+    if (lienPasser) lienPasser.addEventListener('click', passer);
     document.getElementById('situer-precedent').addEventListener('click', () => {
-      situer.index = Math.max(0, situer.index - 1);
-      rendreMeSituer();
+      if (situer.enAttente || situer.index === 0) return;
+      avancerMeSituer(-1);
     });
     document.getElementById('audit-mini-ouvrir').addEventListener('click', () => {
       document.getElementById('audit-carte-overlay').hidden = false;
@@ -4048,9 +4241,28 @@
     });
   }
 
-  function avancerMeSituer() {
-    situer.index += 1;
-    rendreMeSituer();
+  // Transition entre deux compétences : celle qu'on quitte sort du côté d'où la
+  // suivante arrive. Le glissement reste court et la piste le rogne : une carte qui
+  // sortirait vraiment de l'écran créerait un défilement horizontal dans le panneau.
+  const DUREE_TINDER = 220;
+  let minuteurTinder = null;
+  const mouvementReduit = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function avancerMeSituer(sens = 1) {
+    const suite = () => {
+      situer.index = Math.max(0, Math.min(situer.codes.length, situer.index + sens));
+      situer.sens = sens;
+      rendreMeSituer();
+    };
+    const carte = elPanneauCorps.querySelector('.situer');
+    if (!carte || mouvementReduit()) { suite(); return; }
+    situer.enAttente = true;
+    carte.classList.add(sens > 0 ? 'tinder-sortie-gauche' : 'tinder-sortie-droite');
+    clearTimeout(minuteurTinder);
+    minuteurTinder = setTimeout(() => {
+      minuteurTinder = null;
+      if (situer) suite();
+    }, DUREE_TINDER);
   }
 
   // Bilan de l'exploration libre : une liste ouverte depuis la carte n'appartient à
@@ -4160,6 +4372,29 @@
     if (etat.referentiel) majAuditInitial();
   });
 
+  // Clavier pendant l'évaluation : 1, 2 et 3 pour les marches, flèche gauche pour
+  // revenir. Un seul gestionnaire, posé une fois pour toutes : le brancher à chaque
+  // rendu en aurait empilé un par compétence traversée.
+  document.addEventListener('keydown', (evenement) => {
+    if (!situer || situer.enAttente || document.body.dataset.panneau !== 'situer') return;
+    if (evenement.metaKey || evenement.ctrlKey || evenement.altKey) return;
+    const cible = evenement.target;
+    if (cible && (cible.tagName === 'INPUT' || cible.tagName === 'TEXTAREA' || cible.isContentEditable)) return;
+    if (['1', '2', '3'].includes(evenement.key)) {
+      const marche = elPanneauCorps.querySelector(`.marche[data-niveau="${evenement.key}"]`);
+      if (!marche) return;
+      evenement.preventDefault();
+      marche.click();
+      return;
+    }
+    if (evenement.key === 'ArrowLeft') {
+      const precedent = document.getElementById('situer-precedent');
+      if (!precedent || precedent.disabled) return;
+      evenement.preventDefault();
+      precedent.click();
+    }
+  });
+
   // --- Lecture d'une thématique et d'une dimension -----------------------------
   function codesDeTheme(themeId) {
     return etat.referentiel.competencies
@@ -4211,6 +4446,14 @@
 
   const themesComplets = () => etat.referentiel.themes.filter((theme) => etatTheme(theme).complete);
 
+  // Ce qu'il reste à faire dans une thématique, en compétences et en minutes. 20 s par
+  // compétence, arrondi à la minute : annoncer « 2 min 40 » promettrait une précision
+  // que personne ne tient. Une passée compte comme restante, elle est encore à situer.
+  function resteDeTheme(theme) {
+    const restants = codesDeTheme(theme.id).filter((code) => !estEvaluee(code)).length;
+    return { restants, minutes: Math.max(1, Math.round((restants * 20) / 60)) };
+  }
+
   // Mention de score d'un territoire de la carte : la part maîtrisée de ce qui a été
   // évalué, et sur combien de thématiques elle repose. Rapportée au total des
   // compétences, une dimension à peine entamée afficherait un score d'échec ; attendre
@@ -4253,6 +4496,25 @@
   function themeParId(themeId) {
     return etat.referentiel.themes.find((theme) => theme.id === themeId);
   }
+
+  // --- Entrée par la catégorie ---------------------------------------------------
+  // Évaluer une catégorie n'enchaîne rien tout seul : cliquer une catégorie resserre
+  // l'écran de choix sur ses dimensions, et le membre garde la main sur l'ordre. Une
+  // file automatique de six dimensions imposait un tunnel dont on ne savait plus sortir.
+  function dimensionsDeCategorie(categorieId) {
+    return etat.referentiel.dimensions.filter((dimension) => dimension.category === categorieId);
+  }
+
+  // Un clic sur une carte de catégorie, d'où qu'elle vienne : écran de choix ou ciel.
+  // En phase de CAPTURE, donc avant le gestionnaire de la carte du ciel, qui ouvrirait
+  // sinon la vue « explorer » par-dessus l'écran qu'on vient de demander.
+  document.addEventListener('click', (evenement) => {
+    const bouton = evenement.target.closest('[data-evaluer-categorie]');
+    if (!bouton || !etat.referentiel) return;
+    evenement.preventDefault();
+    evenement.stopPropagation();
+    ouvrirChoixDimension(bouton.dataset.evaluerCategorie);
+  }, true);
 
   // --- Entrées dans le parcours ------------------------------------------------
   // Évaluer une thématique. `suite` dit ce que le membre a demandé en arrivant :
@@ -4308,6 +4570,8 @@
     // Le passage automatique en attente appartenait à la liste qu'on quitte.
     clearTimeout(minuteurConfirmation);
     minuteurConfirmation = null;
+    clearTimeout(minuteurTinder);
+    minuteurTinder = null;
     situer = null;
     competenceAffichee = null;
     themeAffiche = null;
@@ -4319,42 +4583,68 @@
     return `<span class="choix-jauge" aria-hidden="true"><i style="width:${pct}%"></i></span>`;
   }
 
-  function ouvrirChoixDimension() {
+  // Avec une catégorie, l'écran se resserre sur ses dimensions et prend son nom ; sans
+  // elle, il montre les sept dimensions groupées par catégorie. Un seul écran pour les
+  // deux : c'est le même choix, à une échelle près.
+  function ouvrirChoixDimension(categorieId = null) {
     preparerEcranAudit();
-    const total = etat.referentiel.competencies.length;
-    const evaluees = etat.referentiel.competencies.filter((competence) => estEvaluee(competence.id)).length;
+    const categorie = categorieId ? CATEGORIES.find((item) => item.id === categorieId) : null;
+    const codes = categorie
+      ? codesDeCategorie(categorie.id)
+      : etat.referentiel.competencies.map((competence) => competence.id);
+    const evaluees = codes.filter(estEvaluee).length;
 
     elPanneauTete.innerHTML = `
-      <p class="panneau-fil audit-fil"><b>Mon audit</b></p>
-      <h2 class="panneau-titre" id="panneau-titre">Choisis une dimension</h2>
-      <p class="choix-intro">${evaluees} / ${total} compétences évaluées. Tu descendras ensuite thématique par thématique, et tu pourras t'arrêter à la fin de chacune.</p>`;
+      <p class="panneau-fil audit-fil">${categorie ? `Mon audit <span>›</span> <b>${echapper(categorie.name)}</b>` : '<b>Mon audit</b>'}</p>
+      <h2 class="panneau-titre" id="panneau-titre">${categorie ? echapper(categorie.name) : 'Choisis une dimension'}</h2>
+      <p class="choix-intro">${evaluees} / ${codes.length} compétences évaluées. ${categorie
+        ? 'Choisis une dimension de cette catégorie, puis une thématique.'
+        : 'Tu descendras ensuite thématique par thématique, et tu pourras t\'arrêter à la fin de chacune.'}</p>`;
 
-    const groupes = CATEGORIES.map((categorie) => {
-      const dimensions = etat.referentiel.dimensions.filter((dimension) => dimension.category === categorie.id);
-      if (dimensions.length === 0) return '';
-      const cartes = dimensions.map((dimension) => {
-        const info = etatDimension(dimension);
-        return `<button type="button" class="choix-carte" data-choix-dimension="${echapper(dimension.id)}" style="--h:${echapper(TEINTES_HEX[dimension.id] || '#c9a661')}">
-          <span class="choix-carte-tete">
-            <span class="choix-pastille" aria-hidden="true"></span>
-            <span class="choix-carte-nom">${echapper(dimension.name)}</span>
-            ${info.complete ? `<span class="choix-carte-score">${pctHtml(info.score)}</span>` : ''}
-          </span>
-          <span class="choix-carte-meta">${info.themes.length} thématique${info.themes.length > 1 ? 's' : ''} · ${info.evaluees} / ${info.codes.length} compétence${info.codes.length > 1 ? 's' : ''} évaluée${info.codes.length > 1 ? 's' : ''}</span>
-          ${jauge(info.evaluees, info.codes.length)}
-        </button>`;
+    const carteDimension = (dimension) => {
+      const info = etatDimension(dimension);
+      return `<button type="button" class="choix-carte" data-choix-dimension="${echapper(dimension.id)}" style="--h:${echapper(TEINTES_HEX[dimension.id] || '#c9a661')}">
+        <span class="choix-carte-tete">
+          <span class="choix-pastille" aria-hidden="true"></span>
+          <span class="choix-carte-nom">${echapper(dimension.name)}</span>
+          ${info.complete ? `<span class="choix-carte-score">${pctHtml(info.score)}</span>` : ''}
+        </span>
+        <span class="choix-carte-meta">${info.themes.length} thématique${info.themes.length > 1 ? 's' : ''} · ${info.evaluees} / ${info.codes.length} compétence${info.codes.length > 1 ? 's' : ''} évaluée${info.codes.length > 1 ? 's' : ''}</span>
+        ${jauge(info.evaluees, info.codes.length)}
+      </button>`;
+    };
+
+    // L'en-tête de catégorie n'est plus une étiquette : c'est une carte cliquable, qui
+    // resserre l'écran sur ses dimensions. Sans elle, rien ne disait qu'on pouvait
+    // entrer par ce niveau-là.
+    const groupes = categorie
+      ? `<div class="choix-grille">${dimensionsDeCategorie(categorie.id).map(carteDimension).join('')}</div>
+         <button type="button" class="choix-lien" id="choix-toutes-dimensions">Toutes les dimensions</button>`
+      : CATEGORIES.map((item) => {
+        const dimensions = dimensionsDeCategorie(item.id);
+        if (dimensions.length === 0) return '';
+        const codesCategorie = codesDeCategorie(item.id);
+        return `<section class="choix-groupe">
+          <button type="button" class="cat-carte" data-evaluer-categorie="${echapper(item.id)}"
+            style="--cc:${echapper(item.couleur || '#c9a661')}"
+            aria-label="Évaluer la catégorie ${echapper(item.name)}">
+            <span class="cat-carte-tete">
+              <span class="cat-carte-titre">${echapper(item.name)}</span>
+              <span class="cat-carte-fleche" aria-hidden="true">→</span>
+            </span>
+            <span class="cat-carte-aide">Évaluer cette catégorie · ${dimensions.length} dimension${dimensions.length > 1 ? 's' : ''} · ${codesCategorie.length} compétence${codesCategorie.length > 1 ? 's' : ''}</span>
+          </button>
+          <div class="choix-grille">${dimensions.map(carteDimension).join('')}</div>
+        </section>`;
       }).join('');
-      return `<section class="choix-groupe">
-        <p class="choix-groupe-titre" style="--cc:${echapper(categorie.couleur || '#c9a661')}">${echapper(categorie.name)}</p>
-        <div class="choix-grille">${cartes}</div>
-      </section>`;
-    }).join('');
 
     ecrireCorps(`<div class="choix-ecran">${groupes}</div>`);
     elPanneauCorps.scrollTop = 0;
     elPanneauCorps.querySelectorAll('[data-choix-dimension]').forEach((bouton) => {
       bouton.addEventListener('click', () => ouvrirChoixTheme(bouton.dataset.choixDimension));
     });
+    const toutes = document.getElementById('choix-toutes-dimensions');
+    if (toutes) toutes.addEventListener('click', () => ouvrirChoixDimension());
 
     afficherPanneau();
     document.body.dataset.panneau = 'choix-dimension';
@@ -4410,6 +4700,46 @@
     document.body.dataset.panneau = 'choix-theme';
   }
 
+  // --- Écran d'encouragement de fin de thématique --------------------------------
+  // Il s'intercale entre la dernière compétence et le résultat, et seulement quand des
+  // compétences ont été mises de côté.
+  function rendreEncouragementPassees(oubliees) {
+    const contexte = situer.contexte;
+    const theme = themeParId(contexte.themeId);
+    const dimension = dimensionParId(contexte.dimensionId);
+    const nom = theme ? theme.name : situer.titre;
+
+    elPanneauTete.innerHTML = `
+      <p class="panneau-fil audit-fil-court">M'évaluer <span>›</span> ${dimension ? `${echapper(dimension.name)} <span>›</span> ` : ''}<b>${echapper(nom)}</b></p>
+      <div class="situer-progres">
+        <span class="situer-jauge"><i style="width:100%"></i></span>
+        <span class="situer-compte">${situer.codes.length} / ${situer.codes.length}</span>
+      </div>`;
+
+    ecrireCorps(`<div class="encourage-passees">
+      <span class="mark">✧</span>
+      <h3 class="encourage-titre" id="panneau-titre">Il te reste ${oubliees.length} compétence${oubliees.length > 1 ? 's' : ''} passée${oubliees.length > 1 ? 's' : ''} dans cette thématique.</h3>
+      <p class="encourage-texte">Le score est plus juste quand tout est évalué.</p>
+      ${listeCompetences(oubliees)}
+      <div class="encourage-boutons">
+        <button type="button" class="encourage-primaire" id="encourage-terminer">Terminer la thématique</button>
+        <button type="button" class="situer-btn" id="encourage-resultat">Voir mon résultat quand même</button>
+      </div>
+    </div>`);
+    elPanneauCorps.scrollTop = 0;
+
+    // Le contexte est le même objet d'un écran à l'autre : y poser le drapeau suffit à
+    // ce que la proposition ne revienne pas après le second passage.
+    document.getElementById('encourage-terminer').addEventListener('click', () => {
+      contexte.encourageVu = true;
+      ouvrirMeSituer({ codes: oubliees, titre: nom, teinte: situer.teinte, contexte });
+    });
+    document.getElementById('encourage-resultat').addEventListener('click', () => {
+      contexte.encourageVu = true;
+      terminerTheme();
+    });
+  }
+
   // --- Fin de thématique --------------------------------------------------------
   // La thématique terminée est le point d'enregistrement : c'est la promesse faite sur
   // l'accueil, et c'est la pause naturelle du parcours. Plus de coupure arbitraire
@@ -4448,6 +4778,12 @@
       // clic avait fait quelque chose.
       attendreEnregistrement(theme);
       enregistrement = (await enregistrer(libelleAuto)) ? 'ok' : 'echec';
+      // Le bandeau posé par `enregistrer` est générique : on le réécrit avec le score,
+      // pour que la maîtrise se lise à l'instant où la thématique se referme.
+      if (enregistrement === 'ok' && theme) {
+        bandeau(`Thématique enregistrée · ${etatTheme(theme).score} % de maîtrise`,
+          'Tes réponses sont en sécurité. Tu peux continuer ou t\'arrêter là.', 'succes');
+      }
     }
     ouvrirResultatTheme({ dimensionId, themeId, suite, enregistrement, libelleAuto });
   }
@@ -4495,13 +4831,14 @@
     const suivante = restantes[0] || null;
     const complets = themesComplets().length;
     const totalThemes = etat.referentiel.themes.length;
-    const enchaine = suite === 'dimension' && suivante;
-
     const choix = [
       suivante
-        ? `<button type="button" class="audit-suite-choix${enchaine ? ' principal' : ''}" data-suite="continuer">Continuer avec la suite de cette dimension<small>${echapper(suivante.name)}</small></button>`
+        ? (() => {
+          const reste = resteDeTheme(suivante);
+          return `<button type="button" class="audit-suite-choix principal poursuivre-primaire" data-suite="continuer" style="--h:${echapper(TEINTES_HEX[dimension.id] || '#c9a661')}">Continuer avec la suite de cette dimension<small>${echapper(suivante.name)} · ~${reste.restants} compétence${reste.restants > 1 ? 's' : ''}, environ ${reste.minutes} min</small></button>`;
+        })()
         : '',
-      `<button type="button" class="audit-suite-choix${!enchaine && suivante ? ' principal' : ''}" data-suite="theme">Choisir une autre thématique de cette dimension<small>${echapper(dimension.name)}</small></button>`,
+      `<button type="button" class="audit-suite-choix" data-suite="theme">Choisir une autre thématique de cette dimension<small>${echapper(dimension.name)}</small></button>`,
       `<button type="button" class="audit-suite-choix${suivante ? '' : ' principal'}" data-suite="dimension">Choisir une autre dimension<small>Les ${etat.referentiel.dimensions.length} dimensions du sphérier</small></button>`,
       `<button type="button" class="audit-suite-choix" data-suite="arreter">M'arrêter là<small>Tes réponses sont enregistrées, tu reprendras ici</small></button>`,
     ].filter(Boolean).join('');
@@ -4526,6 +4863,24 @@
         else { majAuditInitial(); fermerPanneau(); }
       });
     });
+  }
+
+  // Une thématique finie ne dit rien de la dimension : ce bloc replace le score dans sa
+  // carte, un segment par thématique, et nomme ce qui manque encore pour la compléter.
+  function progressionDimensionHtml(dimension, teinte) {
+    const info = etatDimension(dimension);
+    const complets = info.themes.filter((item) => item.complete).length;
+    const total = info.themes.length;
+    const restants = total - complets;
+    const segments = info.themes.map((item) => `<i class="encourage-segment${item.complete ? ' faite' : ''}"></i>`).join('');
+    const phrase = restants === 0
+      ? 'Dimension complète ! Tu peux voir ton résultat de dimension.'
+      : `Encore ${restants} thématique${restants > 1 ? 's' : ''} et tu auras ta carte complète de ${echapper(dimension.name)}.`;
+    return `<div class="encourage-dimension" style="--h:${echapper(teinte)}">
+      <p class="encourage-progression">${echapper(dimension.name)} : ${complets} thématique${complets > 1 ? 's' : ''} sur ${total} évaluée${complets > 1 ? 's' : ''}</p>
+      <span class="encourage-barre" aria-hidden="true">${segments}</span>
+      <p class="encourage-suite">${phrase}</p>
+    </div>`;
   }
 
   // --- Écran « Résultat de la thématique » --------------------------------------
@@ -4567,6 +4922,7 @@
         <h3 class="audit-bilan-nom">${echapper(theme.name)}</h3>
         <p class="audit-bilan-score">${pctHtml(info.score)} de maîtrise</p>
       </div>
+      ${progressionDimensionHtml(dimension, teinte)}
       ${repartition(info.codes, teinte)}
       <dl class="audit-bilan-chiffres">
         <div class="audit-bilan-chiffre"><dt>Compétences</dt><dd>${info.codes.length}</dd></div>
@@ -4593,7 +4949,7 @@
       <aside class="audit-bilan-suite">${dimensionBouclee
         ? `<div class="audit-poursuivre">
             <p class="audit-poursuivre-titre">Dimension terminée</p>
-            <div class="audit-suites"><button type="button" class="audit-suite-choix principal" id="audit-voir-dimension">Voir le résultat de ${echapper(dimension.name)}<small>Toutes ses thématiques sont complètes</small></button></div>
+            <div class="audit-suites"><button type="button" class="audit-suite-choix principal poursuivre-primaire" id="audit-voir-dimension" style="--h:${echapper(teinte)}">Voir mon résultat de dimension<small>${echapper(dimension.name)} · toutes ses thématiques sont complètes</small></button></div>
           </div>`
         : blocPoursuivreHtml(dimension, suite)}</aside>
     </div></div>`);
@@ -5190,6 +5546,9 @@
     elPanneauCorps.querySelectorAll('[data-audit-rdv]').forEach((bouton) => {
       bouton.addEventListener('click', ouvrirReservation);
     });
+    // Seule liste d'évaluation qui reste sans contexte : elle traverse plusieurs
+    // thématiques et parfois plusieurs dimensions, elle n'a donc ni score de thématique
+    // à afficher ni suite à proposer. Elle garde l'exploration libre et son bilan.
     const btnSituer = document.getElementById('syn-situer');
     if (btnSituer) btnSituer.addEventListener('click', () => ouvrirMeSituer({
       codes: codesRetenus, titre: 'Mes compétences non évaluées', teinte: '#c9a661',
@@ -5889,6 +6248,7 @@
       <div class="ciel-categorie-dims"><svg class="ciel-liens" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${liens}</svg>${dimensionsHtml}</div>
       <p class="ciel-categorie-meta">${mentionCategorie.score}${mentionCategorie.compte}</p>
       <button type="button" class="ciel-categorie-cta" data-explorer-categorie="${echapper(categorie.id)}" aria-label="Explorer la catégorie ${echapper(categorie.name)}">Explorer cette catégorie →</button>
+      ${resultat ? '' : `<button type="button" class="cat-evaluer" data-evaluer-categorie="${echapper(categorie.id)}" aria-label="M'évaluer sur la catégorie ${echapper(categorie.name)}">M'évaluer sur cette catégorie</button>`}
     </section>`;
   }
 
