@@ -171,6 +171,29 @@ const serveur = http.createServer((requete, reponse) => {
   reponse.end(html);
 });
 
+// Géométrie réelle des deux colonnes d'un écran de résultat : la boîte de la colonne
+// gauche, le bord droit de ce qu'elle peint vraiment, et le bord gauche du bloc
+// Poursuivre. Une comparaison directe, seul moyen d'attraper un recouvrement.
+async function mesurerColonnes(page) {
+  return page.locator('#panneau-corps').evaluate((corps) => {
+    const gauche = corps.querySelector('.audit-bilan-colonne');
+    const suite = corps.querySelector('.audit-bilan-suite');
+    const boite = gauche.getBoundingClientRect();
+    let contenu = boite.left;
+    gauche.querySelectorAll('*').forEach((element) => {
+      const rect = element.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) contenu = Math.max(contenu, rect.right);
+    });
+    const rectSuite = suite.getBoundingClientRect();
+    return {
+      boiteGauche: boite.right,
+      contenuGauche: contenu,
+      suiteGauche: rectSuite.left,
+      empilees: rectSuite.top >= boite.bottom - 1,
+    };
+  });
+}
+
 async function capturer(page, dossier, nom, options = {}) {
   if (!dossier) return;
   await page.addStyleTag({ content: '#bar:not(.visible) { display: none !important; }' });
@@ -293,6 +316,16 @@ async function principal() {
     }));
     assert.ok(hauteurPanneau.principal <= hauteurPanneau.visible,
       `le choix principal doit tenir sans scroll (${Math.round(hauteurPanneau.principal)} > ${hauteurPanneau.visible})`);
+
+    // Et les deux colonnes ne doivent pas se marcher dessus. La hauteur seule ne voyait
+    // rien : un débordement latéral reste à l'intérieur du corps du panneau, il ne crée
+    // aucun défilement.
+    const colonnes = await mesurerColonnes(page);
+    assert.ok(colonnes.contenuGauche <= colonnes.boiteGauche + 1,
+      `le contenu de la colonne gauche déborde de sa boîte de ${Math.round(colonnes.contenuGauche - colonnes.boiteGauche)} px`);
+    assert.equal(colonnes.empilees, false, 'en 1280x700 le résultat tient bien en deux colonnes');
+    assert.ok(colonnes.contenuGauche <= colonnes.suiteGauche + 1,
+      `la colonne gauche recouvre le bloc Poursuivre de ${Math.round(colonnes.contenuGauche - colonnes.suiteGauche)} px`);
 
     // Poursuivre vers la thématique suivante de la dimension.
     await page.locator('[data-suite="continuer"]').dispatchEvent('click');
@@ -520,6 +553,10 @@ async function principal() {
     await capturer(mobile, screenshotDir, 'resultat-theme-mobile.png');
     // Les quatre suites restent atteignables, empilées, sans débordement latéral.
     assert.equal(await mobile.locator('.audit-suite-choix').count(), 4);
+    const colonnesMobile = await mesurerColonnes(mobile);
+    assert.equal(colonnesMobile.empilees, true, 'en 390x844 le résultat s\'empile en une colonne');
+    assert.ok(colonnesMobile.contenuGauche <= colonnesMobile.boiteGauche + 1,
+      'le contenu ne déborde pas de sa colonne sur mobile');
     assert.ok(await mobile.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
     assert.ok(await mobile.locator('#panneau-corps').evaluate((element) => element.scrollWidth <= element.clientWidth),
       'le corps du panneau ne défile pas horizontalement');

@@ -1707,7 +1707,22 @@
   .audit-suite-choix.principal small { color: var(--paper-dim); }
   .audit-suite-choix.principal:hover { background: rgba(201, 166, 97, .24); }
 
+  /* La bascule une colonne / deux colonnes dépend de la largeur du CORPS DU PANNEAU et
+     non de celle de la fenêtre : dans une fenêtre de 1280 px, le panneau réduit n'en
+     fait que 618, et la règle en @media y imposait deux colonnes dans un espace qui
+     n'en tient qu'une — les colonnes se recouvraient de 41 px. La règle @media reste
+     en repli pour les navigateurs sans requête de conteneur : elle ne fait qu'empiler,
+     jamais l'inverse, donc elle ne peut pas réintroduire le défaut. */
   @media (max-width: 900px) {
+    .audit-bilan-large { grid-template-columns: 1fr; }
+    .audit-bilan-suite { position: static; }
+    .audit-bilan-suite .audit-poursuivre { padding-top: 4px; border-top: 1px solid var(--line-faint); }
+    .audit-bilan-suite .audit-poursuivre-titre { margin-top: 14px; }
+  }
+
+  .audit-cadre { container-type: inline-size; }
+
+  @container (max-width: 900px) {
     .audit-bilan-large { grid-template-columns: 1fr; }
     .audit-bilan-suite { position: static; }
     .audit-bilan-suite .audit-poursuivre { padding-top: 4px; border-top: 1px solid var(--line-faint); }
@@ -3767,8 +3782,16 @@
   }
 
   // --- Écran « Choisir une dimension » -----------------------------------------
-  function preparerEcranAudit(teinte = '#c9a661') {
+  // Les écrans de résultat s'ouvrent agrandis : ils tiennent deux colonnes, et le
+  // panneau réduit ne fait que 618 px dans une fenêtre de 1280. Les écrans de choix
+  // restent au format réduit, et l'état du panneau est reposé à chaque écran pour
+  // qu'une bascule manuelle faite plus tôt ne suive pas le membre d'écran en écran.
+  function preparerEcranAudit(teinte = '#c9a661', { plein = false } = {}) {
     configurerPleinEcran(true);
+    const bascule = document.getElementById('panneau-plein-ecran');
+    elPanneau.classList.toggle('plein-ecran', plein);
+    bascule.textContent = plein ? 'Réduire' : 'Agrandir';
+    bascule.setAttribute('aria-pressed', String(plein));
     situer = null;
     competenceAffichee = null;
     themeAffiche = null;
@@ -3976,7 +3999,7 @@
     const theme = themeParId(themeId);
     if (!dimension || !theme) { ouvrirChoixDimension(); return; }
     const teinte = TEINTES_HEX[dimension.id] || '#c9a661';
-    preparerEcranAudit(teinte);
+    preparerEcranAudit(teinte, { plein: true });
 
     const info = etatTheme(theme);
     const themesDim = themesDeDimension(dimension);
@@ -3997,7 +4020,7 @@
 
     // Deux colonnes sur desktop : la suite du parcours reste visible sans défiler,
     // c'est elle qui doit être atteignable en un geste après un score.
-    elPanneauCorps.innerHTML = `<div class="audit-bilan audit-bilan-large">
+    elPanneauCorps.innerHTML = `<div class="audit-cadre"><div class="audit-bilan audit-bilan-large">
       <div class="audit-bilan-colonne">
       ${enregistrement === 'echec'
         ? `<div class="audit-echec">
@@ -4038,7 +4061,7 @@
             <div class="audit-suites"><button type="button" class="audit-suite-choix principal" id="audit-voir-dimension">Voir le résultat de ${echapper(dimension.name)}<small>Toutes ses thématiques sont complètes</small></button></div>
           </div>`
         : blocPoursuivreHtml(dimension, suite)}</aside>
-    </div>`;
+    </div></div>`;
     elPanneauCorps.scrollTop = 0;
 
     const reessayer = document.getElementById('audit-reessayer');
@@ -4068,7 +4091,7 @@
     const dimension = dimensionParId(dimensionId);
     if (!dimension) { ouvrirChoixDimension(); return; }
     const teinte = TEINTES_HEX[dimension.id] || '#c9a661';
-    preparerEcranAudit(teinte);
+    preparerEcranAudit(teinte, { plein: true });
     const info = etatDimension(dimension);
     // De la moins à la plus maîtrisée : ce qu'on vient chercher en fin de dimension,
     // c'est par où continuer, pas un palmarès.
@@ -4080,7 +4103,7 @@
       <h2 class="panneau-titre" id="panneau-titre">Résultat de la dimension</h2>
       <p class="audit-sous-compteur">${info.themes.length} thématique${info.themes.length > 1 ? 's' : ''} · ${info.evaluees} / ${info.codes.length} compétence${info.codes.length > 1 ? 's' : ''} évaluée${info.codes.length > 1 ? 's' : ''}</p>`;
 
-    elPanneauCorps.innerHTML = `<div class="audit-bilan audit-bilan-large">
+    elPanneauCorps.innerHTML = `<div class="audit-cadre"><div class="audit-bilan audit-bilan-large">
       <div class="audit-bilan-colonne">
       <div class="audit-bilan-tete">
         <h3 class="audit-bilan-nom">${echapper(dimension.name)}</h3>
@@ -4099,7 +4122,7 @@
       </section>
       </div>
       <aside class="audit-bilan-suite">${blocPoursuivreHtml(dimension, suite)}</aside>
-    </div>`;
+    </div></div>`;
     elPanneauCorps.scrollTop = 0;
     brancherPoursuivre(dimension);
 
