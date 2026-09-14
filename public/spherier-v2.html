@@ -1856,7 +1856,7 @@
   /* « Compétences » demandait 97 px pour 81 px disponibles en 390 px de large :
      l'interlettrage part en premier, le libellé reste sur une ligne. */
   @media (max-width: 720px) {
-    .audit-bilan-chiffre dt { letter-spacing: .04em; }
+    .audit-bilan-chiffre dt { letter-spacing: .02em; }
   }
   .audit-bilan-chiffre dd { margin-top: 3px; font-family: 'Cormorant Garamond', serif; font-size: 21px; }
   .audit-bilan-section { display: grid; gap: 8px; }
@@ -5647,7 +5647,11 @@
   }
 
   let minuteurBandeau = null;
-  function bandeau(titre, texte, variante, action) {
+  // `enHaut` force le bandeau en haut de l'écran. La règle par défaut le rapproche du
+  // bouton Enregistrer quand la barre de sauvegarde est visible, ce qui vaut pour la
+  // réponse à un clic ; la confirmation affichée à l'ouverture de la page, elle, n'a
+  // pas de bouton d'origine et se posait sur le bloc « Reprends ton audit ».
+  function bandeau(titre, texte, variante, action, { enHaut = false } = {}) {
     elBandeau.innerHTML = `<b>${echapper(titre)}</b>${echapper(texte)}`
       + (action ? `<br><button type="button" id="bandeau-action">${echapper(action.libelle)}</button>` : '');
     elBandeau.className = 'bandeau visible ' + variante;
@@ -5658,10 +5662,16 @@
     const panneauOuvert = !elVoile.hidden && document.body.dataset.panneau !== undefined;
     // `bottom: auto` explicite : la règle qui rapproche le bandeau de la barre de
     // sauvegarde pose un `bottom`, et le laisser avec un `top` étirerait la boîte.
-    elBandeau.style.top = panneauOuvert
-      ? `${Math.round(elPanneauTete.getBoundingClientRect().bottom) + 12}px`
-      : '';
-    elBandeau.style.bottom = panneauOuvert ? 'auto' : '';
+    if (panneauOuvert) {
+      elBandeau.style.top = `${Math.round(elPanneauTete.getBoundingClientRect().bottom) + 12}px`;
+      elBandeau.style.bottom = 'auto';
+    } else if (enHaut) {
+      elBandeau.style.top = '14px';
+      elBandeau.style.bottom = 'auto';
+    } else {
+      elBandeau.style.top = '';
+      elBandeau.style.bottom = '';
+    }
     if (action) document.getElementById('bandeau-action').addEventListener('click', () => {
       elBandeau.classList.remove('visible'); action.faire();
     });
@@ -6132,7 +6142,8 @@
           etat.computed.levels = { ...etat.computed.levels, ...brouillon.levels };
           etat.computed.themes = calculerOuvertureLocale(brouillon.levels);
           bandeau('Tes modifications ont été retrouvées.',
-            "Elles n'avaient pas été enregistrées : elles t'attendaient sur cet appareil.", 'succes');
+            "Elles n'avaient pas été enregistrées : elles t'attendaient sur cet appareil.",
+            'succes', null, { enHaut: true });
         } else if ((brouillon.passees || []).length === 0 && !brouillon.derniere) {
           // Le brouillon ne diffère de la référence que sur des niveaux : rien à garder.
           // S'il porte des compétences passées ou un repère de reprise, on le laisse :
