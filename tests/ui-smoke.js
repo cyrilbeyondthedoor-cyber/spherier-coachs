@@ -960,6 +960,46 @@ async function principal() {
       `Je sais mobiliser la compétence ${DIM_MULTI.id}-01-02.`,
       'la reprise saute la compétence passée');
 
+    // --- Mobile : la barre de sauvegarde ne bloque pas « Reprendre mon audit » --
+    // Empilée sur trois lignes, elle occupait 372 px de bas d'écran : même défilé tout
+    // en bas, le bouton de reprise restait dessous et `elementFromPoint` renvoyait le
+    // champ de saisie. C'est le critère de sortie du lot 1, en mobile.
+    const mobileBarre = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
+    await mobileBarre.goto(url);
+    await mobileBarre.locator('#ciel:not([hidden])').waitFor();
+    await mobileBarre.getByRole('button', { name: /^(Commencer|Reprendre) mon audit$/ }).dispatchEvent('click');
+    await mobileBarre.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await mobileBarre.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await mobileBarre.locator('.situer-compte').first().waitFor();
+    // Un positionnement non enregistré, puis on quitte la thématique en cours : c'est
+    // l'état que le rechargement doit restaurer, barre de sauvegarde comprise.
+    await mobileBarre.locator('.marche[data-niveau="2"]').first().dispatchEvent('click');
+    await mobileBarre.waitForTimeout(400);
+    await mobileBarre.reload();
+    await mobileBarre.locator('#ciel:not([hidden])').waitFor();
+    await mobileBarre.locator('.barre-sauvegarde.visible').waitFor();
+
+    const hauteurBarre = (await mobileBarre.locator('.barre-sauvegarde').boundingBox()).height;
+    assert.ok(hauteurBarre < 110,
+      `la barre de sauvegarde occupe ${Math.round(hauteurBarre)} px en 390x844, elle doit tenir sur une ligne`);
+
+    const cible = mobileBarre.getByRole('button', { name: 'Reprendre mon audit' });
+    await cible.waitFor();
+    await mobileBarre.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await mobileBarre.waitForTimeout(80);
+    const atteignable = await mobileBarre.evaluate(() => {
+      const bouton = document.getElementById('audit-cta');
+      const r = bouton.getBoundingClientRect();
+      const dessus = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return { trouve: dessus === bouton || bouton.contains(dessus), haut: Math.round(r.top), bas: Math.round(r.bottom) };
+    });
+    assert.ok(atteignable.trouve,
+      `« Reprendre mon audit » est recouvert en 390x844 (haut=${atteignable.haut}, bas=${atteignable.bas})`);
+    // Et le clic réel ouvre bien le parcours, sans interception.
+    await cible.click({ timeout: 3000 });
+    await mobileBarre.locator('#voile:not([hidden])').waitFor();
+    await mobileBarre.close();
+
     // --- Écran d'attente pendant l'enregistrement de fin de thématique ----------
     delaiSnapshot = 400;
     const avantAttente = nbSnapshots;

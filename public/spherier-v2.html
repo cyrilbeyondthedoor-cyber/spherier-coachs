@@ -886,6 +886,7 @@
   .barre-texte { font-family: 'Inter Tight', sans-serif; font-style: normal; font-size: 14px;
     color: var(--paper-dim); min-width: 0; }
   .barre-texte b { color: var(--paper); font-weight: 500; font-style: normal; }
+  .barre-court { display: none; }
   .barre-actions { display: flex; gap: 9px; flex-shrink: 0; }
   .btn-annuler, .btn-enregistrer {
     padding: 9px 18px; border-radius: 999px; cursor: pointer;
@@ -919,10 +920,12 @@
     top: auto; bottom: calc(84px + env(safe-area-inset-bottom, 0px));
     transform: translateX(-50%) translateY(12px);
   }
-  @media (max-width: 640px) {
-    body:has(.barre-sauvegarde.visible) .bandeau { bottom: calc(158px + env(safe-area-inset-bottom, 0px)); }
-  }
-  .bandeau.visible { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+  /* Le bandeau reste traversable au clic : c'est une confirmation, pas une boîte de
+     dialogue. En mobile il se pose au-dessus du bloc d'accueil, et il rendait
+     « Reprendre mon audit » inerte pendant ses quatre secondes. Seul son propre bouton
+     (Réessayer) redevient cliquable. */
+  .bandeau.visible { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: none; }
+  .bandeau.visible button { pointer-events: auto; }
   .bandeau.succes { border-color: var(--gold); color: var(--gold-bright); }
   .bandeau.echec { border-color: #c4523e; color: #e8a08f; }
   .bandeau b { display: block; color: inherit; margin-bottom: 3px; font-weight: 500; }
@@ -1612,13 +1615,25 @@
     .mode-emploi li:nth-child(3) { padding-left: 4px; border-left: 0; }
   }
 
-  @media (max-width: 640px) {
-    .barre-sauvegarde { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 16px calc(13px + env(safe-area-inset-bottom, 0px)); }
-    /* Boutons au-dessus du champ de nom : la ligne du bas, où vit le badge, ne porte
-       que le champ, dont le bord droit recouvert ne gêne pas la saisie. */
-    .barre-libelle { order: 2; }
-    .barre-actions { justify-content: stretch; }
-    .btn-annuler, .btn-enregistrer { flex: 1; }
+  /* Sous 720 px, la barre de sauvegarde tient sur UNE ligne. Empilée sur trois lignes,
+     elle occupait 372 px de bas d'écran et rendait « Reprendre mon audit » impossible à
+     atteindre : au défilement maximal, le bouton restait sous la barre et
+     `elementFromPoint` renvoyait le champ de saisie. Le champ « Nommer ce point » est
+     retiré à cette largeur (le libellé est facultatif), le texte se réduit à sa mention
+     courte, et les deux boutons restent côte à côte. */
+  @media (max-width: 720px) {
+    .barre-sauvegarde { flex-wrap: nowrap; gap: 10px; padding: 9px 16px calc(9px + env(safe-area-inset-bottom, 0px)); }
+    .barre-libelle { display: none; }
+    .barre-long { display: none; }
+    .barre-court { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .barre-texte { flex: 1 1 auto; min-width: 0; font-size: 13.5px; }
+    /* Les boutons passent à GAUCHE : le coin bas droit reste occupé par le badge
+       Netlify, qui absorbait les clics sur Enregistrer. Le desktop réserve 210 px pour
+       lui, une largeur impossible à prendre ici ; déplacer les boutons règle le même
+       problème sans rogner la barre. Seule la fin du texte, déjà tronquée, passe
+       dessous. */
+    .barre-actions { order: -1; }
+    .btn-annuler, .btn-enregistrer { padding: 9px 14px; }
   }
 
   @media (max-width: 640px) {
@@ -5551,15 +5566,30 @@
   // retombe sur le texte normal.
   let brouillonRestaure = false;
 
+  // Deux formulations pour le même état : la phrase complète sur grand écran, une
+  // mention courte sous 720 px, où la barre tient sur une seule ligne pour ne pas
+  // recouvrir le bas de la page (voir la règle `.barre-sauvegarde` en mobile).
+  function texteBarre(long, court) {
+    elBarreTexte.innerHTML = `<span class="barre-long">${long}</span><span class="barre-court">${court}</span>`;
+  }
+
   function majBarre() {
     if (!estModifie()) { elBarre.classList.remove('visible'); return; }
     const c = changements();
     if (brouillonRestaure) {
       brouillonRestaure = false;
       const n = c.niveaux.length;
-      elBarreTexte.innerHTML = n > 0
-        ? `Tu as <b>${n}</b> positionnement${n > 1 ? 's' : ''} de ta dernière visite qui ${n > 1 ? 'ne sont' : "n'est"} pas encore enregistré${n > 1 ? 's' : ''}.`
-        : 'Tu as des changements de ta dernière visite qui ne sont pas encore enregistrés.';
+      if (n > 0) {
+        texteBarre(
+          `Tu as <b>${n}</b> positionnement${n > 1 ? 's' : ''} de ta dernière visite qui ${n > 1 ? 'ne sont' : "n'est"} pas encore enregistré${n > 1 ? 's' : ''}.`,
+          `<b>${n}</b> positionnement${n > 1 ? 's' : ''} non enregistré${n > 1 ? 's' : ''}`
+        );
+      } else {
+        texteBarre(
+          'Tu as des changements de ta dernière visite qui ne sont pas encore enregistrés.',
+          'Changements non enregistrés'
+        );
+      }
       elBarre.classList.add('visible');
       return;
     }
@@ -5567,7 +5597,10 @@
     if (c.niveaux.length) bouts.push(`<b>${c.niveaux.length}</b> positionnement${c.niveaux.length > 1 ? 's' : ''}`);
     if (c.cibles) bouts.push('tes cibles du mois');
     if (c.plusTard) bouts.push('ta liste « plus tard »');
-    elBarreTexte.innerHTML = `Modifié : ${bouts.join(', ')}. Rien n'est encore enregistré.`;
+    texteBarre(
+      `Modifié : ${bouts.join(', ')}. Rien n'est encore enregistré.`,
+      `Modifié : ${bouts.join(', ')}`
+    );
     elBarre.classList.add('visible');
   }
 
