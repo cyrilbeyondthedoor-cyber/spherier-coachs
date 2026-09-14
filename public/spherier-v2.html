@@ -3308,8 +3308,8 @@
 
   // Travail en cours. `reference` est l'état tel que le serveur l'a renvoyé : il sert à
   // savoir ce qui a changé, et à revenir en arrière.
-  let reference = { levels: {}, current: [], later: [] };
-  let brouillon = { levels: {}, current: [], later: [] };
+  let reference = { levels: {}, current: [], later: [], priorites: { themes: {}, dimensions: {}, classement: [] } };
+  let brouillon = { levels: {}, current: [], later: [], priorites: { themes: {}, dimensions: {}, classement: [] } };
 
   const cleBrouillon = () => `spherier-v2-brouillon-${CLIENT_ID}`;
 
@@ -3335,6 +3335,7 @@
   function estModifie() {
     const codes = new Set([...Object.keys(reference.levels), ...Object.keys(brouillon.levels)]);
     for (const c of codes) if ((reference.levels[c] ?? 0) !== (brouillon.levels[c] ?? 0)) return true;
+    if (signaturePriorites(reference.priorites) !== signaturePriorites(brouillon.priorites)) return true;
     return !memeListe(reference.current, brouillon.current) || !memeListe(reference.later, brouillon.later);
   }
 
@@ -3449,7 +3450,20 @@
 
   // « Maintenant » et « plus tard » s'excluent : une compétence que l'on travaille
   // n'est plus en attente, et la promotion est donc un déplacement, pas une copie.
+  //
+  // Dès qu'un classement existe, c'est LUI que ces trois gestes déplacent : `current`
+  // et `later` en sont dérivés, les écrire directement les ferait diverger au prochain
+  // enregistrement. Une compétence absente du classement — gardée depuis la carte, par
+  // exemple — suit l'ancien chemin.
   function basculerPlusTard(code) {
+    const p = etatPriorites();
+    if (p.classement.includes(code)) {
+      // Sous les trois du mois, elle y est déjà : un second clic la retire tout à fait.
+      if (p.classement.indexOf(code) >= MAX_MAINTENANT) { retirerDuClassement(code); return; }
+      deplacerDansClassement(code, MAX_MAINTENANT);
+      memoriserPriorites();
+      return;
+    }
     appliquerChangement(() => {
       if (brouillon.later.includes(code)) {
         brouillon.later = brouillon.later.filter((c) => c !== code);
@@ -3461,6 +3475,13 @@
   }
 
   function basculerMaintenant(code) {
+    const p = etatPriorites();
+    if (p.classement.length > 0) {
+      if (brouillon.current.includes(code)) deplacerDansClassement(code, MAX_MAINTENANT);
+      else deplacerDansClassement(code, Math.min(brouillon.current.length, MAX_MAINTENANT - 1));
+      memoriserPriorites();
+      return;
+    }
     appliquerChangement(() => {
       if (brouillon.current.includes(code)) {
         brouillon.current = brouillon.current.filter((c) => c !== code);
@@ -3472,6 +3493,14 @@
   }
 
   function remplacerMaintenant(sortant, entrant) {
+    const p = etatPriorites();
+    if (p.classement.length > 0) {
+      const rang = p.classement.indexOf(sortant);
+      deplacerDansClassement(entrant, rang >= 0 ? rang : 0);
+      deplacerDansClassement(sortant, MAX_MAINTENANT);
+      memoriserPriorites();
+      return;
+    }
     appliquerChangement(() => {
       brouillon.current = [...new Set(
         brouillon.current.filter((c) => c !== sortant).concat(entrant)
@@ -4374,7 +4403,12 @@
   // ils décrivent un parcours, pas une modification en attente. On les réécrit donc
   // à la main quand l'écriture automatique vient de les emporter.
   function persisterAudit() {
-    if ((brouillon.passees || []).length === 0 && !brouillon.derniere) return;
+    const priorites = brouillon.priorites;
+    const aDesPriorites = Boolean(priorites) && (
+      Object.keys(priorites.themes || {}).length > 0
+      || Object.keys(priorites.dimensions || {}).length > 0
+      || (priorites.classement || []).length > 0);
+    if ((brouillon.passees || []).length === 0 && !brouillon.derniere && !aDesPriorites) return;
     try {
       localStorage.setItem(cleBrouillon(), JSON.stringify({ ...brouillon, le: Date.now() }));
     } catch { /* stockage indisponible : on continue sans filet */ }
@@ -4407,6 +4441,112 @@
     // Simple signet : pas de redessin. Le bloc d'accueil est masqué tant que le panneau
     // est ouvert, le rafraîchir à chaque question ne servait à personne.
     persisterAudit();
+  }
+
+  // --- Priorités et classement --------------------------------------------------
+  // Trois priorités par thématique, trois par dimension, et UN classement qui les
+  // ordonne toutes. Le classement est la seule source d'ordre : « maintenant » et
+  // « plus tard » en sont dérivés, ici comme sur le serveur. Mon mois, la carte et la
+  // synthèse continuent donc de lire `selections` sans rien savoir des priorités.
+  const PRIORITES_MAX = 3;
+
+  function etatPriorites() {
+    const p = brouillon.priorites;
+    if (!p || typeof p !== 'object' || Array.isArray(p)) {
+      brouillon.priorites = { themes: {}, dimensions: {}, classement: [] };
+      return brouillon.priorites;
+    }
+    if (!p.themes || typeof p.themes !== 'object' || Array.isArray(p.themes)) p.themes = {};
+    if (!p.dimensions || typeof p.dimensions !== 'object' || Array.isArray(p.dimensions)) p.dimensions = {};
+    if (!Array.isArray(p.classement)) p.classement = [];
+    return p;
+  }
+
+  const prioritesDuTheme = (themeId) => [...(etatPriorites().themes[themeId] || [])];
+  const prioritesDeLaDimension = (dimensionId) => {
+    const liste = etatPriorites().dimensions[dimensionId];
+    return Array.isArray(liste) ? [...liste] : null;
+  };
+  // Une dimension est « consolidée » dès que la clé existe, même vide : avoir regardé
+  // ses priorités et n'en retenir aucune n'est pas la même chose que ne pas l'avoir
+  // encore fait. La distinction décide si les priorités de thématique remontent.
+  const dimensionConsolidee = (dimensionId) => Array.isArray(etatPriorites().dimensions[dimensionId]);
+
+  // Les codes qui ont leur place au classement : les retenues de chaque dimension
+  // consolidée, et, pour une dimension qui ne l'est pas encore, les priorités de ses
+  // thématiques. Une priorité de thématique compte donc dès qu'elle est cochée.
+  function codesAttendusAuClassement() {
+    const attendus = [];
+    etat.referentiel.dimensions.forEach((dimension) => {
+      const retenues = prioritesDeLaDimension(dimension.id);
+      if (retenues) { attendus.push(...retenues); return; }
+      themesDeDimension(dimension).forEach((theme) => attendus.push(...prioritesDuTheme(theme.id)));
+    });
+    return [...new Set(attendus)];
+  }
+
+  // Recompose le classement : ce qui y figure garde sa place, ce qui vient d'être
+  // priorisé arrive à la suite. Réordonner est une décision du membre, une
+  // recomposition ne doit jamais l'effacer. Les retraits passent par des gestes
+  // explicites, jamais par la recomposition.
+  function recomposerClassement() {
+    const p = etatPriorites();
+    p.classement = [...p.classement, ...codesAttendusAuClassement().filter((code) => !p.classement.includes(code))];
+  }
+
+  // Miroir exact de `deriverSelections` côté serveur : les trois premières du
+  // classement sont les cibles du mois, la suite rejoint la file d'attente.
+  function deriverSelectionsLocales() {
+    const p = etatPriorites();
+    if (p.classement.length === 0) return;
+    const ouverte = (code) => estOuverte(competenceParCode(code)?.theme);
+    const tete = p.classement.slice(0, MAX_MAINTENANT);
+    const current = tete.filter(ouverte);
+    brouillon.later = [...new Set([
+      ...tete.filter((code) => !ouverte(code)),
+      ...p.classement.slice(MAX_MAINTENANT),
+      ...Object.values(p.themes).flat(),
+      ...brouillon.later,
+    ])].filter((code) => !current.includes(code));
+    brouillon.current = current;
+  }
+
+  function memoriserPriorites() {
+    recomposerClassement();
+    deriverSelectionsLocales();
+    appliquerChangement(() => {});
+    persisterAudit();
+  }
+
+  // Déplace un code à une position du classement sans jamais le dupliquer.
+  function deplacerDansClassement(code, position) {
+    const p = etatPriorites();
+    const sans = p.classement.filter((item) => item !== code);
+    const index = Math.max(0, Math.min(position, sans.length));
+    p.classement = [...sans.slice(0, index), code, ...sans.slice(index)];
+  }
+
+  // Retirer = sortir du classement ET des priorités qui l'alimentent. Sans le second
+  // geste, la recomposition suivante ferait revenir la compétence retirée.
+  function retirerDuClassement(code) {
+    const p = etatPriorites();
+    p.classement = p.classement.filter((item) => item !== code);
+    [p.themes, p.dimensions].forEach((groupe) => {
+      Object.keys(groupe).forEach((cle) => {
+        groupe[cle] = groupe[cle].filter((item) => item !== code);
+      });
+    });
+    brouillon.current = brouillon.current.filter((item) => item !== code);
+    brouillon.later = brouillon.later.filter((item) => item !== code);
+    memoriserPriorites();
+  }
+
+  // Signature canonique : l'ordre du classement compte, celui des cases cochées non.
+  function signaturePriorites(p) {
+    const q = p && typeof p === 'object' && !Array.isArray(p) ? p : {};
+    const groupe = (obj) => Object.keys(obj || {}).sort()
+      .map((cle) => cle + ':' + [...(obj[cle] || [])].sort().join(',')).join('|');
+    return `${groupe(q.themes)}#${groupe(q.dimensions)}#${(q.classement || []).join(',')}`;
   }
 
   // L'accueil porte le sous-texte de reprise : il se met à jour quand on le redécouvre.
@@ -6169,6 +6309,9 @@
           // membre en était. Sans lui, la reprise sur un autre appareil repartirait du
           // début de la liste et redemanderait les compétences déjà écartées.
           audit: { passees: [...(brouillon.passees || [])], derniere: brouillon.derniere || null },
+          // Priorités par thématique, par dimension, et le classement qui les ordonne.
+          // Le serveur en redérive « maintenant » et « plus tard », comme ici.
+          priorites: etatPriorites(),
         }),
       });
       if (!reponse.ok) {
@@ -6181,7 +6324,13 @@
       etat.snapshot = data.snapshot;
       etat.computed = data.computed;
       const sel = data.snapshot.blob.selections;
-      reference = { levels: { ...data.snapshot.blob.levels }, current: [...sel.current], later: [...sel.later] };
+      const prioritesEnregistrees = data.priorites ?? data.snapshot.blob.priorites ?? etatPriorites();
+      reference = {
+        levels: { ...data.snapshot.blob.levels },
+        current: [...sel.current],
+        later: [...sel.later],
+        priorites: JSON.parse(JSON.stringify(prioritesEnregistrees)),
+      };
       // Le contexte d'audit survit à la remise à plat du brouillon : il décrit un
       // parcours, pas une modification en attente. L'écraser ici reperdrait les
       // compétences passées à chaque fin de thématique.
@@ -6195,6 +6344,7 @@
         // Un tableau vide renvoyé par le serveur, lui, reste une réponse à respecter.
         passees: [...(auditEnregistre.passees ?? brouillon.passees ?? [])],
         derniere: auditEnregistre.derniere ?? brouillon.derniere ?? null,
+        priorites: JSON.parse(JSON.stringify(prioritesEnregistrees)),
       };
 
       try { localStorage.removeItem(cleBrouillon()); } catch {}
@@ -6254,6 +6404,9 @@
       // membre avait déjà mis de côté.
       passees: [...(brouillon.passees || [])],
       derniere: brouillon.derniere || null,
+      // Les priorités suivent les sélections dont elles sont la source : les garder
+      // pendant qu'on remet `current` à la référence les ferait diverger d'un cran.
+      priorites: JSON.parse(JSON.stringify(reference.priorites || { themes: {}, dimensions: {}, classement: [] })),
     };
     etat.computed.levels = { ...reference.levels };
     etat.computed.themes = calculerOuvertureLocale(brouillon.levels);
@@ -6574,10 +6727,13 @@
       // n'existe peut contenir une compétence dans les deux listes. On l'affiche
       // proprement sans attendre le prochain enregistrement.
       const cur = [...new Set(sel.current || [])];
+      const prioritesServeur = etatClient.priorites ?? etatClient.snapshot?.blob?.priorites
+        ?? { themes: {}, dimensions: {}, classement: [] };
       reference = {
         levels: { ...etat.computed.levels },
         current: cur,
         later: [...new Set(sel.later || [])].filter((c) => !cur.includes(c)),
+        priorites: JSON.parse(JSON.stringify(prioritesServeur)),
       };
       // Contexte de l'audit modulaire, tel que le serveur le renvoie : compétences
       // passées sciemment, et dernière thématique ouverte.
@@ -6588,6 +6744,7 @@
         later: [...reference.later],
         passees: [...(auditServeur.passees || [])],
         derniere: auditServeur.derniere || null,
+        priorites: JSON.parse(JSON.stringify(prioritesServeur)),
       };
 
       // Reprise d'un travail interrompu : page fermée, onglet perdu, réseau tombé.
@@ -6601,6 +6758,8 @@
           // le contexte d'audit aussi, sinon un « Passer » non enregistré disparaîtrait.
           passees: [...(repris.passees || brouillon.passees || [])],
           derniere: repris.derniere || brouillon.derniere || null,
+          // Même raisonnement pour les priorités : le brouillon local est plus récent.
+          priorites: JSON.parse(JSON.stringify(repris.priorites || brouillon.priorites)),
         };
         if (estModifie()) {
           brouillonRestaure = true;
@@ -6609,7 +6768,8 @@
           bandeau('Tes modifications ont été retrouvées.',
             "Elles n'avaient pas été enregistrées : elles t'attendaient sur cet appareil.",
             'succes', null, { enHaut: true });
-        } else if ((brouillon.passees || []).length === 0 && !brouillon.derniere) {
+        } else if ((brouillon.passees || []).length === 0 && !brouillon.derniere
+          && (brouillon.priorites?.classement || []).length === 0) {
           // Le brouillon ne diffère de la référence que sur des niveaux : rien à garder.
           // S'il porte des compétences passées ou un repère de reprise, on le laisse :
           // `estModifie()` ne les voit pas, et les effacer les perdrait au rechargement

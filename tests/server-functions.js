@@ -107,10 +107,22 @@ const { validerEtNormaliser, composerEtat } = require('../snapshot-v2.js');
 // Référentiel minuscule et local : la validation ne dépend que des codes qu'on lui
 // donne, inutile de faire tourner la lecture Notion pour l'éprouver.
 const referentielAudit = {
-  themes: [{ id: 'theme-un', name: 'Thématique', dimension: 'Fondations', feeds: [] }],
+  // Deux dimensions et trois thématiques : le minimum pour éprouver l'appartenance
+  // d'un code à SA thématique et à SA dimension, que la validation des priorités vérifie.
+  dimensions: [
+    { id: 'FON', name: 'Fondations', category: 'COACH' },
+    { id: 'ALL', name: 'Alliance', category: 'CLIENTS' },
+  ],
+  themes: [
+    { id: 'theme-un', name: 'Thématique', dimension: 'Fondations', feeds: [] },
+    { id: 'theme-deux', name: 'Seconde thématique', dimension: 'Fondations', feeds: [] },
+    { id: 'theme-all', name: 'Thématique alliance', dimension: 'Alliance', feeds: [] },
+  ],
   competencies: [
     { id: 'FON-01-01', theme: 'theme-un', name: 'Poser le cadre' },
     { id: 'FON-01-02', theme: 'theme-un', name: 'Tenir le cadre' },
+    { id: 'FON-02-01', theme: 'theme-deux', name: 'Rendre le cadre lisible' },
+    { id: 'ALL-01-01', theme: 'theme-all', name: 'Créer la confiance' },
   ],
 };
 
@@ -148,8 +160,8 @@ async function testerAuditSnapshot() {
   assert.match(inconnu.erreurs.join(' '), /absents du référentiel/);
 
   // Borne dure : jamais plus de codes passés qu'il n'existe de compétences.
-  const trop = valider({ passees: ['FON-01-01', 'FON-01-02', 'FON-01-03'] });
-  assert.ok(trop.erreurs.some((message) => /limité à 2 codes/.test(message)));
+  const trop = valider({ passees: ['FON-01-01', 'FON-01-02', 'FON-02-01', 'ALL-01-01', 'FON-01-03'] });
+  assert.ok(trop.erreurs.some((message) => /limité à 4 codes/.test(message)));
 
   // Mauvais type : refusé avant même de regarder les codes.
   const mauvaisType = valider({ passees: 'FON-01-01' });
@@ -168,11 +180,88 @@ async function testerAuditSnapshot() {
   assert.deepEqual(composerEtat({ referentiel: referentielAudit, snapshot: null }).audit.passees, []);
 }
 
+const validerPriorites = (priorites) => validerEtNormaliser({
+  referentiel: referentielAudit,
+  corps: { ...corpsDeBase, priorites },
+});
+
+async function testerPrioritesSnapshot() {
+  // Champ absent : priorités vides, et les sélections envoyées passent telles quelles.
+  const sans = validerEtNormaliser({ referentiel: referentielAudit, corps: { ...corpsDeBase, selections: { current: ['FON-01-01'], later: [] } } });
+  assert.deepEqual(sans.erreurs, []);
+  assert.deepEqual(sans.blob.priorites, { themes: {}, dimensions: {}, classement: [] });
+  assert.deepEqual(sans.blob.selections.current, ['FON-01-01'], 'sans classement, les sélections envoyées font foi');
+
+  // Accepté : trois par entrée au maximum, classement ordonné.
+  const accepte = validerPriorites({
+    themes: { 'theme-un': ['FON-01-01', 'FON-01-02'], 'theme-deux': ['FON-02-01'] },
+    dimensions: { FON: ['FON-01-02', 'FON-02-01'], ALL: ['ALL-01-01'] },
+    classement: ['ALL-01-01', 'FON-02-01', 'FON-01-02'],
+  });
+  assert.deepEqual(accepte.erreurs, []);
+  assert.deepEqual(accepte.blob.priorites.dimensions.FON, ['FON-01-02', 'FON-02-01']);
+  assert.deepEqual(accepte.blob.priorites.classement, ['ALL-01-01', 'FON-02-01', 'FON-01-02']);
+
+  // Dérivation : les trois premières deviennent « maintenant », le reste « plus tard ».
+  assert.deepEqual(accepte.blob.selections.current, ['ALL-01-01', 'FON-02-01', 'FON-01-02']);
+  // FON-01-01 est une priorité de thématique non retenue au niveau dimension : elle
+  // rejoint la file d'attente au lieu de disparaître.
+  assert.deepEqual(accepte.blob.selections.later, ['FON-01-01']);
+
+  // Quatrième dans le classement : elle bascule en « plus tard », pas en erreur.
+  const quatre = validerPriorites({
+    themes: {},
+    dimensions: { FON: ['FON-01-01', 'FON-01-02', 'FON-02-01'], ALL: ['ALL-01-01'] },
+    classement: ['FON-01-01', 'FON-01-02', 'FON-02-01', 'ALL-01-01'],
+  });
+  assert.deepEqual(quatre.erreurs, []);
+  assert.deepEqual(quatre.blob.selections.current, ['FON-01-01', 'FON-01-02', 'FON-02-01']);
+  assert.deepEqual(quatre.blob.selections.later, ['ALL-01-01']);
+
+  // Un code inconnu est refusé, jamais filtré en silence.
+  assert.match(validerPriorites({ themes: { 'theme-un': ['ZZZ-99-99'] } }).erreurs.join(' '), /absents du référentiel/);
+  assert.match(validerPriorites({ classement: ['ZZZ-99-99'] }).erreurs.join(' '), /absents du référentiel/);
+
+  // Un code rangé sous la mauvaise thématique ou la mauvaise dimension est refusé.
+  assert.match(validerPriorites({ themes: { 'theme-un': ['FON-02-01'] } }).erreurs.join(' '), /n'en font pas partie/);
+  assert.match(validerPriorites({ dimensions: { ALL: ['FON-01-01'] } }).erreurs.join(' '), /n'en font pas partie/);
+
+  // Plus de trois par entrée : refusé. Le référentiel de base n'a que deux compétences
+  // par thématique, on l'étend le temps de ce cas.
+  const quatreDansUnTheme = validerEtNormaliser({
+    referentiel: {
+      ...referentielAudit,
+      competencies: [...referentielAudit.competencies, { id: 'FON-01-03', theme: 'theme-un', name: 'Encore' }, { id: 'FON-01-04', theme: 'theme-un', name: 'Toujours' }],
+    },
+    corps: { ...corpsDeBase, priorites: { themes: { 'theme-un': ['FON-01-01', 'FON-01-02', 'FON-01-03', 'FON-01-04'] } } },
+  });
+  assert.match(quatreDansUnTheme.erreurs.join(' '), /limité à 3 compétences/);
+
+  // Classement dédoublonné, et borné.
+  const doublon = validerPriorites({ classement: ['FON-01-01', 'FON-01-01', 'FON-01-02'] });
+  assert.deepEqual(doublon.blob.priorites.classement, ['FON-01-01', 'FON-01-02']);
+  const long = validerPriorites({ classement: Array.from({ length: 101 }, () => 'FON-01-01') });
+  assert.match(long.erreurs.join(' '), /limité à 100 codes/);
+
+  // Mauvais types : refusés avant de regarder les codes.
+  assert.match(validerPriorites([]).erreurs.join(' '), /priorites doit être un objet/);
+  assert.match(validerPriorites({ themes: [] }).erreurs.join(' '), /priorites.themes doit être un objet/);
+  assert.match(validerPriorites({ classement: 'FON-01-01' }).erreurs.join(' '), /tableau de codes/);
+
+  // Relecture : la même dérivation s'applique, pour qu'un snapshot ancien relu
+  // aujourd'hui donne le même « maintenant » qu'un snapshot écrit aujourd'hui.
+  const relu = composerEtat({ referentiel: referentielAudit, snapshot: { blob: accepte.blob } });
+  assert.deepEqual(relu.snapshot.blob.selections.current, ['ALL-01-01', 'FON-02-01', 'FON-01-02']);
+  assert.deepEqual(relu.priorites.classement, ['ALL-01-01', 'FON-02-01', 'FON-01-02']);
+  assert.deepEqual(composerEtat({ referentiel: referentielAudit, snapshot: null }).priorites.classement, []);
+}
+
 Promise.resolve()
   .then(testerAcces)
   .then(testerEvenements)
   .then(testerAuditSnapshot)
-  .then(() => console.log('Fonctions accès, suivi prospect et contexte d\'audit : OK'))
+  .then(testerPrioritesSnapshot)
+  .then(() => console.log('Fonctions accès, suivi prospect, contexte d\'audit et priorités : OK'))
   .catch((erreur) => {
     console.error(erreur);
     process.exit(1);
