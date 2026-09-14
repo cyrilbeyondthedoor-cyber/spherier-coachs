@@ -49,6 +49,8 @@ const FAUTES_SIGNALEES = [
   [/exploraration/g, 'exploration'],
   [/^• vous êtes capables de lier/gm, '• Vous êtes capables de lier'],
   [/etc\)/g, 'etc.)'],
+  [/([^,]) etc\./g, '$1, etc.'],
+  [/un call découverte où une opportunité/g, 'un call découverte ou une opportunité'],
   [/(êtes|es) capables de nommer/g, '$1 capable de nommer'],
   [/questions introspective\b/g, 'questions introspectives'],
   [/vision de monde/g, 'vision du monde'],
@@ -85,7 +87,6 @@ const FAUTES_HORS_LISTE = [
   [/précédée ou suivi d'une justification/g, "précédée ou suivie d'une justification"],
   [/vis à vis/g, 'vis-à-vis'],
   [/situations relevent/g, 'situations relèvent'],
-  [/maitrise une panoplie/g, 'maîtrise une panoplie'],
   [/une seconde voir une troisième/g, 'une seconde voire une troisième'],
   [/ton clien\b/g, 'ton client'],
   [/désagrable/g, 'désagréable'],
@@ -100,7 +101,8 @@ const FAUTES_HORS_LISTE = [
   [/une processus éprouvé/g, 'un processus éprouvé'],
   [/qu 'il apporte/g, "qu'il apporte"],
   [/qu'il n'avait pas identifié avant la séance/g, "qu'il n'avait pas identifiée avant la séance"],
-  [/le developpement d'un être humain/g, "le développement d'un être humain"],
+  [/\bdeveloppement\b/g, 'développement'],
+  [/\bmaitris(e|es|ent)\b/g, 'maîtris$1'],
   [/des exemples ou tu ne t'es pas laissé/g, "des exemples où tu ne t'es pas laissé"],
 ];
 
