@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
 const { chromium } = require('playwright');
+const { deriverSelections } = require('../snapshot-v2.js');
 const {
   CATEGORIES,
   DIMENSIONS,
@@ -124,6 +125,20 @@ let echecSnapshot = false;
 let delaiSnapshot = 0;
 let nbSnapshots = 0;
 
+const PRIORITES_VIDES = { themes: {}, dimensions: {}, classement: [] };
+
+// Même dérivation que le serveur, faite avec SA fonction : un faux serveur qui
+// renverrait les sélections telles quelles laisserait passer une régression du
+// contrat que l'écran de récap repose entièrement sur.
+function selectionsDerivees(envoi) {
+  const priorites = envoi.priorites ?? PRIORITES_VIDES;
+  return deriverSelections({
+    priorites,
+    maxMaintenant: MAX_CIBLES_MAINTENANT,
+    laterExistant: envoi.selections?.later ?? [],
+  }) ?? envoi.selections;
+}
+
 function json(reponse, valeur, statut = 200) {
   reponse.writeHead(statut, { 'Content-Type': 'application/json; charset=utf-8' });
   reponse.end(JSON.stringify(valeur));
@@ -161,10 +176,12 @@ const serveur = http.createServer((requete, reponse) => {
         derniere: dernierSnapshot.audit?.derniere ?? null,
         maj: new Date().toISOString(),
       };
+      const prioritesRelues = dernierSnapshot.priorites ?? PRIORITES_VIDES;
       return json(reponse, {
         snapshot: { id: 'snapshot-relu', cree_le: new Date().toISOString(), libelle: dernierSnapshot.label || null,
-          blob: { levels: dernierSnapshot.levels, selections: dernierSnapshot.selections, audit } },
+          blob: { levels: dernierSnapshot.levels, selections: selectionsDerivees(dernierSnapshot), audit, priorites: prioritesRelues } },
         audit,
+        priorites: prioritesRelues,
         computed: { levels: { ...niveauxVides, ...dernierSnapshot.levels }, themes: etatThemes },
         notes: {},
       });
@@ -214,6 +231,7 @@ const serveur = http.createServer((requete, reponse) => {
         derniere: dernierSnapshot.audit?.derniere ?? null,
         maj: new Date().toISOString(),
       };
+      const prioritesEcrites = dernierSnapshot.priorites ?? PRIORITES_VIDES;
       const repondre = () => json(reponse, {
         snapshot: {
           id: 'snapshot-test',
@@ -221,11 +239,13 @@ const serveur = http.createServer((requete, reponse) => {
           libelle: dernierSnapshot.label || null,
           blob: {
             levels: dernierSnapshot.levels,
-            selections: dernierSnapshot.selections,
+            selections: selectionsDerivees(dernierSnapshot),
             audit,
+            priorites: prioritesEcrites,
           },
         },
         audit,
+        priorites: prioritesEcrites,
         computed: { levels: dernierSnapshot.levels, themes: etatThemes },
       });
       if (delaiSnapshot > 0) setTimeout(repondre, delaiSnapshot);
@@ -911,9 +931,90 @@ async function principal() {
     assert.deepEqual(dernierSnapshot.selections.current, ordreApres,
       'les trois premières du classement sont les trois cibles du mois');
 
+    // --- Lot 7 : Mon mois et synthèse globale ----------------------------------
+    await prioTheme.locator('#panneau-fermer').dispatchEvent('click');
+    await prioTheme.locator('#btn-mois').dispatchEvent('click');
+    await prioTheme.getByRole('heading', { name: 'Mon mois' }).waitFor();
+    assert.equal(await prioTheme.locator('.sel-item.cible').count(), 3);
+    await prioTheme.getByText(`Ce mois-ci — 3/${MAX_CIBLES_MAINTENANT}`, { exact: true }).waitFor();
+    // Chaque ligne porte son origine : dimension puis thématique.
+    assert.ok((await prioTheme.locator('.sel-item.cible .sel-nom small').first().textContent()).includes('›'));
+    // Et l'ordre affiché est celui du classement.
+    assert.deepEqual(
+      await prioTheme.locator('.sel-item.cible [data-aller]').evaluateAll((boutons) => boutons.map((b) => b.dataset.aller)),
+      ordreApres);
+    await capturer(prioTheme, screenshotDir, 'mon-mois-desktop.png', { fullPage: true });
+
+    // La fiche d'une compétence reste cohérente avec le classement : « Garder pour
+    // plus tard » la fait descendre sous les trois du mois au lieu d'écrire `later`
+    // dans le dos du classement.
+    await prioTheme.locator(`.sel-item.cible [data-aller="${ordreApres[0]}"]`).click();
+    await prioTheme.locator('#btn-plus-tard').click();
+    await prioTheme.locator('#btn-mois').dispatchEvent('click');
+    await prioTheme.getByRole('heading', { name: 'Mon mois' }).waitFor();
+    const apresPlusTard = await prioTheme.locator('.sel-item.cible [data-aller]')
+      .evaluateAll((boutons) => boutons.map((b) => b.dataset.aller));
+    assert.equal(apresPlusTard.includes(ordreApres[0]), false,
+      'gardée pour plus tard, elle sort des trois du mois');
+    assert.equal(apresPlusTard.length, 2);
+
+    await prioTheme.getByRole('button', { name: 'Réordonner', exact: true }).click();
+    await prioTheme.getByRole('heading', { name: `Récap après ${DIM_MULTI.name}` }).waitFor();
+
+    // Depuis le récap, la synthèse ne propose plus sa propre sélection.
+    await prioTheme.locator('[data-suite="synthese"]').dispatchEvent('click');
+    await prioTheme.getByRole('heading', { name: 'Ton sphérier en un regard' }).waitFor();
+    assert.equal(await prioTheme.getByRole('button', { name: 'Choisir mes trois priorités' }).count(), 0,
+      'un classement existe : la synthèse renvoie vers lui');
+    await prioTheme.getByRole('button', { name: 'Voir mon classement' }).click();
+    await prioTheme.getByRole('heading', { name: 'Ton classement', exact: true }).waitFor();
+    // Deux lignes : la troisième vient d'être gardée pour plus tard depuis sa fiche.
+    assert.equal(await prioTheme.locator('#recap-classement .rang').count(), 2);
+    // Mode global : un seul score, celui du sphérier entier.
+    assert.equal(await prioTheme.locator('.recap-score').count(), 1);
+    await capturer(prioTheme, screenshotDir, 'classement-global-desktop.png', { fullPage: true });
+
     // Retirer une ligne la sort du classement et de « ce mois-ci ».
     await prioTheme.locator(`[data-rang="${ordreApres[2]}"] [data-retirer-rang]`).click();
-    assert.equal(await prioTheme.locator('#recap-classement .rang').count(), 2);
+    assert.equal(await prioTheme.locator('#recap-classement .rang').count(), 1);
+    assert.equal(await prioTheme.locator('#recap-classement .rang.rang-mois').count(), 1);
+
+    // --- Lot 7 : rechargement complet, le classement est retrouvé --------------
+    // Nouvel onglet, aucun brouillon local : tout doit venir du snapshot relu.
+    const relecture = await navigateur.newPage({ viewport: { width: 1280, height: 900 } });
+    await relecture.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000003`);
+    await relecture.locator('#ciel:not([hidden])').waitFor();
+    await relecture.locator('#btn-mois').dispatchEvent('click');
+    await relecture.getByRole('heading', { name: 'Mon mois' }).waitFor();
+    assert.deepEqual(
+      await relecture.locator('.sel-item.cible [data-aller]').evaluateAll((boutons) => boutons.map((b) => b.dataset.aller)),
+      ordreApres, 'le classement enregistré revient dans le même ordre après rechargement');
+    await relecture.getByRole('button', { name: 'Réordonner', exact: true }).click();
+    await relecture.getByRole('heading', { name: /Récap après|Ton classement/ }).waitFor();
+    assert.equal(await relecture.locator('#recap-classement .rang').count(), 3);
+    await relecture.close();
+
+    // --- Lot 7 : le récap sur un téléphone -------------------------------------
+    const recapMobile = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
+    await recapMobile.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000003`);
+    await recapMobile.locator('#ciel:not([hidden])').waitFor();
+    await recapMobile.locator('#btn-mois').dispatchEvent('click');
+    await recapMobile.getByRole('button', { name: 'Réordonner', exact: true }).click();
+    await recapMobile.getByRole('heading', { name: /Récap après|Ton classement/ }).waitFor();
+    assert.equal(await recapMobile.locator('#recap-classement .rang').count(), 3);
+    // Le glisser-déposer n'existe pas au doigt : les flèches, elles, sont partout.
+    assert.equal(await recapMobile.locator('.rang-poignee').count(), 0);
+    assert.equal(await recapMobile.locator('#recap-classement [data-monter]').count(), 3);
+    assert.equal((await mesurerColonnes(recapMobile)).empilees, true, 'en 390x844 le récap s\'empile');
+    assert.ok(await recapMobile.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    assert.ok(await recapMobile.locator('#panneau-corps').evaluate((element) => element.scrollWidth <= element.clientWidth),
+      'le corps du panneau ne défile pas horizontalement');
+    // Cibles tactiles : les flèches et « Retirer » tiennent les 44 px.
+    const hauteurs = await recapMobile.locator('#recap-classement .rang').first()
+      .locator('button').evaluateAll((boutons) => boutons.map((b) => Math.round(b.getBoundingClientRect().height)));
+    assert.ok(hauteurs.every((h) => h >= 44), `cibles tactiles trop petites : ${hauteurs.join(', ')}`);
+    await capturer(recapMobile, screenshotDir, 'recap-dimension-mobile.png', { fullPage: true });
+    await recapMobile.close();
 
     const publicMobile = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
     await publicMobile.goto(`http://127.0.0.1:${adresse.port}/`);

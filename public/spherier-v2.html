@@ -1930,6 +1930,9 @@
   .audit-classement-nom { font-size: 14px; }
   .audit-classement-ligne .choix-jauge { grid-column: 1 / -1; }
 
+  .sel-entete { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .sel-dim-classement i { background: var(--gold); }
+
   .recap-scores { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
   .recap-score {
     display: grid; gap: 5px; padding: 12px 14px;
@@ -3555,9 +3558,20 @@
   // exemple — suit l'ancien chemin.
   function basculerPlusTard(code) {
     const p = etatPriorites();
-    if (p.classement.includes(code)) {
-      // Sous les trois du mois, elle y est déjà : un second clic la retire tout à fait.
-      if (p.classement.indexOf(code) >= MAX_MAINTENANT) { retirerDuClassement(code); return; }
+    const rang = p.classement.indexOf(code);
+    if (rang >= 0) {
+      // Déjà sous les trois du mois : un second clic la retire tout à fait. Et quand le
+      // classement tient en trois lignes, il n'y a rien en dessous où la faire
+      // descendre : elle sort du classement et rejoint la file d'attente, ce que le
+      // bouton promet. Sans ce cas, « Garder pour plus tard » ne faisait rien.
+      if (rang >= MAX_MAINTENANT || p.classement.length <= MAX_MAINTENANT) {
+        const resteEnAttente = rang < MAX_MAINTENANT;
+        retirerDuClassement(code);
+        if (resteEnAttente) appliquerChangement(() => {
+          brouillon.later = [...new Set([...brouillon.later, code])];
+        });
+        return;
+      }
       deplacerDansClassement(code, MAX_MAINTENANT);
       memoriserPriorites();
       return;
@@ -4109,7 +4123,7 @@
 
     return `<div class="sel-item${options.cible ? ' cible' : ''}">
       <button type="button" class="sel-nom" data-aller="${echapper(code)}">
-        ${echapper(c.name)}<small>${echapper(t ? t.name : '')}${aUneNote(code) ? ' · note' : ''}</small>
+        ${echapper(c.name)}<small>${echapper(origineDe(code))}${aUneNote(code) ? ' · note' : ''}</small>
       </button>
       <span class="sel-etat">${etatTexte}</span>
       ${promouvoir}
@@ -4127,14 +4141,19 @@
       <h2 class="panneau-titre" id="panneau-titre">Mon mois</h2>
       <p class="panneau-def">Ce que tu travailles maintenant, et ce que tu gardes pour la suite.</p>`;
 
+    const classement = etatPriorites().classement;
+    const suiteClassement = classement.slice(MAX_MAINTENANT);
+
     const cibles = brouillon.current.length
       ? brouillon.current.map((c) => ligneSelection(c, { cible: true })).join('')
       : `<p class="sel-vide">Aucune compétence choisie pour ce mois. Trois au maximum : c'est peu, et c'est voulu — mieux vaut trois compétences travaillées qu'une liste d'intentions.</p>`;
 
-    // « Plus tard » groupé par dimension : c'est ce qui transforme un fourre-tout en
-    // file d'attente lisible.
+    // La suite du classement garde SON ordre : c'est celui que le membre a posé sur
+    // l'écran de récap, et le regrouper par dimension l'effacerait. Le reste de la
+    // liste d'attente, qui n'a jamais été classé, reste groupé par dimension : c'est
+    // ce qui transforme un fourre-tout en file d'attente lisible.
     const parDim = new Map();
-    brouillon.later.forEach((code) => {
+    brouillon.later.filter((code) => !classement.includes(code)).forEach((code) => {
       const c = etat.referentiel.competencies.find((x) => x.id === code);
       if (!c) return;
       const d = dimensionDe(c);
@@ -4149,13 +4168,27 @@
         <p class="sel-dim" style="--h: ${TEINTES_HEX[id] || '#f0ebe0'}"><i></i>${echapper(g.dimension ? g.dimension.name : '')}</p>
         ${g.codes.map((c) => ligneSelection(c)).join('')}`).join('');
 
+    const suiteHtml = suiteClassement.length
+      ? `<p class="sel-dim sel-dim-classement"><i></i>Dans ton classement</p>
+         ${suiteClassement.map((code) => ligneSelection(code)).join('')}`
+      : '';
+
     const plusTard = brouillon.later.length
-      ? groupes
+      ? suiteHtml + groupes
       : `<p class="sel-vide">Rien en attente. Sur n'importe quelle compétence, « Garder pour plus tard » la range ici — y compris dans une thématique encore fermée.</p>`;
+
+    // « Réordonner » renvoie vers l'écran de récap, le seul endroit où l'ordre se
+    // décide. Sans dimension bouclée, il s'ouvre en mode global.
+    const reordonner = classement.length
+      ? '<button type="button" class="choix-lien" id="mois-reordonner">Réordonner</button>'
+      : '';
 
     ecrireCorps(`
       <section class="panneau-section sel-groupe">
-        <p class="panneau-label">Ce mois — ${brouillon.current.length}/${MAX_MAINTENANT}</p>
+        <div class="sel-entete">
+          <p class="panneau-label">Ce mois-ci — ${brouillon.current.length}/${MAX_MAINTENANT}</p>
+          ${reordonner}
+        </div>
         ${cibles}
       </section>
       <section class="panneau-section sel-groupe">
@@ -4165,6 +4198,9 @@
       <div id="zone-remplacement"></div>
       <p class="sel-rappel">Touche une compétence pour la retrouver dans sa constellation.</p>`);
     elPanneauCorps.scrollTop = 0;
+
+    const boutonReordonner = document.getElementById('mois-reordonner');
+    if (boutonReordonner) boutonReordonner.addEventListener('click', () => ouvrirRecapDimension(derniereDimensionEvaluee()));
 
     elPanneauCorps.querySelectorAll('[data-aller]').forEach((btn) => {
       btn.addEventListener('click', () => allerVersCompetence(btn.dataset.aller));
@@ -5781,6 +5817,15 @@
     });
   }
 
+  // Dimension par laquelle rouvrir le récap : celle où le membre s'est arrêté, sinon la
+  // dernière qu'il a consolidée, sinon aucune — le récap s'ouvre alors en mode global.
+  function derniereDimensionEvaluee() {
+    const repere = brouillon.derniere && brouillon.derniere.dimensionId;
+    if (repere && dimensionParId(repere)) return repere;
+    const consolidees = etat.referentiel.dimensions.filter((dimension) => dimensionConsolidee(dimension.id));
+    return consolidees.length ? consolidees[consolidees.length - 1].id : null;
+  }
+
   // `dimensionId` nul : mode global, ouvert depuis la synthèse ou depuis Mon mois quand
   // aucune dimension n'a encore été bouclée.
   function ouvrirRecapDimension(dimensionId = null, suite = 'theme') {
@@ -5998,6 +6043,9 @@
     // Le choix des trois priorités demande de quoi choisir : sous cinq compétences à
     // améliorer, le tri n'en est pas un.
     const prioritesPossibles = aAmeliorer >= 5;
+    // Dès qu'un classement existe, il fait foi : la synthèse ne propose plus sa propre
+    // sélection, elle renvoie vers l'écran qui porte l'ordre.
+    const aClassement = etatPriorites().classement.length > 0;
 
     ecrireCorps(`<section class="carte-resultat">
       <p class="carte-resultat-intro">Voici la carte de ta pratique. Les pourcentages portent sur ce que tu as déjà évalué, et chaque territoire dit sur combien de ses thématiques il repose.${
@@ -6007,9 +6055,12 @@
       <div class="ciel-piste">${categories}</div>
       <div class="niveaux-accueil">${contenuNiveauxAccueil(true)}</div>
       <div class="carte-resultat-actions">
-        ${prioritesChoisies || !prioritesPossibles
-          ? '<button type="button" class="carte-resultat-cta" id="resultat-retour-carte">Revenir à mon sphérier</button>'
-          : '<button type="button" class="carte-resultat-cta" id="resultat-priorites">Choisir mes trois priorités</button>'}
+        ${aClassement
+          ? '<button type="button" class="carte-resultat-cta" id="resultat-classement">Voir mon classement</button>'
+          : (prioritesChoisies || !prioritesPossibles
+            ? '<button type="button" class="carte-resultat-cta" id="resultat-retour-carte">Revenir à mon sphérier</button>'
+            : '<button type="button" class="carte-resultat-cta" id="resultat-priorites">Choisir mes trois priorités</button>')}
+        ${aClassement ? '<button type="button" class="carte-resultat-secondaire" id="resultat-retour-carte">Revenir à mon sphérier</button>' : ''}
         <button type="button" class="carte-resultat-secondaire" id="resultat-lineaire">Ouvrir la vue d’ensemble linéaire</button>
         ${prioritesChoisies ? '<button type="button" class="carte-resultat-secondaire" data-audit-rdv>Réserver un échange</button>' : ''}
       </div>
@@ -6038,6 +6089,8 @@
     });
     const priorites = document.getElementById('resultat-priorites');
     if (priorites) priorites.addEventListener('click', ouvrirSelectionAudit);
+    const voirClassement = document.getElementById('resultat-classement');
+    if (voirClassement) voirClassement.addEventListener('click', () => ouvrirRecapDimension(null));
     const retourCarte = document.getElementById('resultat-retour-carte');
     if (retourCarte) retourCarte.addEventListener('click', () => { fermerPanneau(); allerAuCiel(); });
     document.getElementById('resultat-lineaire').addEventListener('click', () => ouvrirSynthese(true));
