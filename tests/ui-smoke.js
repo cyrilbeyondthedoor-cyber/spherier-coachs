@@ -92,6 +92,9 @@ const etatThemes = Object.fromEntries(themes.map((theme) => [theme.id, { status:
 let dernierSnapshot = null;
 // Panne simulée du serveur, pour éprouver le message d'échec et le bouton Réessayer.
 let echecSnapshot = false;
+// Latence simulée, pour voir l'écran d'attente de fin de thématique.
+let delaiSnapshot = 0;
+let nbSnapshots = 0;
 
 function json(reponse, valeur) {
   reponse.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -163,13 +166,14 @@ const serveur = http.createServer((requete, reponse) => {
         reponse.end(JSON.stringify({ erreur: 'Panne simulée du serveur.' }));
         return;
       }
+      nbSnapshots += 1;
       dernierSnapshot = JSON.parse(corps);
       const audit = {
         passees: dernierSnapshot.audit?.passees ?? [],
         derniere: dernierSnapshot.audit?.derniere ?? null,
         maj: new Date().toISOString(),
       };
-      json(reponse, {
+      const repondre = () => json(reponse, {
         snapshot: {
           id: 'snapshot-test',
           created_at: new Date().toISOString(),
@@ -183,6 +187,8 @@ const serveur = http.createServer((requete, reponse) => {
         audit,
         computed: { levels: dernierSnapshot.levels, themes: etatThemes },
       });
+      if (delaiSnapshot > 0) setTimeout(repondre, delaiSnapshot);
+      else repondre();
     });
     return;
   }
@@ -698,6 +704,52 @@ async function principal() {
     await annulation.locator('.audit-echec').waitFor({ state: 'detached' });
     assert.match(dernierSnapshot.label, /^Thématique FON, /,
       'le libellé automatique survit au Réessayer');
+
+    // --- Une compétence passée survit à deux rechargements ---------------------
+    // `estModifie()` ignore les compétences passées : sans garde, le brouillon local
+    // était effacé à la première relecture et la passée disparaissait à la suivante.
+    const rechargement = await navigateur.newPage({ viewport: { width: 1280, height: 700 } });
+    await rechargement.goto(url);
+    await rechargement.locator('#ciel:not([hidden])').waitFor();
+    await rechargement.getByRole('button', { name: 'Commencer mon audit' }).dispatchEvent('click');
+    await rechargement.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await rechargement.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await rechargement.locator('.situer-compte', { hasText: '1 / 4' }).waitFor();
+    await rechargement.getByRole('button', { name: 'Passer →' }).dispatchEvent('click');
+    await rechargement.locator('.situer-compte', { hasText: '2 / 4' }).waitFor();
+    await rechargement.locator('#panneau-fermer').dispatchEvent('click');
+    for (const passe of [1, 2]) {
+      await rechargement.reload();
+      await rechargement.locator('#ciel:not([hidden])').waitFor();
+      await rechargement.getByRole('button', { name: 'Reprendre mon audit' })
+        .waitFor({ timeout: 5000 })
+        .catch(() => { throw new Error(`la compétence passée a été perdue au rechargement ${passe}`); });
+    }
+    await rechargement.getByRole('button', { name: 'Reprendre mon audit' }).dispatchEvent('click');
+    assert.equal(await rechargement.locator('.situer-nom').textContent(),
+      `Je sais mobiliser la compétence ${DIM_MULTI.id}-01-02.`,
+      'la reprise saute la compétence passée');
+
+    // --- Écran d'attente pendant l'enregistrement de fin de thématique ----------
+    delaiSnapshot = 400;
+    const avantAttente = nbSnapshots;
+    const attente = await navigateur.newPage({ viewport: { width: 1280, height: 700 } });
+    await attente.goto(url);
+    await attente.locator('#ciel:not([hidden])').waitFor();
+    await attente.getByRole('button', { name: 'Commencer mon audit' }).dispatchEvent('click');
+    await attente.locator(`[data-choix-dimension="${DIM_MULTI.id}"]`).dispatchEvent('click');
+    await attente.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}-2"]`).dispatchEvent('click');
+    await attente.locator('.situer-compte', { hasText: '1 / 2' }).waitFor();
+    await attente.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    await attente.locator('.situer-compte', { hasText: '2 / 2' }).waitFor();
+    await attente.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    // L'écran d'attente remplace la question : plus aucune marche à recliquer pendant
+    // l'appel réseau, donc pas de second enregistrement de la même thématique.
+    await attente.locator('.audit-attente').waitFor();
+    assert.equal(await attente.locator('.marche[data-niveau]').count(), 0);
+    await attente.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
+    assert.equal(nbSnapshots - avantAttente, 1, 'une seule fin de thématique enregistrée');
+    delaiSnapshot = 0;
 
     console.log('UI desktop, mobile et sauvegarde simulée : OK');
   } finally {
