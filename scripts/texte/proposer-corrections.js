@@ -62,13 +62,6 @@ const FAUTES_SIGNALEES = [
   [/égo\b/g, 'ego'],
   [/non alignement/g, 'non-alignement'],
   [/la question "qu'est-ce qui est en train de se jouer \?"/g, 'la question « qu\'est-ce qui est en train de se jouer ? »'],
-  [/l'humour et la légèreté au service de mon client$/g, "l'humour et la légèreté au service de mon client."],
-  [/pour étendre mon business en son sein \(farming\)$/g, 'pour étendre mon business en son sein (farming).'],
-  [/une seconde source d'acquisition pour réduire ma dépendance à la première$/g,
-    "une seconde source d'acquisition pour réduire ma dépendance à la première."],
-  [/le dialogue entre les parts \(IFS\*\) lors d'une bascule\*$/g,
-    "le dialogue entre les parts (IFS*) lors d'une bascule*."],
-  [/d'un être humain \(Ken Wilber, Enéagramme…\)$/g, "d'un être humain (Ken Wilber, Enéagramme…)."],
   [/en pratique délibérées dans ma pratique/g, 'en pratiques délibérées'],
   [/vous vous fixer une pratique/g, 'vous vous fixez une pratique'],
   [/l'enjeux\b/g, "l'enjeu"],
@@ -86,8 +79,6 @@ const FAUTES_SIGNALEES = [
   [/plusieurs fils\* et piste avant de resserer sur celle qui paraît le plus pertinent pour le client/g,
     'plusieurs fils* et pistes avant de resserrer sur la plus pertinente pour le client'],
   [/,? l’intersection de ma vision$/g, '.'],
-  [/\(exploration, bascule\*, clôture\), et je n'improvise pas$/g,
-    "(exploration, bascule*, clôture), et je n'improvise pas."],
 ];
 
 // Fautes non remontées par la recette, repérées en relisant les 192 compétences.
@@ -264,12 +255,24 @@ function normaliserPonctuation(texte) {
     .replace(/\n{3,}/g, '\n\n');
 }
 
+// Un énoncé se termine par un point, comme une puce de marqueur. Une règle générale
+// plutôt qu'une entrée par cas : la liste des énoncés concernés avait déjà été comptée
+// deux fois de travers, parce qu'un énoncé sans autre correction n'apparaissait dans
+// aucun contrôle.
+function fermerEnonce(texte) {
+  const t = texte.trim();
+  if (!t) return t;
+  if (/[.!?…]$/.test(t) || /[.!?…]\s*»$/.test(t)) return t;
+  return `${t}.`;
+}
+
 function motifs({ champ, avant, apres, tutoye, enonceCourt, ajout }) {
   const liste = [];
   if (ajout) liste.push('marqueur-ajoute');
   if (champ === 'difficulte') return ['difficulte'];
   if (enonceCourt) {
     liste.push('enonce-court');
+    if (fermerEnonce(avant) !== avant.trim()) liste.push('ponctuation');
     if (tableTouche(avant, SUBSTITUTIONS)) liste.push('substitution');
     if (normaliserApostrophes(avant) !== avant) liste.push('apostrophe');
     return liste;
@@ -281,6 +284,7 @@ function motifs({ champ, avant, apres, tutoye, enonceCourt, ajout }) {
   if (champ === 'markers' && tutoye) liste.push('tutoiement');
   if (champ === 'markers' && tableTouche(avant, RETOUCHES_MARQUEURS)) liste.push('relecture');
   if (normaliserPonctuation(avant) !== avant && champ === 'markers') liste.push('ponctuation');
+  if (champ !== 'markers' && fermerEnonce(avant) !== avant.trim()) liste.push('ponctuation');
   if (normaliserApostrophes(avant) !== avant) liste.push('apostrophe');
   if (liste.length === 0 && avant !== apres) liste.push('reformulation');
   return liste;
@@ -292,11 +296,11 @@ function motifs({ champ, avant, apres, tutoye, enonceCourt, ajout }) {
 function proposerChamp(champ, valeur, tutoiement, enonceCourt, code) {
   if (enonceCourt && champ !== 'markers') {
     const retouche = appliquerTable(enonceCourt, RETOUCHES_ENONCES_COURTS);
-    return normaliserApostrophes(
+    return fermerEnonce(normaliserApostrophes(
       normaliserAsterisques(appliquerTable(retouche, SUBSTITUTIONS)).trim(),
-    );
+    ));
   }
-  if (champ !== 'markers') return normaliserApostrophes(corrigerTexte(valeur).trim());
+  if (champ !== 'markers') return fermerEnonce(normaliserApostrophes(corrigerTexte(valeur).trim()));
 
   const base = appliquerTable(tutoiement || valeur, RETOUCHES_MARQUEURS);
   const ajout = MARQUEURS_AJOUTES[code];

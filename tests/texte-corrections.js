@@ -150,4 +150,19 @@ assert.equal(
 assert.equal(normaliserApostrophes("l'ancrage et l'enjeu"), 'l\u2019ancrage et l\u2019enjeu');
 assert.equal(proposerChamp('markers', "• Tu tiens l'espace.", null), '• Tu tiens l\u2019espace.');
 
+// 11. Un énoncé se termine par un point, y compris après une parenthèse fermante, et
+// la règle ne double pas un point déjà présent.
+assert.equal(
+  proposerChamp('name', 'Je sais coacher en entreprise (farming)', null),
+  'Je sais coacher en entreprise (farming).',
+);
+assert.equal(
+  proposerChamp('name', 'Je sais coacher en entreprise.', null),
+  'Je sais coacher en entreprise.',
+);
+assert.equal(
+  proposerChamp('name', 'Je sais lire un modèle (Wilber…)', null),
+  'Je sais lire un modèle (Wilber…).',
+);
+
 console.log('Corrections de texte du référentiel : OK');
