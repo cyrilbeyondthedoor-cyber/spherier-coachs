@@ -842,6 +842,8 @@ async function principal() {
     assert.deepEqual(dernierSnapshot.selections.current.slice().sort(),
       dernierSnapshot.priorites.classement.slice().sort(),
       'les trois du classement deviennent les trois cibles du mois');
+    assert.equal(await prioTheme.locator('#bar.visible').count(), 0,
+      'la barre d\'enregistrement se referme après l\'envoi différé');
     // La fiche se déplie sur place, sans quitter l'écran de résultat.
     await prioTheme.locator('#priorites-theme summary').first().click();
     await prioTheme.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
@@ -930,6 +932,10 @@ async function principal() {
       'le classement part dans le snapshot dans l\'ordre affiché');
     assert.deepEqual(dernierSnapshot.selections.current, ordreApres,
       'les trois premières du classement sont les trois cibles du mois');
+    // Aller-retour complet : ce que le serveur renvoie doit annuler « modifié ». Une
+    // normalisation qui diffère d'un côté laisserait la barre allumée pour toujours.
+    assert.equal(await prioTheme.locator('#bar.visible').count(), 0,
+      'après enregistrement, plus rien n\'est signalé comme modifié');
 
     // --- Lot 7 : Mon mois et synthèse globale ----------------------------------
     await prioTheme.locator('#panneau-fermer').dispatchEvent('click');
