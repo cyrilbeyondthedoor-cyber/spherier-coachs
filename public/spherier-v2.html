@@ -1093,7 +1093,13 @@
   /* Pied ancré en bas du panneau scrollable : sur petit écran, un énoncé de 3 lignes
      avec 3 marqueurs poussait « Précédente »/« Passer » hors du viewport (principe 2.3).
      `position: sticky` colle le pied au bord bas de .panneau-corps (son ancêtre
-     scrollable), le contenu au-dessus continue de défiler derrière un fond opaque. */
+     scrollable) : les boutons restent donc TOUJOURS atteignables sans scroll, quelle
+     que soit la longueur de l'énoncé ou des marqueurs. Limite connue et documentée
+     dans le rapport : quand le contenu qui précède (énoncé + marqueurs + escalier)
+     dépasse largement la hauteur du panneau, le pied peut recouvrir le bas de la
+     dernière marche visible tant qu'on n'a pas commencé à défiler — un compromis
+     inhérent au motif "bouton d'action fixe au-dessus d'une liste plus longue que
+     l'écran", inévitable en CSS pur sans mesurer la hauteur réelle du pied en JS. */
   .situer-pied {
     display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
     padding: 16px 0 calc(16px + env(safe-area-inset-bottom, 0px));
