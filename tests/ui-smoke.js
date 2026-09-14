@@ -834,6 +834,48 @@ async function principal() {
       dernierSnapshot.priorites.classement.slice().sort(),
       'les trois du classement deviennent les trois cibles du mois');
 
+    // --- Lot 7 : consolidation par dimension -----------------------------------
+    // Seconde thématique de la dimension : il y reste une compétence à situer. Une fois
+    // faite, la dimension est bouclée et sa consolidation devient accessible.
+    await prioTheme.locator(`[data-evaluer-theme="theme-${DIM_MULTI.id}-2"]`).dispatchEvent('click');
+    await prioTheme.locator('.situer-compte', { hasText: '2 / 2' }).waitFor();
+    await prioTheme.locator('.marche[data-niveau="1"]').dispatchEvent('click');
+    await prioTheme.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
+    await prioTheme.locator('#priorites-theme .audit-priorite-case').first().check();
+    await prioTheme.locator('#audit-voir-dimension').click();
+    await prioTheme.getByRole('heading', { name: 'Résultat de la dimension' }).waitFor();
+
+    await prioTheme.getByText('Tes 3 priorités pour cette dimension', { exact: true }).waitFor();
+    const casesDim = prioTheme.locator('#priorites-dimension .audit-priorite-case');
+    // Quatre priorités de thématique : rien à compléter, et rien de pré-coché puisqu'il
+    // y en a plus de trois. Elles restent groupées par thématique.
+    assert.equal(await casesDim.count(), 4);
+    assert.equal(await prioTheme.locator('#priorites-dimension .audit-priorites-groupe').count(), 2);
+    assert.equal(await prioTheme.locator('#priorites-dimension .audit-priorite-proposee').count(), 0);
+    assert.match(await prioTheme.locator('#priorites-dimension-compteur').textContent(), /^0 \/ 3/);
+    await casesDim.nth(0).check();
+    await casesDim.nth(1).check();
+    await casesDim.nth(2).check();
+    assert.match(await prioTheme.locator('#priorites-dimension-compteur').textContent(), /^3 \/ 3/);
+    await casesDim.nth(3).click();
+    assert.equal(await casesDim.nth(3).isChecked(), false, 'la quatrième retenue est refusée');
+    await prioTheme.getByText('Trois priorités au maximum pour cette dimension.', { exact: false }).waitFor();
+    await capturer(prioTheme, screenshotDir, 'priorites-dimension-desktop.png', { fullPage: true });
+
+    const avantConsolidation = nbSnapshots;
+    await prioTheme.getByRole('button', { name: 'Valider mes priorités' }).click();
+    await prioTheme.waitForFunction((n) => true, null);
+    await prioTheme.waitForTimeout(500);
+    assert.ok(nbSnapshots > avantConsolidation, 'valider enregistre la consolidation');
+    assert.equal(dernierSnapshot.priorites.dimensions[DIM_MULTI.id].length, 3);
+    assert.deepEqual(dernierSnapshot.priorites.classement.slice().sort(),
+      dernierSnapshot.priorites.dimensions[DIM_MULTI.id].slice().sort(),
+      'la quatrième priorité sort du classement');
+    assert.deepEqual(dernierSnapshot.selections.current.slice().sort(),
+      dernierSnapshot.priorites.dimensions[DIM_MULTI.id].slice().sort());
+    assert.equal(dernierSnapshot.selections.later.length, 1,
+      'la priorité non retenue reste pour plus tard');
+
     const publicMobile = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
     await publicMobile.goto(`http://127.0.0.1:${adresse.port}/`);
     await publicMobile.getByRole('heading', { name: 'Accède au sphérier de compétences du coach' }).waitFor();

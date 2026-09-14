@@ -1911,6 +1911,10 @@
   .audit-priorite-detail { padding: 4px 0 8px 32px; color: var(--paper-dim); font-size: 13px; line-height: 1.55; }
   .audit-priorite-detail p + p, .audit-priorite-detail ul { margin-top: 7px; }
   .audit-priorite-detail li { margin-left: 17px; }
+  .audit-priorites-groupe {
+    margin-top: 6px; color: var(--stone); font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+  }
+  .audit-priorites-groupe:first-child { margin-top: 0; }
   .audit-priorites-alerte { color: var(--gold-bright); font-size: 13px; }
   .audit-priorites-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
   .audit-priorites-valider {
@@ -5380,6 +5384,167 @@
     document.body.dataset.panneau = 'resultat-theme';
   }
 
+  // --- Consolidation des priorités par dimension --------------------------------
+  // La sélection de cet écran vit à part du modèle : elle n'est écrite qu'au clic sur
+  // « Valider mes priorités ». Cocher et décocher en réfléchissant ne doit pas faire
+  // bouger Mon mois à chaque geste.
+  let consolidation = null;
+
+  // Candidates d'une dimension : les priorités déjà cochées dans ses thématiques,
+  // complétées, s'il en manque, par ses compétences les plus faibles. Tout reste
+  // groupé par thématique, y compris le complément.
+  function candidatesPrioritesDimension(dimensionId) {
+    const dimension = dimensionParId(dimensionId);
+    if (!dimension) return { groupes: [], proposees: [], codes: [] };
+    const themes = themesDeDimension(dimension);
+    const cochees = themes.flatMap((theme) => prioritesDuTheme(theme.id));
+
+    const proposees = [];
+    if (cochees.length < PRIORITES_MAX) {
+      const faibles = themes
+        .flatMap((theme) => candidatesPrioritesTheme(theme.id))
+        .filter((code) => !cochees.includes(code))
+        .sort((a, b) => brouillon.levels[a] - brouillon.levels[b]
+          || ((competenceParCode(a)?.order ?? 0) - (competenceParCode(b)?.order ?? 0)));
+      proposees.push(...faibles.slice(0, PRIORITES_MAX - cochees.length));
+    }
+
+    const retenus = new Set([...cochees, ...proposees]);
+    const groupes = themes
+      .map((theme) => ({
+        theme,
+        codes: codesDeTheme(theme.id)
+          .filter((code) => retenus.has(code))
+          .sort((a, b) => brouillon.levels[a] - brouillon.levels[b]
+            || ((competenceParCode(a)?.order ?? 0) - (competenceParCode(b)?.order ?? 0))),
+      }))
+      .filter((groupe) => groupe.codes.length > 0);
+
+    return { groupes, proposees, codes: groupes.flatMap((groupe) => groupe.codes) };
+  }
+
+  // Sélection de départ : ce qui a déjà été consolidé, sinon les candidates elles-mêmes
+  // quand il n'y en a pas plus de trois — cocher trois cases pour confirmer trois
+  // propositions n'apporte rien. Au-delà, le choix appartient au membre.
+  function selectionInitialeDimension(dimensionId, codes) {
+    const dejaRetenues = prioritesDeLaDimension(dimensionId);
+    if (dejaRetenues) return dejaRetenues.filter((code) => codes.includes(code));
+    return codes.length <= PRIORITES_MAX ? [...codes] : [];
+  }
+
+  function sectionPrioritesDimension(dimensionId) {
+    const dimension = dimensionParId(dimensionId);
+    if (!dimension) return '';
+    const { groupes, proposees, codes } = candidatesPrioritesDimension(dimensionId);
+    if (!consolidation || consolidation.dimensionId !== dimensionId) {
+      consolidation = { dimensionId, codes: selectionInitialeDimension(dimensionId, codes) };
+    }
+    const retenues = consolidation.codes;
+
+    let corps;
+    if (prioritesRepliees.has(`dim:${dimensionId}`)) {
+      corps = `<p class="audit-priorites-repliee">Tu choisiras plus tard. Tes priorités de thématique t'attendent ici.</p>
+        <div class="audit-priorites-actions">
+          <button type="button" class="choix-lien" data-priorites-deplier="dim:${echapper(dimensionId)}">Choisir maintenant</button>
+        </div>`;
+    } else if (codes.length === 0) {
+      corps = `<p class="audit-bilan-aide">Rien à prioriser dans cette dimension : tout ce que tu as situé, tu le maîtrises.</p>`;
+    } else {
+      corps = `<p class="audit-bilan-aide">Voici ce que tu as coché thématique par thématique${proposees.length ? ', complété par tes compétences les plus faibles' : ''}. Retiens-en trois pour cette dimension. Les autres passent en « pour plus tard ».</p>
+        <div class="audit-priorites-liste">
+          ${groupes.map((groupe) => `<p class="audit-priorites-groupe">${echapper(groupe.theme.name)}</p>
+            ${groupe.codes.map((code) => ligneChoixPriorite(code, {
+              cle: 'priorite-dimension',
+              retenue: retenues.includes(code),
+              proposee: proposees.includes(code),
+            })).join('')}`).join('')}
+        </div>
+        <p class="audit-priorites-alerte" id="priorites-dimension-alerte" role="status"></p>
+        <div class="audit-priorites-actions">
+          <button type="button" class="audit-priorites-valider" id="priorites-dimension-valider">Valider mes priorités</button>
+          <button type="button" class="choix-lien" data-priorites-replier="dim:${echapper(dimensionId)}">Je choisirai plus tard</button>
+        </div>`;
+    }
+
+    return `<section class="audit-bilan-section audit-priorites" id="priorites-dimension" data-dimension-priorites="${echapper(dimensionId)}">
+      <p class="audit-bilan-label">Tes 3 priorités pour cette dimension</p>
+      <div class="audit-priorites-tete">
+        <p class="audit-priorites-compteur" id="priorites-dimension-compteur" role="status">${retenues.length} / ${PRIORITES_MAX} retenue${retenues.length > 1 ? 's' : ''}</p>
+      </div>
+      ${corps}
+    </section>`;
+  }
+
+  function rafraichirSectionPrioritesDimension(dimensionId) {
+    const section = document.getElementById('priorites-dimension');
+    if (!section) return;
+    section.outerHTML = sectionPrioritesDimension(dimensionId);
+    brancherPrioritesDimension(dimensionId);
+  }
+
+  // Écrit la consolidation dans le modèle. Les candidates non retenues sortent du
+  // classement : elles restent « pour plus tard », où la dérivation les remet, mais
+  // elles ne pèsent plus sur l'ordre du mois.
+  function validerPrioritesDimension(dimensionId) {
+    const { codes } = candidatesPrioritesDimension(dimensionId);
+    const retenues = consolidation && consolidation.dimensionId === dimensionId ? consolidation.codes : [];
+    const p = etatPriorites();
+    p.dimensions[dimensionId] = [...retenues];
+    const ecartees = codes.filter((code) => !retenues.includes(code));
+    p.classement = p.classement.filter((code) => !ecartees.includes(code));
+    brouillon.later = [...new Set([...brouillon.later, ...ecartees])];
+    memoriserPriorites();
+  }
+
+  function brancherPrioritesDimension(dimensionId) {
+    const section = document.getElementById('priorites-dimension');
+    if (!section) return;
+    const compteur = document.getElementById('priorites-dimension-compteur');
+    const alerte = document.getElementById('priorites-dimension-alerte');
+
+    section.querySelectorAll('[data-priorite-dimension]').forEach((case_) => {
+      case_.addEventListener('change', () => {
+        const code = case_.dataset.prioriteDimension;
+        if (case_.checked && consolidation.codes.length >= PRIORITES_MAX) {
+          case_.checked = false;
+          if (alerte) alerte.textContent = 'Trois priorités au maximum pour cette dimension. Décoche-en une pour en retenir une autre.';
+          return;
+        }
+        if (alerte) alerte.textContent = '';
+        consolidation.codes = case_.checked
+          ? [...consolidation.codes, code]
+          : consolidation.codes.filter((item) => item !== code);
+        const total = consolidation.codes.length;
+        if (compteur) compteur.textContent = `${total} / ${PRIORITES_MAX} retenue${total > 1 ? 's' : ''}`;
+        const ligne = section.querySelector(`[data-ligne-priorite="${CSS.escape(code)}"]`);
+        if (ligne) ligne.classList.toggle('retenue', case_.checked);
+      });
+    });
+
+    section.querySelectorAll('[data-priorites-replier]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        prioritesRepliees.add(bouton.dataset.prioritesReplier);
+        rafraichirSectionPrioritesDimension(dimensionId);
+      });
+    });
+    section.querySelectorAll('[data-priorites-deplier]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        prioritesRepliees.delete(bouton.dataset.prioritesDeplier);
+        rafraichirSectionPrioritesDimension(dimensionId);
+      });
+    });
+
+    const valider = document.getElementById('priorites-dimension-valider');
+    if (valider) valider.addEventListener('click', async () => {
+      valider.disabled = true;
+      validerPrioritesDimension(dimensionId);
+      clearTimeout(minuteurPriorites);
+      minuteurPriorites = null;
+      await enregistrer();
+      ouvrirResultatDimension(dimensionId);
+    });
+  }
+
   // --- Écran « Résultat de la dimension » ---------------------------------------
   function ouvrirResultatDimension(dimensionId, suite = 'theme') {
     const dimension = dimensionParId(dimensionId);
@@ -5415,10 +5580,12 @@
           </div>`).join('')}
         </div>
       </section>
+      ${sectionPrioritesDimension(dimension.id)}
       </div>
       <aside class="audit-bilan-suite">${blocPoursuivreHtml(dimension, suite)}</aside>
     </div></div>`);
     elPanneauCorps.scrollTop = 0;
+    brancherPrioritesDimension(dimension.id);
     brancherPoursuivre(dimension);
 
     afficherPanneau();
