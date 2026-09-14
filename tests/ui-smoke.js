@@ -635,6 +635,18 @@ async function principal() {
     assert.deepEqual(dernierSnapshot.audit.passees.slice().sort(),
       [`${DIM_MULTI.id}-01-04`, `${DIM_MULTI.id}-02-01`, `${DIM_MULTI.id}-02-02`].sort());
 
+    // Les deux thématiques sont complètes : le résultat de la dimension s'intercale
+    // avant l'écran de suite.
+    await mobile.getByRole('button', { name: /^Voir le résultat de/ }).click();
+    await mobile.locator('body[data-panneau="resultat-dimension"]').waitFor({ state: 'attached' });
+    await mobile.getByRole('heading', { name: 'Résultat de la dimension' }).waitFor();
+    assert.equal(await mobile.locator('.audit-classement-ligne').count(), 2);
+    assert.equal(await mobile.locator('.audit-suite-choix').count(), 3,
+      'dimension bouclée : plus de « continuer avec la suite »');
+    assert.equal((await mesurerColonnes(mobile)).empilees, true);
+    assert.ok(await mobile.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    await capturer(mobile, screenshotDir, 'resultat-dimension-mobile.png');
+
     // --- Reprise après un rechargement complet -------------------------------
     // Même parcours, nouvel onglet, aucun brouillon local : le contexte doit venir
     // du snapshot relu. C'est le cas qui ramenait les testeurs à la mauvaise question.
@@ -704,6 +716,30 @@ async function principal() {
     await annulation.locator('.audit-echec').waitFor({ state: 'detached' });
     assert.match(dernierSnapshot.label, /^Thématique FON, /,
       'le libellé automatique survit au Réessayer');
+
+    // --- Résultat de la dimension, en 1280x700 --------------------------------
+    // On termine la seconde thématique pour boucler la dimension.
+    await annulation.locator('[data-suite="continuer"]').dispatchEvent('click');
+    await annulation.locator('.situer-compte', { hasText: '1 / 2' }).waitFor();
+    await annulation.locator('.marche[data-niveau="3"]').dispatchEvent('click');
+    await annulation.locator('.situer-compte', { hasText: '2 / 2' }).waitFor();
+    await annulation.locator('.marche[data-niveau="2"]').dispatchEvent('click');
+    await annulation.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
+    await annulation.getByRole('button', { name: /^Voir le résultat de/ }).click();
+    await annulation.locator('body[data-panneau="resultat-dimension"]').waitFor({ state: 'attached' });
+    await annulation.getByRole('heading', { name: 'Résultat de la dimension' }).waitFor();
+
+    // Thématiques classées de la moins à la plus maîtrisée.
+    const classement = (await annulation.locator('.audit-classement-ligne .syn-pct').allTextContents())
+      .map((texte) => parseInt(texte, 10));
+    assert.equal(classement.length, 2);
+    assert.deepEqual(classement, [...classement].sort((a, b) => a - b));
+    // Et les deux colonnes ne se marchent pas dessus non plus sur cet écran.
+    const colonnesDimension = await mesurerColonnes(annulation);
+    assert.equal(colonnesDimension.empilees, false);
+    assert.ok(colonnesDimension.contenuGauche <= colonnesDimension.suiteGauche + 1,
+      'le classement recouvre le bloc Poursuivre');
+    await capturer(annulation, screenshotDir, 'resultat-dimension-desktop.png');
 
     // --- Une compétence passée survit à deux rechargements ---------------------
     // `estModifie()` ignore les compétences passées : sans garde, le brouillon local
