@@ -5393,7 +5393,10 @@
           return `<button type="button" class="audit-suite-choix principal poursuivre-primaire" data-suite="continuer" style="--h:${echapper(TEINTES_HEX[dimension.id] || '#c9a661')}">Continuer avec la suite de cette dimension<small>${echapper(suivante.name)} · ~${reste.restants} compétence${reste.restants > 1 ? 's' : ''}, environ ${reste.minutes} min</small></button>`;
         })()
         : '',
-      `<button type="button" class="audit-suite-choix" data-suite="theme">Choisir une autre thématique de cette dimension<small>${echapper(dimension.name)}</small></button>`,
+      // Dimension complète : plus rien à choisir dans cette dimension, le choix disparaît.
+      restantes.length > 0
+        ? `<button type="button" class="audit-suite-choix" data-suite="theme">Choisir une autre thématique de cette dimension<small>${echapper(dimension.name)}</small></button>`
+        : '',
       `<button type="button" class="audit-suite-choix${suivante ? '' : ' principal'}" data-suite="dimension">Choisir une autre dimension<small>Les ${etat.referentiel.dimensions.length} dimensions du sphérier</small></button>`,
       `<button type="button" class="audit-suite-choix" data-suite="arreter">M'arrêter là<small>Tes réponses sont enregistrées, tu reprendras ici</small></button>`,
     ].filter(Boolean).join('');

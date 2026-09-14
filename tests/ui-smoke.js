@@ -1281,8 +1281,9 @@ async function principal() {
     await mobile.locator('body[data-panneau="resultat-dimension"]').waitFor({ state: 'attached' });
     await mobile.getByRole('heading', { name: 'Résultat de la dimension' }).waitFor();
     assert.equal(await mobile.locator('.audit-classement-ligne').count(), 2);
-    assert.equal(await mobile.locator('.audit-suite-choix').count(), 3,
-      'dimension bouclée : plus de « continuer avec la suite »');
+    assert.equal(await mobile.locator('.audit-suite-choix').count(), 2,
+      'dimension bouclée : plus de « continuer avec la suite » ni de « choisir une autre thématique »');
+    assert.equal(await mobile.locator('[data-suite="theme"]').count(), 0);
     assert.equal((await mesurerColonnes(mobile)).empilees, true);
     assert.ok(await mobile.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
     await capturer(mobile, screenshotDir, 'resultat-dimension-mobile.png');
