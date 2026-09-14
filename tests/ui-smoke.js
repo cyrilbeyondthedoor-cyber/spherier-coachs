@@ -1177,7 +1177,20 @@ async function principal() {
     assert.match((await annulation.locator('#situer-astuce').textContent()).trim(),
       /^Coche une marche, ou passe pour l'instant : tu pourras y revenir\./);
     // L'astuce clavier accompagne l'invitation sur desktop.
-    assert.equal((await annulation.locator('.tinder-clavier').textContent()).trim(), '1, 2 ou 3 au clavier');
+    assert.equal((await annulation.locator('.tinder-clavier').textContent()).trim(),
+      '1 · 2 · 3 au clavier, du plus bas au plus haut');
+    // Lot 8.1 : l'escalier se lit du plus haut niveau au plus bas, et la marche la plus
+    // exigeante reste la plus à droite.
+    const ordreMarches = await annulation.locator('.marche[data-niveau]').evaluateAll((marches) => marches.map((m) => ({
+      niveau: Number(m.dataset.niveau),
+      haut: Math.round(m.getBoundingClientRect().top),
+      gauche: Math.round(m.getBoundingClientRect().left),
+    })));
+    assert.deepEqual(ordreMarches.map((m) => m.niveau), [3, 2, 1]);
+    assert.ok(ordreMarches[0].haut < ordreMarches[1].haut && ordreMarches[1].haut < ordreMarches[2].haut,
+      'les marches se suivent de haut en bas dans l\'ordre 3, 2, 1');
+    assert.ok(ordreMarches[0].gauche > ordreMarches[1].gauche && ordreMarches[1].gauche > ordreMarches[2].gauche,
+      'l\'escalier descend vers la gauche');
 
     // --- Enregistrement en échec, puis Réessayer -----------------------------
     // Le résultat reste affiché depuis le brouillon local, et le libellé automatique
