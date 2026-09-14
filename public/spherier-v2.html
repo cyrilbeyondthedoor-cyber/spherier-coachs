@@ -1550,6 +1550,44 @@
     .titre h1 { font-size: 32px; }
     .titre h1::before, .titre h1::after { margin: 0 8px; }
   }
+  /* --- Lexique : champ de recherche collant et mots astérisqués --------------- */
+  /* Le champ reste sous la main pendant qu'on parcourt la trentaine de termes. */
+  /* Le décalage négatif remonte le bloc jusqu'au bord du corps du panneau : avec
+     `top: 0` il se collait sous les 20 px de marge intérieure, et les termes
+     défilaient dans la bande restée visible au-dessus. */
+  .lexique-tete {
+    position: sticky; top: -20px; z-index: 2; background: #0d1320;
+    padding: 20px 0 2px; margin-top: -10px; margin-bottom: 8px;
+  }
+  .lexique-tete .lexique-compte { margin-bottom: 4px; }
+  /* Le mot garde la ligne et la taille du texte qui l'entoure : c'est un mot, pas un
+     bouton posé dans la phrase. Seuls le pointillé et l'astérisque le signalent. */
+  .lex-mot {
+    padding: 0; border: none; background: none; cursor: pointer;
+    font: inherit; color: var(--gold-bright);
+    border-bottom: 1px dotted var(--gold);
+  }
+  .lex-mot:hover { color: var(--paper); border-bottom-color: var(--paper); }
+  .lex-mot:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .lex-mot sup { font-size: .7em; }
+  .lex-bulle {
+    position: absolute; z-index: 5; width: min(300px, calc(100% - 20px));
+    padding: 13px 15px; border-radius: 11px;
+    background: #161d28; border: 1px solid var(--gold);
+    box-shadow: 0 14px 34px rgba(3, 5, 11, .6);
+  }
+  .lex-bulle:focus { outline: none; }
+  .lex-bulle-terme {
+    font-family: 'Cormorant Garamond', serif; font-size: 17px; font-weight: 500;
+    color: var(--gold-bright);
+  }
+  .lex-bulle-def { margin-top: 5px; color: var(--paper-dim); font-size: 13px; line-height: 1.55; }
+  .lex-bulle-tout {
+    margin-top: 11px; padding: 9px 14px; min-height: 44px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--line); background: rgba(240,235,224,.04); color: var(--paper-dim);
+    font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 13px;
+  }
+  .lex-bulle-tout:hover { border-color: var(--gold); color: var(--paper); }
 </style>
 </head>
 <body>
@@ -1849,6 +1887,40 @@
     return String(str).replace(/[&<>"']/g, (c) => (
       { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
     ));
+  }
+
+  // Un mot suivi d'une astérisque renvoie au lexique. Le texte est déjà échappé quand
+  // on l'inspecte : l'apostrophe y est écrite « &#39; », d'où sa présence dans le motif.
+  const MOT_LEXIQUE = /([A-Za-zÀ-ÖØ-öø-ÿ]+(?:(?:-|&#39;)[A-Za-zÀ-ÖØ-öø-ÿ]+)*)\*/g;
+
+  // Index construit une seule fois par référentiel : 33 termes relus à chaque marqueur
+  // affiché coûteraient cher pendant l'audit, qui redessine le panneau à chaque clic.
+  let cacheIndexLexique = null;
+  function indexLexique() {
+    const termes = etat.referentiel?.lexique?.termes || [];
+    if (cacheIndexLexique && cacheIndexLexique.source === termes) return cacheIndexLexique.index;
+    const index = new Map();
+    termes.forEach((entree) => {
+      const cle = normaliserRecherche(entree.terme);
+      // Singulier et pluriel simples : « fils* » et « cycle* » doivent tomber sur
+      // « Fils » et « Cycles » sans qu'on duplique les entrées du lexique.
+      const variantes = cle.endsWith('s') ? [cle, cle.slice(0, -1)] : [cle, cle + 's'];
+      variantes.forEach((variante) => { if (variante && !index.has(variante)) index.set(variante, entree); });
+    });
+    cacheIndexLexique = { source: termes, index };
+    return index;
+  }
+
+  // Transforme « bascule* » en bouton cliquable lorsque le mot est défini au lexique.
+  // Reçoit du texte DÉJÀ échappé et n'ajoute que du balisage écrit ici : aucun contenu
+  // du référentiel ne peut ainsi devenir du HTML actif.
+  function lierLexique(texteEchappe) {
+    const index = indexLexique();
+    if (index.size === 0) return texteEchappe;
+    return String(texteEchappe).replace(MOT_LEXIQUE, (entier, mot) => {
+      if (!index.has(normaliserRecherche(mot.replace(/&#39;/g, "'")))) return entier;
+      return `<button type="button" class="lex-mot" data-terme="${mot}">${mot}<sup>*</sup></button>`;
+    });
   }
 
   function afficherPortailPublic() {
@@ -2918,7 +2990,7 @@
 
     return `<section class="panneau-section">
       ${competence.markers ? `<p class="panneau-label">Marqueurs observables</p>
-        <p class="marche-enonce" style="white-space:pre-line;margin-bottom:18px">${echapper(competence.markers)}</p>` : ''}
+        <p class="marche-enonce" style="white-space:pre-line;margin-bottom:18px">${lierLexique(echapper(competence.markers))}</p>` : ''}
       <p class="panneau-label">Où tu en es</p>
       <div class="escalier">${marches}</div>
       <p class="escalier-note">${note}</p>
@@ -3282,9 +3354,9 @@
       <div class="situer-layout"><div class="situer">
         <p class="situer-fil">${echapper(theme ? theme.name : '')}</p>
         <p class="situer-difficulte">Niveau de la compétence : ${pastilleDifficulte(c)}</p>
-        <h2 class="situer-nom" id="panneau-titre">${echapper(c.name)}</h2>
+        <h2 class="situer-nom" id="panneau-titre">${lierLexique(echapper(c.name))}</h2>
         ${(c.statement || c.definition) && (c.statement || c.definition) !== c.name
-          ? `<p class="situer-def">${echapper(c.statement || c.definition)}</p>` : ''}
+          ? `<p class="situer-def">${lierLexique(echapper(c.statement || c.definition))}</p>` : ''}
         <div style="margin-top:18px">${escalier(c, niveau, situer.teinte)}</div>
         <div class="situer-pied">
           <button type="button" class="situer-btn" id="situer-precedent" ${situer.index === 0 ? 'disabled' : ''}>← Précédente</button>
@@ -4008,9 +4080,9 @@
     elPanneauTete.innerHTML = `
       ${retour ? `<button type="button" class="panneau-retour" id="panneau-retour">← ${echapper(theme ? theme.name : '')}</button>` : ''}
       <p class="panneau-fil">${echapper(dimension ? dimension.name : '')} <span>›</span> <b>${echapper(theme ? theme.name : '')}</b></p>
-      <h2 class="panneau-titre" id="panneau-titre">${echapper(competence.name)}</h2>
+      <h2 class="panneau-titre" id="panneau-titre">${lierLexique(echapper(competence.name))}</h2>
       ${(competence.statement || competence.definition) && (competence.statement || competence.definition) !== competence.name
-        ? `<p class="panneau-def">${echapper(competence.statement || competence.definition)}</p>` : ''}
+        ? `<p class="panneau-def">${lierLexique(echapper(competence.statement || competence.definition))}</p>` : ''}
       ${pastilleDifficulte(competence, 'panneau-diff')}
     `;
     elPanneauCorps.innerHTML = escalier(competence, niveau, teinte)
@@ -4054,12 +4126,17 @@
     elPanneauTete.innerHTML = `
       <p class="panneau-fil"><b>Lexique</b></p>
       <h2 class="panneau-titre" id="panneau-titre">${echapper(lexique.titre)}</h2>`;
+    // Tri alphabétique français et insensible aux accents : le lexique se parcourt
+    // comme un dictionnaire, sans dépendre de l'ordre historique du classeur source.
+    const termesTries = [...lexique.termes].sort((x, y) => normaliserRecherche(x.terme).localeCompare(normaliserRecherche(y.terme), 'fr'));
     elPanneauCorps.innerHTML = `
       <p class="lexique-intro">${echapper(lexique.intro)}</p>
-      <input type="search" class="lexique-recherche" id="lexique-recherche" placeholder="Rechercher un mot (ex. : domino, bascule, fils)" aria-label="Rechercher dans le lexique" autocomplete="off">
-      <p class="lexique-compte" id="lexique-compte" aria-live="polite"></p>
+      <div class="lexique-tete">
+        <input type="search" class="lexique-recherche" id="lexique-recherche" placeholder="Rechercher un mot (ex. : domino, bascule, fils)" aria-label="Rechercher dans le lexique" autocomplete="off">
+        <p class="lexique-compte" id="lexique-compte" aria-live="polite"></p>
+      </div>
       <dl class="lexique-liste" id="lexique-liste">
-        ${lexique.termes.map((t) => `<div class="lexique-terme" data-recherche="${echapper(normaliserRecherche(t.terme + ' ' + t.definition))}"><dt>${echapper(t.terme)}</dt><dd>${echapper(t.definition)}</dd></div>`).join('')}
+        ${termesTries.map((t) => `<div class="lexique-terme" data-recherche="${echapper(normaliserRecherche(t.terme + ' ' + t.definition))}"><dt>${echapper(t.terme)}</dt><dd>${echapper(t.definition)}</dd></div>`).join('')}
       </dl>
       <p class="syn-vide" id="lexique-vide" hidden>Aucun terme ne correspond.</p>`;
     elPanneauCorps.scrollTop = 0;
@@ -4091,6 +4168,82 @@
   function normaliserRecherche(texte) {
     return String(texte || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   }
+  // ============================================================
+  // INFOBULLE DE LEXIQUE
+  // ============================================================
+  // Un mot astérisqué rencontré pendant l'audit se lit sur place : ouvrir le lexique
+  // entier ferait perdre la question en cours. L'infobulle vit dans `.panneau`, qui
+  // porte déjà un `transform` et sert donc de repère aux positions absolues.
+  let bulleLexique = null;
+  let motLexiqueActif = null;
+
+  function fermerBulleLexique() {
+    if (!bulleLexique) return;
+    bulleLexique.remove();
+    bulleLexique = null;
+    const mot = motLexiqueActif;
+    motLexiqueActif = null;
+    // Le focus revient au mot cliqué s'il est encore à l'écran : le panneau peut
+    // avoir été redessiné entre-temps par une navigation dans l'audit.
+    if (mot && mot.isConnected && elVoile.classList.contains('visible')) mot.focus({ preventScroll: true });
+  }
+
+  function ouvrirBulleLexique(bouton) {
+    const entree = indexLexique().get(normaliserRecherche(bouton.dataset.terme || ''));
+    if (!entree) return;
+    fermerBulleLexique();
+    const bulle = document.createElement('div');
+    bulle.className = 'lex-bulle';
+    bulle.id = 'lex-bulle';
+    bulle.setAttribute('role', 'dialog');
+    bulle.setAttribute('aria-label', `Définition de ${entree.terme}`);
+    bulle.tabIndex = -1;
+    bulle.innerHTML = `
+      <p class="lex-bulle-terme">${echapper(entree.terme)}</p>
+      <p class="lex-bulle-def">${echapper(entree.definition)}</p>
+      <button type="button" class="lex-bulle-tout" id="lex-bulle-tout">Voir tout le lexique</button>`;
+    elPanneau.appendChild(bulle);
+    bulleLexique = bulle;
+    motLexiqueActif = bouton;
+    positionnerBulleLexique(bouton, bulle);
+    bulle.focus({ preventScroll: true });
+  }
+
+  function positionnerBulleLexique(bouton, bulle) {
+    const marge = 10;
+    const repere = elPanneau.getBoundingClientRect();
+    const mot = bouton.getBoundingClientRect();
+    const largeur = bulle.offsetWidth;
+    const hauteur = bulle.offsetHeight;
+    let gauche = mot.left - repere.left + mot.width / 2 - largeur / 2;
+    gauche = Math.max(marge, Math.min(gauche, repere.width - largeur - marge));
+    let haut = mot.bottom - repere.top + 8;
+    // Pas de place en dessous : on bascule au-dessus du mot plutôt que de déborder.
+    if (haut + hauteur > repere.height - marge) {
+      haut = Math.max(marge, mot.top - repere.top - hauteur - 8);
+    }
+    bulle.style.left = `${Math.round(gauche)}px`;
+    bulle.style.top = `${Math.round(haut)}px`;
+  }
+
+  // Délégation posée une seule fois : les énoncés et les marqueurs sont redessinés à
+  // chaque clic sur une marche, brancher chaque mot serait à refaire sans arrêt.
+  elPanneau.addEventListener('click', (e) => {
+    const mot = e.target.closest('.lex-mot');
+    if (mot) { ouvrirBulleLexique(mot); return; }
+    if (e.target.closest('#lex-bulle-tout')) { fermerBulleLexique(); ouvrirLexique(); return; }
+    if (!e.target.closest('.lex-bulle')) fermerBulleLexique();
+  });
+  // L'infobulle est ancrée au panneau, pas au texte : sans ce recalage elle se
+  // décrocherait du mot dès que le corps du panneau défile ou que la fenêtre change.
+  const suivreBulleLexique = () => {
+    if (!bulleLexique || !motLexiqueActif || !motLexiqueActif.isConnected) return;
+    positionnerBulleLexique(motLexiqueActif, bulleLexique);
+  };
+  elPanneauCorps.addEventListener('scroll', suivreBulleLexique);
+  window.addEventListener('resize', suivreBulleLexique);
+  elVoile.addEventListener('click', (e) => { if (e.target === elVoile) fermerBulleLexique(); });
+
   document.getElementById('ouvrir-lexique').addEventListener('click', ouvrirLexique);
   document.getElementById('panneau-plein-ecran').addEventListener('click', () => {
     const scrollInterne = elPanneauCorps.scrollTop;
@@ -4118,6 +4271,7 @@
       }
     }
     if (e.key === 'Escape' && !elVoile.hidden) {
+      if (bulleLexique) { fermerBulleLexique(); return; }
       if (elPanneau.classList.contains('plein-ecran')) {
         elPanneau.classList.remove('plein-ecran');
         document.getElementById('panneau-plein-ecran').textContent = 'Agrandir';

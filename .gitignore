@@ -19,3 +19,6 @@ screenshot-*.png
 
 # Généré au build Netlify
 public/version.txt
+
+# Captures de recette locales, régénérables
+.captures/

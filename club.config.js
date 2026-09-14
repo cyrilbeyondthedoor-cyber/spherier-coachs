@@ -238,9 +238,12 @@ const LEXIQUE = {
     { terme: "Sphérier de compétences", definition: "Référentiel qui organise les compétences attendues des coachs du Club selon plusieurs dimensions et niveaux cumulatifs." },
     { terme: "Dimension", definition: "Grand domaine de compétences utilisé pour structurer le Sphérier." },
     { terme: "Marqueur observable", definition: "Comportement concret permettant d’évaluer la maîtrise d’une compétence dans la pratique." },
-    { terme: "Niveau Fondamental", definition: "Premier niveau du Sphérier. Il regroupe les acquis requis pour exercer sur un socle sain." },
-    { terme: "Niveau Professionnel établi", definition: "Niveau de compétence requis pour accéder au dispositif « Trouve ton coach »." },
-    { terme: "Niveau A-player", definition: "Niveau avancé correspondant à une pratique solide, fine et incarnée du coaching." },
+    // Les trois niveaux portent ici le libellé exact affiché sur la pastille de
+    // difficulté d'une compétence : un membre qui clique sur « A-player* » doit
+    // retrouver le mot tel qu'il l'a lu, sans reformulation intermédiaire.
+    { terme: "Socle fondamental", definition: "Premier niveau du Sphérier. Il regroupe les acquis requis pour exercer sur un socle sain." },
+    { terme: "Professionnel établi", definition: "Niveau de compétence requis pour accéder au dispositif « Trouve ton coach »." },
+    { terme: "A-player", definition: "Niveau avancé du Sphérier. Il correspond à une pratique solide, fine et incarnée du coaching." },
     { terme: "Trouve ton coach (TTC)", definition: "Dispositif de mise en relation entre des clients et des coachs du Club ayant validé le niveau requis." },
     { terme: "Développement vertical et horizontal", definition: "Le développement horizontal enrichit les compétences. Le développement vertical transforme la façon dont une personne interprète le monde." },
     { terme: "Structure d’interprétation", definition: "Ensemble de croyances et de valeurs à travers lesquelles une personne comprend les situations et choisit ses actions." },
