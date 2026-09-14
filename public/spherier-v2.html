@@ -1441,7 +1441,14 @@
   .carte-resultat-actions { display: flex; justify-content: center; gap: 10px; margin: 28px 0 8px; flex-wrap: wrap; }
   .carte-resultat-cta { min-height: 48px; padding: 11px 22px; border: 1px solid var(--gold); border-radius: 999px; background: var(--gold); color: var(--night-deep); cursor: pointer; font: inherit; font-weight: 600; }
   .carte-resultat-secondaire { min-height: 48px; padding: 11px 22px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--paper-dim); cursor: pointer; font: inherit; }
-  .priorite-marque { position: absolute; top: 5px; right: 12px; padding: 4px 9px; border: 1px solid rgba(201,166,97,.48); border-radius: 999px; background: rgba(201,166,97,.10); color: var(--gold-bright); font-size: 11px; letter-spacing: .13em; text-transform: uppercase; }
+  /* Le badge vivait en absolu, calé en haut à droite : sous 400 px de carte, il passait
+     par-dessus la ligne de score. Il prend sa place dans le flux, entre le score et le
+     nom de la catégorie, où il ne peut recouvrir personne à aucune largeur. */
+  .priorite-marque {
+    align-self: center; max-width: 100%; margin-bottom: 7px; padding: 4px 9px;
+    border: 1px solid rgba(201,166,97,.48); border-radius: 999px; background: rgba(201,166,97,.10);
+    color: var(--gold-bright); font-size: 11px; letter-spacing: .13em; text-transform: uppercase;
+  }
 
 
   /* LE CIEL — page d'arrivée.

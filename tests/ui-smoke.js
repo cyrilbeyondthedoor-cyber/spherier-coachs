@@ -759,6 +759,34 @@ async function principal() {
     await resultatPage.locator('#audit-suite').dispatchEvent('click');
     await resultatPage.getByRole('heading', { name: 'Ton sphérier en un regard' }).waitFor();
     assert.equal(await resultatPage.locator('.priorite-marque').count() > 0, true);
+
+    // --- Lot 8.4 : le badge « Priorité choisie » ne recouvre plus rien -----------
+    // Il vivait en absolu, calé en haut à droite, et passait par-dessus la ligne de
+    // score dès que la carte descendait sous 400 px.
+    for (const largeur of [320, 370, 390, 640, 900, 1280]) {
+      await resultatPage.setViewportSize({ width: largeur, height: 900 });
+      await resultatPage.waitForTimeout(120);
+      const recouvrements = await resultatPage.locator('.carte-resultat .ciel-categorie')
+        .evaluateAll((cartes) => cartes.flatMap((carte) => {
+          const badge = carte.querySelector('.priorite-marque');
+          if (!badge) return [];
+          const b = badge.getBoundingClientRect();
+          return [...carte.querySelectorAll('.ciel-categorie-meta, .ciel-categorie-titre, .ciel-categorie-cta, .ciel-categorie-dims')]
+            .map((el) => {
+              const r = el.getBoundingClientRect();
+              const recouvre = !(b.right <= r.left + 0.5 || b.left >= r.right - 0.5
+                || b.bottom <= r.top + 0.5 || b.top >= r.bottom - 0.5);
+              return { recouvre, cible: el.className };
+            })
+            .filter((item) => item.recouvre);
+        }));
+      assert.deepEqual(recouvrements, [],
+        `le badge « Priorité choisie » en recouvre un autre en ${largeur} px : ${JSON.stringify(recouvrements)}`);
+      assert.ok(await resultatPage.locator('.priorite-marque').first().isVisible(),
+        `le badge doit rester visible en ${largeur} px`);
+    }
+    await capturer(resultatPage, screenshotDir, 'priorite-marque-370.png');
+    await resultatPage.setViewportSize({ width: 1280, height: 900 });
     await resultatPage.getByRole('button', { name: 'Ouvrir la vue d’ensemble linéaire' }).click();
     assert.equal(await resultatPage.locator('.syn-categorie-item').count(), 3);
     assert.equal(await resultatPage.locator('.syn-maitrise-item').count(), 3);
