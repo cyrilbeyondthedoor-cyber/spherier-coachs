@@ -25,6 +25,7 @@ const NOMS_NOTION = {
   statement: 'Énoncé N1',
   description: 'Description',
   markers: 'Marqueurs',
+  difficulte: 'Difficulté',
 };
 
 function segments(texte) {
@@ -36,11 +37,16 @@ function segments(texte) {
 }
 
 function proprieteNotion(champ, texte) {
-  return champ === 'name' ? { title: segments(texte) } : { rich_text: segments(texte) };
+  if (champ === 'name') return { title: segments(texte) };
+  // La difficulté est une liste de choix : l'option doit exister telle quelle dans
+  // Notion, sans quoi l'API en crée une nouvelle et la pastille perd sa couleur.
+  if (champ === 'difficulte') return { select: { name: texte } };
+  return { rich_text: segments(texte) };
 }
 
 function lire(page, nom) {
   const prop = page.properties[nom];
+  if (prop?.type === 'select') return prop.select?.name ?? '';
   const parts = prop?.rich_text ?? prop?.title ?? [];
   return parts.map((s) => s.plain_text).join('').trim();
 }

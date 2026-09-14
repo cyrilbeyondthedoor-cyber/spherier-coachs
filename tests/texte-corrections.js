@@ -6,7 +6,9 @@
 const assert = require('node:assert/strict');
 const {
   corrigerFautes,
+  corrigerTexte,
   normaliserPonctuation,
+  normaliserAsterisques,
   proposerChamp,
   construirePropositions,
   resumer,
@@ -92,5 +94,29 @@ const resume = resumer(propositions);
 assert.equal(resume.competencesTouchees, 1);
 assert.equal(resume.champsModifies, 1);
 assert.deepEqual(resume.parChamp, { markers: 1 });
+
+// 6. L'astérisque de renvoi au lexique se replace après le mot entier.
+assert.equal(normaliserAsterisques('équilibrer et bascule*r, ancrer*'), 'équilibrer et basculer*, ancrer*');
+assert.equal(normaliserAsterisques('vous ancre*z le rêve'), 'vous ancrez* le rêve');
+assert.equal(normaliserAsterisques('un fil* et un domino*'), 'un fil* et un domino*');
+
+// 7. Termes flous et anglicismes : substitutions arbitrées, sans toucher au reste.
+assert.equal(
+  corrigerTexte('• Tu peux citer une séance récente où tu as utilisé cette technique.'),
+  '• Tu peux citer une séance récente (moins de 3 mois) où tu as utilisé cette technique.',
+);
+// Déjà précisé : la substitution ne s'applique pas deux fois.
+assert.equal(
+  corrigerTexte('• Une séance récente (moins de 3 mois) suffit.'),
+  '• Une séance récente (moins de 3 mois) suffit.',
+);
+assert.equal(
+  corrigerTexte('ma capacité de delivery et mon modèle économique'),
+  'ma capacité de prestation et mon modèle économique',
+);
+assert.equal(
+  corrigerTexte('• Dans un enregistrement, tu reprends les mots du client.'),
+  '• En réécoutant une séance, tu reprends les mots du client.',
+);
 
 console.log('Corrections de texte du référentiel : OK');

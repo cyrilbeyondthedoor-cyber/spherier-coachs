@@ -17,7 +17,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const DOSSIER = __dirname;
-const CHAMPS = ['name', 'statement', 'description', 'markers'];
+const CHAMPS = ['name', 'statement', 'description', 'markers', 'difficulte'];
 
 // Fautes relevées lors de la recette de la version testeurs. Les motifs sont écrits sur
 // le texte d'origine (au vouvoiement) ET, quand la faute survit à la réécriture, sur sa
@@ -51,8 +51,19 @@ const FAUTES_SIGNALEES = [
   [/etc\)/g, 'etc.)'],
   [/(êtes|es) capables de nommer/g, '$1 capable de nommer'],
   [/questions introspective\b/g, 'questions introspectives'],
+  [/vision de monde/g, 'vision du monde'],
+  [/, paradoxe\*, incoéhrence…\)/g, ', paradoxe*…)'],
+  [/émotionnelement/g, 'émotionnellement'],
   [/en pratique délibérées dans ma pratique/g, 'en pratiques délibérées'],
   [/vous vous fixer une pratique/g, 'vous vous fixez une pratique'],
+  [/l'enjeux\b/g, "l'enjeu"],
+  [/son enjeux de départ/g, 'son enjeu de départ'],
+  [/à toute les séances/g, 'à toutes les séances'],
+  [/sais creusez au délà/g, 'sais creuser au-delà'],
+  [/manière douce de cloturer/g, 'manière douce de clôturer'],
+  [/savoir si il a tout/g, "savoir s'il a tout"],
+  [/tu as intégrer des éléments créatifs/g, 'tu as intégré des éléments créatifs'],
+  [/cette décisision/g, 'cette décision'],
   // Signalements de formulation, hors table de fautes.
   [/de manière embarquante mon expérience, les étapes/g, 'de manière engageante mon parcours, les étapes'],
   [/au service de mon client au sein du programme\./g, 'au service de mon client.'],
@@ -71,13 +82,10 @@ const FAUTES_HORS_LISTE = [
   [/procéssus/g, 'processus'],
   [/quelque soit le profil/g, 'quel que soit le profil'],
   [/qu'l se sent/g, "qu'il se sent"],
-  [/l'enjeux\b/g, "l'enjeu"],
-  [/son enjeux de départ/g, 'son enjeu de départ'],
   [/précédée ou suivi d'une justification/g, "précédée ou suivie d'une justification"],
   [/vis à vis/g, 'vis-à-vis'],
   [/situations relevent/g, 'situations relèvent'],
   [/maitrise une panoplie/g, 'maîtrise une panoplie'],
-  [/sais creusez au délà/g, 'sais creuser au-delà'],
   [/une seconde voir une troisième/g, 'une seconde voire une troisième'],
   [/ton clien\b/g, 'ton client'],
   [/désagrable/g, 'désagréable'],
@@ -86,20 +94,64 @@ const FAUTES_HORS_LISTE = [
   [/un sujet difficiles/g, 'un sujet difficile'],
   [/introspéctive/g, 'introspective'],
   [/les règles qui a éclaire/g, 'les règles qui éclairent'],
-  [/tu as intégrer des éléments créatifs/g, 'tu as intégré des éléments créatifs'],
   [/d'unemplacement centralisé/g, "d'un emplacement centralisé"],
   [/clarté mental\b/g, 'clarté mentale'],
-  [/à toute les séances/g, 'à toutes les séances'],
   [/t'appuyes dessus/g, "t'appuies dessus"],
   [/une processus éprouvé/g, 'un processus éprouvé'],
   [/qu 'il apporte/g, "qu'il apporte"],
   [/qu'il n'avait pas identifié avant la séance/g, "qu'il n'avait pas identifiée avant la séance"],
-  [/cette décisision/g, 'cette décision'],
-  [/manière douce de cloturer/g, 'manière douce de clôturer'],
-  [/savoir si il a tout/g, "savoir s'il a tout"],
   [/le developpement d'un être humain/g, "le développement d'un être humain"],
   [/des exemples ou tu ne t'es pas laissé/g, "des exemples où tu ne t'es pas laissé"],
 ];
+
+// Termes flous et anglicismes, arbitrés par le propriétaire. Ils ne relèvent pas de la
+// faute : le texte est correct, il est seulement imprécis ou emprunté à l'anglais.
+const SUBSTITUTIONS = [
+  // Repères de temps : « récent » ne dit rien de vérifiable.
+  [/\b(séance|métaphore) récente(?! \(moins)/g, '$1 récente (moins de 3 mois)'],
+  [/\b(moment|cas) récent(?! \(moins)/g, '$1 récent (moins de 3 mois)'],
+  [/très régulièrement/g, 'au moins une fois par trimestre'],
+  [/une formulation type/g, "une formulation prête à l'emploi"],
+  [/de faire de la psychoéducation en séance/g, "d'expliquer la théorie en séance"],
+  [/après l'outil/g, "à l'issue de l'exercice"],
+  [/Dans un enregistrement,/g, 'En réécoutant une séance,'],
+  [/Dans une séance enregistrée,/g, 'En réécoutant une séance,'],
+  [/Sur un enregistrement,/g, 'En réécoutant une séance,'],
+  [/le vérifier sur un enregistrement/g, 'le vérifier en réécoutant une séance'],
+  // Anglicismes traduits. « call découverte », « hook », « farming » et « lead magnet »
+  // restent : ce sont les mots employés sur le terrain, ils sont définis au lexique.
+  [/Je sais concevoir un surdelivery intentionnel qui augmente la valeur/g,
+    'Je sais sur-délivrer intentionnellement pour augmenter la valeur'],
+  [/Chaque élément de surdelivery répond/g, 'Chaque élément sur-délivré répond'],
+  [/faire du surdelivery/g, 'sur-délivrer'],
+  [/qualité du delivery/g, 'qualité de la prestation'],
+  [/capacité de delivery/g, 'capacité de prestation'],
+  [/au delivery/g, 'à la prestation'],
+  [/le delivery/g, 'la prestation'],
+  [/du delivery/g, 'de la prestation'],
+  [/\bdelivery\b/g, 'prestation'],
+  [/, timing,/g, ', moment,'],
+  [/onboarding sans couture/g, 'intégration fluide'],
+  [/et onboarding\./g, 'et intégration.'],
+  [/\bonboarding\b/g, 'intégration'],
+  // Un marqueur n'a pas à renvoyer à la séance de formation où l'exemple a été donné.
+  [/\(exemple donné en atelier : /g, '('],
+];
+
+// Difficulté revue : une compétence qui repose sur un outil ou une grille propre à une
+// approche relève du niveau avancé. Les autres compétences de ce type (ennéagramme,
+// niveaux d'être, Dilts, Ken Wilber, IFS) y sont déjà.
+const DIFFICULTES_REVUES = {
+  // Le marqueur « tu ne coaches pas un client dont le niveau d'être ou de réflexion
+  // dépasse le tien » applique une limite au sens de Flaherty.
+  'FON-02-01': 'A-player',
+};
+
+// L'astérisque de renvoi au lexique se place après le mot entier : « basculer* », jamais
+// « bascule*r », sans quoi le mot se coupe en deux à l'écran et le renvoi tombe à côté.
+function normaliserAsterisques(texte) {
+  return String(texte).replace(/([A-Za-zÀ-ÖØ-öø-ÿ]+)\*([A-Za-zÀ-ÖØ-öø-ÿ]+)/g, '$1$2*');
+}
 
 function appliquerTable(texte, table) {
   return table.reduce((acc, [motif, remplacement]) => acc.replace(motif, remplacement), texte);
@@ -107,6 +159,10 @@ function appliquerTable(texte, table) {
 
 function corrigerFautes(texte) {
   return appliquerTable(appliquerTable(texte, FAUTES_SIGNALEES), FAUTES_HORS_LISTE);
+}
+
+function corrigerTexte(texte) {
+  return normaliserAsterisques(appliquerTable(corrigerFautes(texte), SUBSTITUTIONS));
 }
 
 function tableTouche(texte, table) {
@@ -141,8 +197,11 @@ function normaliserPonctuation(texte) {
 
 function motifs({ champ, avant, apres, tutoye }) {
   const liste = [];
+  if (champ === 'difficulte') return ['difficulte'];
   if (tableTouche(avant, FAUTES_SIGNALEES)) liste.push('faute');
   if (tableTouche(avant, FAUTES_HORS_LISTE)) liste.push('faute-hors-liste');
+  if (tableTouche(avant, SUBSTITUTIONS)) liste.push('substitution');
+  if (normaliserAsterisques(avant) !== avant) liste.push('asterisque');
   if (champ === 'markers' && tutoye) liste.push('tutoiement');
   if (normaliserPonctuation(avant) !== avant && champ === 'markers') liste.push('ponctuation');
   if (liste.length === 0 && avant !== apres) liste.push('reformulation');
@@ -154,7 +213,7 @@ function motifs({ champ, avant, apres, tutoye }) {
 // réécriture aurait laissée passer est ainsi rattrapée.
 function proposerChamp(champ, valeur, tutoiement) {
   const base = champ === 'markers' && tutoiement ? tutoiement : valeur;
-  const corrige = corrigerFautes(base);
+  const corrige = corrigerTexte(base);
   return champ === 'markers' ? normaliserPonctuation(corrige) : corrige.trim();
 }
 
@@ -165,7 +224,9 @@ function construirePropositions(competences, tutoiements) {
       const avant = competence[champ] || '';
       if (!avant) continue;
       const tutoye = champ === 'markers' ? tutoiements[competence.code] : null;
-      const apres = proposerChamp(champ, avant, tutoye);
+      const apres = champ === 'difficulte'
+        ? (DIFFICULTES_REVUES[competence.code] || avant)
+        : proposerChamp(champ, avant, tutoye);
       if (apres === avant) continue;
       propositions.push({
         code: competence.code,
@@ -266,7 +327,10 @@ function principal() {
   console.log('par motif :', resume.parMotif);
 }
 
-module.exports = { corrigerFautes, normaliserPonctuation, proposerChamp, construirePropositions, resumer };
+module.exports = {
+  corrigerFautes, corrigerTexte, normaliserPonctuation, normaliserAsterisques,
+  proposerChamp, construirePropositions, resumer,
+};
 
 if (require.main === module) {
   try {

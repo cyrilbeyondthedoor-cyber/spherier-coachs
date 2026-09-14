@@ -8,6 +8,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { Client, collectPaginatedAPI } = require('@notionhq/client');
+const { DIMENSIONS } = require('../../club.config.js');
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 const SORTIE = path.join(__dirname, 'competences.json');
@@ -40,11 +41,15 @@ async function principal() {
     interroger(process.env.DB_COMPETENCES),
   ]);
 
-  const themesActifs = new Map(
-    pagesThemes
-      .filter((p) => p.properties.Actif?.checkbox === true)
-      .map((p) => [p.id, texte(p, 'Name')]),
-  );
+  const themes = pagesThemes
+    .filter((p) => p.properties.Actif?.checkbox === true)
+    .map((p) => ({
+      id: p.id,
+      name: texte(p, 'Name'),
+      dimension: p.properties.Dimension?.select?.name ?? '',
+      order: p.properties.Ordre?.number ?? 0,
+    }));
+  const themesActifs = new Map(themes.map((t) => [t.id, t.name]));
 
   const rang = (c) => c.order ?? Number.MAX_SAFE_INTEGER;
   const competences = pagesCompetences
@@ -52,6 +57,7 @@ async function principal() {
     .map((p) => ({
       pageId: p.id,
       code: texte(p, 'Code'),
+      themeId: relations(p, '📚 Thèmes').find((id) => themesActifs.has(id)) ?? null,
       theme: themesActifs.get(relations(p, '📚 Thèmes').find((id) => themesActifs.has(id))) ?? null,
       difficulte: p.properties.Difficulté?.select?.name ?? null,
       name: texte(p, 'Name'),
@@ -64,6 +70,18 @@ async function principal() {
     // Même ordre que referentiel-v2.js : l'audit des fautes numérote les compétences
     // dans cet ordre, une numérotation différente rendrait ses repères inutilisables.
     .sort((a, b) => rang(a) - rang(b) || a.code.localeCompare(b.code, 'fr'));
+
+  // Rang dans le parcours d'audit : dimensions dans l'ordre du club, thématiques par
+  // leur `Ordre`, compétences dans l'ordre du référentiel. C'est la numérotation que
+  // voient les testeurs quand ils déroulent l'audit, et donc celle de leurs retours.
+  const parcours = [];
+  DIMENSIONS.forEach((dimension) => {
+    themes
+      .filter((t) => t.dimension === dimension.name)
+      .sort((a, b) => a.order - b.order)
+      .forEach((t) => competences.filter((c) => c.themeId === t.id).forEach((c) => parcours.push(c.code)));
+  });
+  competences.forEach((c) => { c.position = parcours.indexOf(c.code) + 1; });
 
   fs.writeFileSync(SORTIE, `${JSON.stringify(competences, null, 2)}\n`, 'utf8');
   console.log(`${competences.length} compétences actives écrites dans ${path.relative(process.cwd(), SORTIE)}`);
