@@ -4,12 +4,17 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "npm run test:server && npm run test:ui",
-    "test:server": "node tests/server-functions.js && node tests/referentiel-cache.js && node tests/texte-corrections.js",
+    "test": "npm run test:server && npm run test:ui && npm run test:progression && npm run test:sql && npm run test:a11y",
+    "test:server": "node tests/server-functions.js && node tests/referentiel-cache.js && node tests/texte-corrections.js && node tests/progression-core.js && node tests/progression-api.js",
     "test:ui": "node tests/ui-smoke.js",
     "test:notion": "node tests/ui-notion-smoke.js",
     "test:prospects": "node tests/prospects-notion-integration.js",
-    "preview:notion": "node preview-notion.js"
+    "preview:notion": "node preview-notion.js",
+    "test:progression": "node tests/progression-ui.js",
+    "test:sql": "node tests/progression-sql.js",
+    "test:a11y": "node tests/progression-a11y.js",
+    "test:webkit": "BROWSER=webkit node tests/progression-ui.js",
+    "preview:progression": "node preview-progression.js"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +26,8 @@
     "dotenv": "^17.4.2"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "axe-core": "^4.13.0",
     "exceljs": "^4.4.0",
     "netlify-cli": "^27.0.1",
     "playwright": "^1.62.0"

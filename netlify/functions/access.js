@@ -24,6 +24,8 @@ exports.handler = async (event) => {
     return reponse(400, { erreur: 'Données invalides.' });
   }
 
+  if (!corps || typeof corps !== 'object' || Array.isArray(corps)) return reponse(400, { erreur: 'Le corps doit être un objet JSON.' });
+
   const prenom = String(corps.prenom || '').trim();
   const email = String(corps.email || '').trim().toLowerCase();
   const source = String(corps.source || 'lien-direct').trim().slice(0, 120);

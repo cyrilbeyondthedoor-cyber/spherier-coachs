@@ -13,11 +13,18 @@ function json(reponse, valeur) {
 }
 
 async function principal() {
-  const referentiel = await getReferentielV2({ force: true });
+  const referentiel = process.env.SPHERIER_REFERENTIEL_JSON ? JSON.parse(fs.readFileSync(process.env.SPHERIER_REFERENTIEL_JSON, 'utf8')) : await getReferentielV2({ force: true });
   const levels = Object.fromEntries(referentiel.competencies.map((competence) => [competence.id, 0]));
   const themes = Object.fromEntries(referentiel.themes.map((theme) => [theme.id, { status: 'open', unlock_hint: '' }]));
 
   const serveur = http.createServer((requete, reponse) => {
+    const asset = requete.url.split('?')[0];
+    if (/^\/spherier-(core|persistence|dashboard|navigation|progress)\.(js|css)$/.test(asset)) {
+      reponse.writeHead(200, { 'Content-Type': asset.endsWith('.css') ? 'text/css' : 'text/javascript' });
+      return reponse.end(fs.readFileSync(path.join(__dirname, '..', 'public', asset)));
+    }
+    if (requete.url.startsWith('/api/history')) return json(reponse, { items: [], nextCursor: null });
+
     if (requete.url.startsWith('/api/referential')) return json(reponse, referentiel);
     if (requete.url.startsWith('/api/state')) {
       return json(reponse, { snapshot: null, computed: { levels, themes }, notes: {} });
@@ -38,6 +45,7 @@ async function principal() {
     await page.goto(url);
     await page.locator('#ciel:not([hidden])').waitFor();
 
+    await page.locator('#comprendre-spherier').click();
     await page.getByRole('heading', { name: 'Comment utiliser le sphérier ?' }).waitFor();
     await page.getByText('Tu choisis par où commencer, thématique par thématique.', { exact: false }).waitFor();
     await page.getByRole('button', { name: 'Commencer mon audit' }).dispatchEvent('click');
@@ -63,7 +71,7 @@ async function principal() {
     assert.equal(await page.locator('.ciel-categorie').count(), 3);
     assert.equal(await page.locator('.ciel-dimension').count(), 7);
     assert.equal(referentiel.bookingUrl, 'https://calendly.com/thomasgibot/55min');
-    assert.ok((await page.locator('.ciel-dimension-compte').allTextContents()).every((texte) => texte.includes('%')));
+    assert.ok((await page.locator('.ciel-dimension-compte').allTextContents()).every((texte) => texte.includes('Pas encore évalué')));
     const cercles = await page.locator('.ciel-categorie').evaluateAll((elements) => elements.map((element) => {
       const rect = element.getBoundingClientRect();
       return {
@@ -73,7 +81,7 @@ async function principal() {
         overflowY: element.scrollHeight - element.clientHeight,
       };
     }));
-    assert.ok(cercles.every((cercle) => Math.abs(cercle.width - cercle.height) <= 1));
+    assert.ok(cercles.every((cercle) => cercle.width > 250 && cercle.height >= 400), 'les trois territoires gardent une zone de lecture suffisante');
     assert.ok(cercles.every((cercle) => cercle.overflowX === 0 && cercle.overflowY === 0));
     assert.equal(await page.locator('.ciel-guide').count(), 0);
 

@@ -28,14 +28,20 @@ exports.handler = async (event) => {
     return reponse(400, { erreur: 'Corps de requête JSON invalide.' });
   }
 
+  if (!corps || typeof corps !== 'object' || Array.isArray(corps)) return reponse(400, { erreur: 'Le corps doit être un objet JSON.' });
+
+  if (!Object.hasOwn(corps, 'base_revision')) return reponse(428, { erreur: 'Recharge cette page pour utiliser la nouvelle sauvegarde.' });
+  if (corps.base_revision !== null && (!Number.isSafeInteger(corps.base_revision) || corps.base_revision < 1)) return reponse(400, { erreur: 'Version de note invalide.' });
+
   try {
     const referentiel = await getReferentielV2();
     const { erreurs, clientId, code, texte } = validerNote({ referentiel, corps });
     if (erreurs.length > 0) return reponse(400, { erreur: erreurs.join(' '), details: erreurs });
 
-    const note = await ecrireNote({ clientId, code, texte });
+    const note = await ecrireNote({ clientId, code, texte, baseRevision: corps.base_revision });
     return reponse(200, { note });
   } catch (err) {
+    if (err.status === 409) return reponse(409, { erreur: err.message, current: err.current });
     console.error('note:', err);
     return reponse(502, { erreur: "Enregistrement de la note impossible." });
   }
