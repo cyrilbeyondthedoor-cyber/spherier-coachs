@@ -68,3 +68,8 @@ status = 200
   from = "/"
   to = "/spherier-v2.html"
   status = 200
+
+[[redirects]]
+from = "/api/history"
+to = "/.netlify/functions/history"
+status = 200

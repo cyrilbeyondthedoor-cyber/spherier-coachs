@@ -157,6 +157,13 @@ function json(reponse, valeur, statut = 200) {
 }
 
 const serveur = http.createServer((requete, reponse) => {
+    const asset = requete.url.split('?')[0];
+    if (/^\/spherier-(core|persistence|dashboard|navigation|progress)\.(js|css)$/.test(asset)) {
+      reponse.writeHead(200, { 'Content-Type': asset.endsWith('.css') ? 'text/css' : 'text/javascript' });
+      return reponse.end(fs.readFileSync(path.join(__dirname, '..', 'public', asset)));
+    }
+    if (requete.url.startsWith('/api/history')) return json(reponse, { items: [], nextCursor: null });
+
   if (requete.url.startsWith('/api/referential')) return json(reponse, referential);
   if (requete.url.startsWith('/api/state')) {
     const auditComplet = requete.url.includes('00000000-0000-4000-8000-000000000002');
@@ -286,6 +293,7 @@ const serveur = http.createServer((requete, reponse) => {
           cree_le: new Date().toISOString(),
           libelle: dernierSnapshot.label || null,
           blob: {
+            kind: dernierSnapshot.kind, practice: dernierSnapshot.practice || {},
             levels: dernierSnapshot.levels,
             selections: selectionsDerivees(dernierSnapshot),
             audit,
@@ -377,7 +385,7 @@ async function principal() {
     await page.getByRole('button', { name: 'Réserver un échange', exact: true }).waitFor();
     assert.equal(await page.locator('#audit-synthese').isVisible(), false, 'pas de synthèse tant qu\'aucune thématique n\'est complète');
     assert.equal(await page.locator('.niveau-accueil').count(), 3);
-    assert.equal(await page.getByText('Évalue au moins une thématique pour voir ton score', { exact: true }).count(), 3);
+    assert.equal(await page.locator('.niveau-accueil-score', { hasText: 'Non évalué' }).count(), 3);
     assert.equal(await page.locator('#barre.visible').count(), 0);
     await capturer(page, screenshotDir, 'accueil-desktop.png', { fullPage: true });
 
@@ -424,7 +432,7 @@ async function principal() {
       };
     });
     assert.equal(retourVisuel.confirmee, true, 'la marche cochée se colore avant le passage');
-    assert.equal(retourVisuel.astuce, 'Enregistré, compétence suivante.');
+    assert.equal(retourVisuel.astuce, 'Réponse retenue, compétence suivante.');
     await page.locator('.situer-compte', { hasText: '2 / 4' }).waitFor();
     await page.locator('.marche[data-niveau="2"]').dispatchEvent('click');
     await page.locator('.situer-compte', { hasText: '3 / 4' }).waitFor();
@@ -435,7 +443,7 @@ async function principal() {
     // --- Lot 6.2 : l'écran d'encouragement s'intercale avant le résultat --------
     await page.locator('.encourage-passees').waitFor();
     await page.getByText('Il te reste 1 compétence passée dans cette thématique.').waitFor();
-    await page.getByText('Le score est plus juste quand tout est évalué.').waitFor();
+    await page.getByText('Les compétences passées restent hors du calcul. Tu peux les reprendre quand tu le souhaites.').waitFor();
     await capturer(page, screenshotDir, 'encouragement-passees-desktop.png');
     // « Terminer la thématique » rouvre la compétence passée, là où elle a été laissée.
     await page.getByRole('button', { name: 'Terminer la thématique' }).dispatchEvent('click');
@@ -448,7 +456,7 @@ async function principal() {
 
     await page.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
     await page.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
-    assert.equal((await page.locator('.audit-bilan-score .syn-pct').textContent()).trim(), '50 %');
+    assert.equal((await page.locator('.audit-bilan-score .syn-pct').textContent()).trim(), '33 %');
 
     // --- Lot 6.3 : la thématique finie replace le score dans sa dimension -------
     assert.equal((await page.locator('.encourage-progression').textContent()).trim(),
@@ -574,7 +582,7 @@ async function principal() {
     // Compétence restée intacte pendant l'audit : la cocher depuis la carte doit
     // encore fonctionner, c'est l'usage « exploration libre » du même panneau.
     await page.locator('.etoile[data-competence="FON-02-02"]').dispatchEvent('click');
-    await page.getByText('Un exemple observable pour FON-02-02.').waitFor();
+    await page.locator('.marqueurs-apercu').filter({ hasText: 'Un exemple observable pour FON-02-02.' }).waitFor();
     assert.equal(await page.locator('.marche[data-niveau]').count(), 3);
     // Lot 8.1 : hors évaluation le raccourci n'existe pas, la touche ne s'affiche donc pas.
     assert.equal(await page.locator('.marche-touche').count(), 0);
@@ -588,6 +596,7 @@ async function principal() {
     const definitionAffichee = await page.locator('.panneau-def').textContent();
     assert.equal(/ :/.test(definitionAffichee), false);
     assert.ok(/\u00a0:/.test(definitionAffichee));
+    await page.locator('.marqueurs-details summary').click();
     const motFils = page.locator('.marche-enonce .lex-mot').first();
     assert.equal(await motFils.textContent(), 'fils*');
     // Élision : seul « ancrage » est souligné, l'article reste du texte courant.
@@ -612,7 +621,7 @@ async function principal() {
     // Retour sur la compétence après un détour par le lexique : ses marqueurs se
     // réaffichent, et c'est elle que l'on positionne juste après.
     await page.locator('.etoile[data-competence="FON-02-02"]').dispatchEvent('click');
-    await page.getByText('Un exemple observable pour FON-02-02.').waitFor();
+    await page.locator('.marqueurs-apercu').filter({ hasText: 'Un exemple observable pour FON-02-02.' }).waitFor();
 
     await page.locator('.marche[data-niveau="3"]').dispatchEvent('click');
     await page.locator('#panneau-fermer').dispatchEvent('click');
@@ -643,9 +652,9 @@ async function principal() {
     await page.locator('#detail-retour').dispatchEvent('click');
     await page.locator('#detail-retour').dispatchEvent('click');
     await page.locator('#audit-synthese:not([hidden])').waitFor();
-    assert.equal(await page.getByText('Évalue au moins une thématique pour voir ton score').count(), 0,
+    assert.equal((await page.locator('.niveau-accueil-score').allTextContents()).filter(t => !t.includes('%')).length, 0,
       'le score des niveaux ne dépend plus d\'un audit terminé');
-    await page.getByText('maîtrisées sur 1 thématique évaluée sur 8', { exact: false }).first().waitFor();
+    await page.getByText('maîtrisées parmi les compétences évaluées', { exact: false }).first().waitFor();
     await page.locator('#audit-synthese').dispatchEvent('click');
     await page.getByRole('heading', { name: 'Ton sphérier en un regard' }).waitFor();
     await page.getByText('sur 8 évaluée', { exact: false }).waitFor();
@@ -653,8 +662,8 @@ async function principal() {
     // partiel, et dire sur combien de thématiques ils reposent.
     assert.ok(await page.locator('.carte-resultat .ciel-score').count() >= 2,
       'la carte de la synthèse partielle affiche des pourcentages');
-    await page.locator('.carte-resultat .ciel-dimension-compte', { hasText: 'maîtrisées sur 1/2 thématiques' }).waitFor();
-    await page.locator('.carte-resultat .ciel-categorie-meta', { hasText: 'maîtrisées sur 1/3 thématiques' }).waitFor();
+    await page.locator('.carte-resultat .ciel-dimension-compte', { hasText: 'maîtrisées sur 1/2 thématiques terminées' }).waitFor();
+    await page.locator('.carte-resultat .ciel-categorie-meta', { hasText: 'maîtrisées sur 1/3 thématiques terminées' }).waitFor();
     // Un territoire dont rien n'est évalué le dit, au lieu d'afficher 0 %.
     assert.ok(await page.locator('.carte-resultat .ciel-dimension-compte', { hasText: 'Pas encore évalué' }).count() >= 1);
     await capturer(page, screenshotDir, 'synthese-partielle-desktop.png');
@@ -664,7 +673,7 @@ async function principal() {
     // un score et l'autre rien.
     const scoreCarte = (await page.locator('.carte-resultat [data-ouvrir="FON"] .ciel-dimension-compte')
       .textContent()).trim();
-    assert.match(scoreCarte, /^\d+ % maîtrisées sur 1\/2 thématiques · \d+\/6 évaluées$/);
+    assert.match(scoreCarte, /^\d+ % maîtrisées sur 1\/2 thématiques terminées · \d+\/6 évaluées$/);
     await page.locator('#panneau-fermer').dispatchEvent('click');
     await page.locator('#ciel [data-explorer-categorie="COACH"]').dispatchEvent('click');
     await page.locator('[data-dimension="FON"]').waitFor();
@@ -674,7 +683,7 @@ async function principal() {
       'le zoom de catégorie et la carte affichent le même score');
     // Le pourcentage remonte aussi sur l'onglet de la catégorie et sur son en-tête.
     assert.equal(await page.locator('[data-tab-categorie="COACH"] .syn-pct').count(), 1);
-    await page.locator('.categorie-detail-entete small', { hasText: 'maîtrisées sur 1/3 thématiques' }).waitFor();
+    await page.locator('.categorie-detail-entete small', { hasText: 'maîtrisées sur 1/3 thématiques terminées' }).waitFor();
     await capturer(page, screenshotDir, 'zoom-categorie-partiel-desktop.png');
     await page.locator('#detail-retour').dispatchEvent('click');
     await page.locator('#ciel:not([hidden])').waitFor();
@@ -1055,7 +1064,7 @@ async function principal() {
     await prioTheme.locator('#btn-mois').dispatchEvent('click');
     await prioTheme.getByRole('heading', { name: 'Mon mois' }).waitFor();
     assert.equal(await prioTheme.locator('.sel-item.cible').count(), 3);
-    await prioTheme.getByText(`Ce mois-ci — 3/${MAX_CIBLES_MAINTENANT}`, { exact: true }).waitFor();
+    await prioTheme.getByText(`Ce mois-ci · 3/${MAX_CIBLES_MAINTENANT}`, { exact: true }).waitFor();
     // Chaque ligne porte son origine : dimension puis thématique.
     assert.ok((await prioTheme.locator('.sel-item.cible .sel-nom small').first().textContent()).includes('›'));
     // Et l'ordre affiché est celui du classement.
@@ -1077,8 +1086,8 @@ async function principal() {
       'gardée pour plus tard, elle sort des trois du mois');
     assert.equal(apresPlusTard.length, 2);
 
-    await prioTheme.getByRole('button', { name: 'Réordonner', exact: true }).click();
-    await prioTheme.getByRole('heading', { name: `Récap après ${DIM_MULTI.name}` }).waitFor();
+    await prioTheme.getByRole('button', { name: 'Retravailler mes priorités', exact: true }).click();
+    await prioTheme.getByRole('heading', { name: 'Ton classement', exact: true }).waitFor();
 
     // Depuis le récap, la synthèse ne propose plus sa propre sélection.
     await prioTheme.locator('[data-suite="synthese"]').dispatchEvent('click');
@@ -1108,7 +1117,7 @@ async function principal() {
     assert.deepEqual(
       await relecture.locator('.sel-item.cible [data-aller]').evaluateAll((boutons) => boutons.map((b) => b.dataset.aller)),
       ordreApres, 'le classement enregistré revient dans le même ordre après rechargement');
-    await relecture.getByRole('button', { name: 'Réordonner', exact: true }).click();
+    await relecture.getByRole('button', { name: 'Retravailler mes priorités', exact: true }).click();
     await relecture.getByRole('heading', { name: /Récap après|Ton classement/ }).waitFor();
     assert.equal(await relecture.locator('#recap-classement .rang').count(), 3);
     await relecture.close();
@@ -1118,7 +1127,7 @@ async function principal() {
     await recapMobile.goto(`http://127.0.0.1:${adresse.port}/?c=00000000-0000-4000-8000-000000000003`);
     await recapMobile.locator('#ciel:not([hidden])').waitFor();
     await recapMobile.locator('#btn-mois').dispatchEvent('click');
-    await recapMobile.getByRole('button', { name: 'Réordonner', exact: true }).click();
+    await recapMobile.getByRole('button', { name: 'Retravailler mes priorités', exact: true }).click();
     await recapMobile.getByRole('heading', { name: /Récap après|Ton classement/ }).waitFor();
     assert.equal(await recapMobile.locator('#recap-classement .rang').count(), 3);
     // Le glisser-déposer n'existe pas au doigt : les flèches, elles, sont partout.
@@ -1233,7 +1242,7 @@ async function principal() {
     // Une compétence passée : l'encouragement s'intercale, ici on choisit le résultat.
     await mobile.locator('.encourage-passees').waitFor();
     await capturer(mobile, screenshotDir, 'encouragement-passees-mobile.png');
-    await mobile.getByRole('button', { name: 'Voir mon résultat quand même' }).dispatchEvent('click');
+    await mobile.getByRole('button', { name: 'Voir mon résultat' }).dispatchEvent('click');
     await mobile.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
     await mobile.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
     // Le fil d'Ariane s'arrête avant « Agrandir » et la croix au lieu de passer dessous.
@@ -1270,7 +1279,7 @@ async function principal() {
     await mobile.locator('.situer-compte', { hasText: '2 / 2' }).waitFor();
     await mobile.getByRole('button', { name: 'Suivante →' }).dispatchEvent('click');
     await mobile.getByText('Il te reste 2 compétences passées dans cette thématique.').waitFor();
-    await mobile.getByRole('button', { name: 'Voir mon résultat quand même' }).dispatchEvent('click');
+    await mobile.getByRole('button', { name: 'Voir mon résultat' }).dispatchEvent('click');
     await mobile.getByRole('heading', { name: 'Résultat de la thématique' }).waitFor();
     assert.deepEqual(dernierSnapshot.audit.passees.slice().sort(),
       [`${DIM_MULTI.id}-01-04`, `${DIM_MULTI.id}-02-01`, `${DIM_MULTI.id}-02-02`].sort());
@@ -1353,8 +1362,8 @@ async function principal() {
     assert.deepEqual(ordreMarches.map((m) => m.niveau), [3, 2, 1]);
     assert.ok(ordreMarches[0].haut < ordreMarches[1].haut && ordreMarches[1].haut < ordreMarches[2].haut,
       'les marches se suivent de haut en bas dans l\'ordre 3, 2, 1');
-    assert.ok(ordreMarches[0].gauche > ordreMarches[1].gauche && ordreMarches[1].gauche > ordreMarches[2].gauche,
-      'l\'escalier descend vers la gauche');
+    assert.ok(ordreMarches.every(m => m.gauche === ordreMarches[0].gauche),
+      'les réponses fixes sont alignées pour rester lisibles sur mobile');
 
     // --- Enregistrement en échec, puis Réessayer -----------------------------
     // Le résultat reste affiché depuis le brouillon local, et le libellé automatique
@@ -1366,7 +1375,7 @@ async function principal() {
     await annulation.locator('.situer-compte', { hasText: '4 / 4' }).waitFor();
     await annulation.locator('.marche[data-niveau="3"]').dispatchEvent('click');
     // La première compétence est restée passée : l'encouragement passe avant le résultat.
-    await annulation.getByRole('button', { name: 'Voir mon résultat quand même' }).dispatchEvent('click');
+    await annulation.getByRole('button', { name: 'Voir mon résultat' }).dispatchEvent('click');
     await annulation.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
     await annulation.locator('.audit-echec').waitFor();
     await annulation.getByRole('button', { name: "Réessayer l'enregistrement" }).waitFor();
@@ -1459,7 +1468,7 @@ async function principal() {
 
     const cible = mobileBarre.getByRole('button', { name: 'Reprendre mon audit' });
     await cible.waitFor();
-    await mobileBarre.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await cible.scrollIntoViewIfNeeded();
     await mobileBarre.waitForTimeout(80);
     const atteignable = await mobileBarre.evaluate(() => {
       const bouton = document.getElementById('audit-cta');
@@ -1643,7 +1652,7 @@ async function principal() {
       // dans le viewport ET dans la zone visible du corps. Une compétence longue impose
       // de défiler, jamais de renoncer à voir une marche.
       const marchesEnBas = await pageLisibilite.evaluate(() => {
-        const corps = document.getElementById('panneau-corps').getBoundingClientRect();
+        const corps = document.getElementById('situer-reponses').getBoundingClientRect();
         return [...document.querySelectorAll('.marche')].map((marche) => {
           const m = marche.getBoundingClientRect();
           return { top: Math.round(m.top), bottom: Math.round(m.bottom), corpsHaut: Math.round(corps.top), corpsBas: Math.round(corps.bottom) };
@@ -1704,12 +1713,17 @@ async function principal() {
     // b) La définition répète le terme : rappel discret, pas un second lien.
     assert.equal(await lexique.locator('.panneau-def .lex-mot').count(), 0);
     assert.equal(await lexique.locator('.panneau-def .lex-rappel').count(), 1);
-    // c) L'énoncé de la liste porte son propre terme, rendu en span : un bouton dans un
-    // bouton n'est pas du HTML valide et le navigateur le sortirait de son parent.
+    // Le lexique est un bouton autonome dans une ligne non interactive. Le focus
+    // clavier ouvre la même définition que le clic et le survol.
     const motListe = lexique.locator('.comp-nom .lex-mot');
     assert.equal(await motListe.count(), 1);
     assert.equal(await motListe.textContent(), 'fils*');
-    assert.equal(await motListe.evaluate((el) => el.tagName), 'SPAN');
+    assert.equal(await motListe.evaluate((el) => el.tagName), 'BUTTON');
+    await motListe.focus();
+    await lexique.locator('.lex-bulle[role="dialog"]').waitFor();
+    assert.equal(await lexique.locator('.lex-bulle-terme').textContent(), 'Fils');
+    await lexique.keyboard.press('Escape');
+    await lexique.locator('.lex-bulle').waitFor({ state: 'detached' });
     assert.equal(await lexique.locator('.comp-nom .lex-rappel').count(), 1,
       "« ancrage » est déjà pris par le titre : la liste n'en garde qu'un rappel");
     await capturer(lexique, screenshotDir, 'lexique-theme-desktop.png');
@@ -1780,7 +1794,7 @@ async function principal() {
     await lancer.waitFor();
     assert.match((await lancer.textContent()).trim(), /^Évaluer cette thématique · 4 compétences/);
     // La liste reste consultable à côté du bouton : c'est le mode exploration.
-    assert.equal(await constellation.locator('.comp-item[data-competence]').count(), 4);
+    assert.equal(await constellation.locator('.comp-ouvrir[data-competence]').count(), 4);
     const avantConstellation = nbSnapshots;
     await lancer.dispatchEvent('click');
     await constellation.locator('body[data-panneau="situer"]').waitFor({ state: 'attached' });
@@ -1966,7 +1980,7 @@ async function principal() {
       await retouches.locator('.marche[data-niveau="1"]').dispatchEvent('click');
     }
     await retouches.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
-    assert.equal((await retouches.locator('.audit-bilan-score .syn-pct').textContent()).trim(), '33 %');
+    assert.equal((await retouches.locator('.audit-bilan-score .syn-pct').textContent()).trim(), '0 %');
 
     // 8.3 : « Modifier mes positionnements » repart de la première compétence.
     await retouches.locator('#audit-modifier-theme').dispatchEvent('click');
@@ -1981,7 +1995,7 @@ async function principal() {
       await retouches.getByRole('button', { name: 'Suivante →' }).dispatchEvent('click');
     }
     await retouches.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
-    assert.equal((await retouches.locator('.audit-bilan-score .syn-pct').textContent()).trim(), '50 %',
+    assert.equal((await retouches.locator('.audit-bilan-score .syn-pct').textContent()).trim(), '25 %',
       'le score suit la correction faite depuis « Modifier mes positionnements »');
 
     // On boucle la seconde thématique pour atteindre le résultat de dimension.
@@ -2061,7 +2075,7 @@ async function principal() {
     await retouches.locator(`[data-dimension="${DIM_MULTI.id}"] .theme[data-theme]`).first().dispatchEvent('click');
     await retouches.locator('#theme-resultat').dispatchEvent('click');
     await retouches.locator('body[data-panneau="resultat-theme"]').waitFor({ state: 'attached' });
-    assert.equal((await retouches.locator('.audit-bilan-score .syn-pct').textContent()).trim(), '67 %',
+    assert.equal((await retouches.locator('.audit-bilan-score .syn-pct').textContent()).trim(), '50 %',
       'le score de la thématique suit une correction faite depuis la vue d\'ensemble');
     await retouches.close();
 

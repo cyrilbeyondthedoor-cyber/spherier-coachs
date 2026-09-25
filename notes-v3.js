@@ -14,7 +14,7 @@ async function lireNotes(clientId) {
   const supabase = creerClientServeur();
   const { data, error } = await supabase
     .from(TABLE_NOTES)
-    .select('code, texte, cree_le, maj_le')
+    .select('code, texte, cree_le, maj_le, revision')
     .eq('client_id', clientId);
 
   if (error) throw new Error(`Lecture des notes impossible : ${error.message}`);
@@ -22,13 +22,14 @@ async function lireNotes(clientId) {
   // Renvoyées indexées par code : c'est ainsi que le renderer les consomme.
   const notes = {};
   (data ?? []).forEach((n) => {
-    notes[n.code] = { texte: n.texte, cree_le: n.cree_le, maj_le: n.maj_le };
+    notes[n.code] = { texte: n.texte, cree_le: n.cree_le, maj_le: n.maj_le, revision: n.revision };
   });
   return notes;
 }
 
 function validerNote({ referentiel, corps }) {
   const erreurs = [];
+  if (!corps || typeof corps !== 'object' || Array.isArray(corps)) return { erreurs: ['Le corps doit être un objet JSON.'] };
 
   if (!estUuidV4(corps.uuid)) {
     erreurs.push('uuid manquant ou invalide (UUID v4 attendu).');
@@ -54,29 +55,14 @@ function validerNote({ referentiel, corps }) {
 }
 
 // Écriture unique : on crée ou on remplace, jamais on n'empile.
-// Une note vidée est supprimée plutôt que conservée à blanc — une ligne vide serait un
-// faux positif partout où l'on signale « cette compétence porte une note ».
-async function ecrireNote({ clientId, code, texte }) {
-  const supabase = creerClientServeur();
-
-  if (texte === '') {
-    const { error } = await supabase
-      .from(TABLE_NOTES)
-      .delete()
-      .eq('client_id', clientId)
-      .eq('code', code);
-    if (error) throw new Error(`Suppression de la note impossible : ${error.message}`);
-    return { code, texte: '', supprimee: true };
-  }
-
-  const { data, error } = await supabase
-    .from(TABLE_NOTES)
-    .upsert({ client_id: clientId, code, texte }, { onConflict: 'client_id,code' })
-    .select('code, texte, cree_le, maj_le')
-    .single();
-
+// Une note vidée conserve sa révision pour empêcher un ancien appareil de la recréer.
+async function ecrireNote({ clientId, code, texte, baseRevision }) {
+  const { data, error } = await creerClientServeur().rpc('save_spherier_note', {
+    p_client_id: clientId, p_code: code, p_text: texte, p_base_revision: baseRevision,
+  });
   if (error) throw new Error(`Enregistrement de la note impossible : ${error.message}`);
-  return { ...data, supprimee: false };
+  if (data.conflict) throw Object.assign(new Error('Cette note a changé sur un autre appareil.'), { status: 409, current: data.current });
+  return { ...data.note, supprimee: data.note.texte === '' };
 }
 
 module.exports = { lireNotes, validerNote, ecrireNote, TABLE_NOTES, LONGUEUR_MAX };

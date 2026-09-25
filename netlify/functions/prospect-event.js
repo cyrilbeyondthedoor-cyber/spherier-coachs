@@ -26,6 +26,8 @@ exports.handler = async (event) => {
   } catch {
     return reponse(400, { erreur: 'Données invalides.' });
   }
+
+  if (!corps || typeof corps !== 'object' || Array.isArray(corps)) return reponse(400, { erreur: 'Le corps doit être un objet JSON.' });
   const uuid = String(corps.uuid || '').trim().toLowerCase();
   const type = String(corps.type || '');
   if (!estUuidV4(uuid) || !['started', 'progress', 'agenda_clicked'].includes(type)) {

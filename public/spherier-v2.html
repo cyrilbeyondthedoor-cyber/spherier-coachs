@@ -2289,6 +2289,7 @@
   }
   .marche-actuelle .marche-touche { border-color: color-mix(in srgb, var(--teinte-p) 45%, transparent); color: var(--paper-dim); }
 </style>
+<link rel="stylesheet" href="/spherier-progress.css">
 </head>
 <body>
 
@@ -2296,8 +2297,8 @@
 <div class="stars" id="stars"></div>
 <div class="mountains">
   <svg viewBox="0 0 1400 300" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M0,300 L0,220 L120,140 L240,200 L380,80 L520,160 L640,40 L780,120 L900,60 L1040,140 L1180,90 L1300,170 L1400,130 L1400,300 Z" fill="#050811" opacity="0.9"/>
-    <path d="M0,300 L0,260 L150,200 L290,250 L430,180 L580,230 L720,170 L860,220 L1000,180 L1140,240 L1280,200 L1400,250 L1400,300 Z" fill="#0a0e1a" opacity="0.95"/>
+    <path d="M0,300 L0,220 L120,140 L240,200 L380,80 L520,160 L640,40 L780,120 L900,60 L1040,140 L1180,90 L1300,170 L1400,130 L1400,300 Z" fill="var(--night-deep)" opacity="0.9"/>
+    <path d="M0,300 L0,260 L150,200 L290,250 L430,180 L580,230 L720,170 L860,220 L1000,180 L1140,240 L1280,200 L1400,250 L1400,300 Z" fill="var(--night)" opacity="0.95"/>
   </svg>
 </div>
 
@@ -2416,12 +2417,13 @@
   </div>
 
   <div class="detail" id="detail" hidden>
+    <button type="button" id="detail-accueil">Toutes les catégories</button>
     <button type="button" class="detail-retour" id="detail-retour" hidden>← Toutes les catégories</button>
     <div class="dimensions" id="dimensions" hidden></div>
   </div>
 </div>
 
-<div class="barre-sauvegarde" id="barre" aria-live="polite">
+<div class="barre-sauvegarde" id="barre" inert aria-hidden="true" aria-live="polite">
   <p class="barre-texte" id="barre-texte"></p>
   <input type="text" class="barre-libelle" id="barre-libelle" maxlength="80"
          placeholder="Nommer ce point — ex. Octobre, ce qui se passe en moi"
@@ -2443,9 +2445,14 @@
     <div class="panneau-tete" id="panneau-tete"></div>
     <div class="panneau-corps" id="panneau-corps"></div>
     <div class="panneau-pied" id="panneau-pied"></div>
+    <div class="panneau-feedback" id="panneau-feedback"></div>
   </div>
 </div>
 
+<script src="/spherier-core.js"></script>
+<script src="/spherier-persistence.js"></script>
+<script src="/spherier-dashboard.js"></script>
+<script src="/spherier-navigation.js"></script>
 <script>
   // ============================================================
   // IDENTITÉ DU CLIENT
@@ -2476,7 +2483,7 @@
 
   function lireClientMemorise() {
     try {
-      const brut = localStorage.getItem(CLE_CLIENT_MEMORISE);
+      const brut = memoLire(CLE_CLIENT_MEMORISE);
       if (!brut) return null;
       const valeur = JSON.parse(brut);
       return valeur && UUID_V4_RE.test(valeur.uuid) ? String(valeur.uuid).toLowerCase() : null;
@@ -2488,12 +2495,12 @@
   function memoriserClient() {
     if (!CLIENT_ID) return;
     try {
-      localStorage.setItem(CLE_CLIENT_MEMORISE, JSON.stringify({ uuid: CLIENT_ID }));
+      memoEcrire(CLE_CLIENT_MEMORISE, JSON.stringify({ uuid: CLIENT_ID }));
     } catch { /* stockage indisponible : on continue sans filet, sans casser */ }
   }
 
   function oublierClient() {
-    try { localStorage.removeItem(CLE_CLIENT_MEMORISE); } catch {}
+    try { memoRetirer(CLE_CLIENT_MEMORISE); } catch {}
   }
 
   // ============================================================
@@ -2845,7 +2852,7 @@
     try {
       const sourceUrl = new URLSearchParams(window.location.search).get('source');
       const source = sourceUrl || (modeRenvoiLien ? 'lien-oublie' : 'lien-direct');
-      const reponse = await fetch('/api/access', {
+      const reponse = await apiFetch('/api/access', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2911,10 +2918,11 @@
       .map((competence) => competence.id);
   }
 
+  function scoreCodes(codes) { return SpherierCore.score(codes, brouillon.levels, brouillon.passees || []); }
+  function scoreTexte(score) { return score === null ? 'Non évalué' : `${score} %`; }
   function progressionCodes(codes) {
-    const total = codes.length;
-    const maitrisees = codes.filter((code) => (brouillon.levels[code] ?? 0) >= NIVEAU_ACQUIS).length;
-    return { maitrisees, total, pourcentage: total ? Math.round((maitrisees / total) * 100) : 0 };
+    const s = scoreCodes(codes);
+    return { maitrisees: s.mastered, total: s.total, evaluees: s.evaluated, passees: s.skipped, pourcentage: s.percent };
   }
 
   function auditEstComplet() {
@@ -2929,18 +2937,18 @@
     // un audit à moitié fait ressemblerait à une pratique à moitié maîtrisée.
     const complets = themesComplets().length;
     const totalThemes = etat.referentiel.themes.length;
-    const lisible = complet || complets > 0;
+    const lisible = etat.referentiel.competencies.some(c => estEvaluee(c.id));
     const contenu = DIFFICULTES_ORDRE.map((d) => {
       const comps = etat.referentiel.competencies.filter((competence) => competence.difficulty === d.nom);
       const evaluees = comps.filter((competence) => (brouillon.levels[competence.id] ?? 0) > 0).length;
       const maitrisees = comps.filter((competence) => (brouillon.levels[competence.id] ?? 0) >= NIVEAU_ACQUIS).length;
       // Sur un audit terminé, les deux dénominateurs se rejoignent : le chiffre ne
       // saute donc pas au moment où la dernière thématique se ferme.
-      const pct = evaluees ? Math.round((maitrisees / evaluees) * 100) : 0;
-      let score = 'Évalue au moins une thématique pour voir ton score';
-      if (lisible && evaluees === 0) score = 'Rien d\'évalué encore à ce niveau';
+      const pct = scoreCodes(comps.map(c => c.id)).percent;
+      let score = 'Non évalué';
+      if (evaluees === 0) score = 'Non évalué';
       else if (complet) score = `${pct} % maîtrisées`;
-      else if (lisible) score = `${pct} % maîtrisées sur ${complets} thématique${complets > 1 ? 's' : ''} évaluée${complets > 1 ? 's' : ''} sur ${totalThemes}`;
+      else if (lisible) score = `${pct} % maîtrisées parmi les compétences évaluées`;
       return `<button type="button" class="niveau-accueil" data-niveau-accueil="${echapper(d.nom)}" style="--dc:${echapper(d.couleur)}"${interactif ? '' : ' tabindex="-1"'}>
         <span class="niveau-accueil-nom">${echapper(d.nom)}</span>
         <span class="niveau-accueil-score">${score}</span>
@@ -3308,7 +3316,7 @@
               </g>
             </svg>
             <button type="button" class="amas-mobile-titre" data-theme="${echapper(theme.id)}">${echapper(theme.name)}</button>
-            <p class="amas-mobile-meta">${competences.length} compétences · ${progression.pourcentage} % maîtrisées</p>
+            <p class="amas-mobile-meta">${competences.length} compétences · ${progression.pourcentage === null ? 'Non évalué' : progression.pourcentage + ' % maîtrisées'}</p>
           </article>`;
         }).join('');
       conteneur.innerHTML = `<div class="amas-mobile-piste">${cartes}</div>${avecLegende ? legendeConstellation(teinte) : ''}`;
@@ -3366,7 +3374,7 @@
         <circle class="theme-noyau" cx="${theme.x}" cy="${theme.y}" r="${R_NOYAU}" fill="var(--night-deep)" stroke="${couleurNoyau}" stroke-opacity="${verrouillee ? 0.4 : 0.85}"/>
         ${etoiles}
         <text class="theme-nom" x="${theme.x}" y="${theme.y + DECALAGE_NOM}">${nomSvg}</text>
-        <text class="theme-progression" x="${theme.x}" y="${progressionY}">${progression.pourcentage} % maîtrisées</text>
+        <text class="theme-progression" x="${theme.x}" y="${progressionY}">${progression.pourcentage === null ? 'Non évalué' : progression.pourcentage + ' % maîtrisées'}</text>
       </g>`;
     }).join('');
 
@@ -3491,20 +3499,26 @@
   let brouillon = { levels: {}, current: [], later: [], priorites: { themes: {}, dimensions: {}, classement: [] } };
 
   const cleBrouillon = () => `spherier-v2-brouillon-${CLIENT_ID}`;
+  const cleNavigation = () => `spherier-navigation-${CLIENT_ID}`;
 
   // Le brouillon est écrit à chaque modification. La sauvegarde est explicite — un
   // snapshot doit rester « un moment où je me suis évalué », pas une ligne par clic —
   // mais rien ne doit être perdu si la page se ferme ou si le réseau lâche.
   function enregistrerBrouillon() {
+    if (conflitSnapshot) return;
     try {
-      if (!estModifie()) localStorage.removeItem(cleBrouillon());
-      else localStorage.setItem(cleBrouillon(), JSON.stringify({ ...brouillon, le: Date.now() }));
+      if (!estModifie()) effacerBrouillon();
+      else {
+        const copie = JSON.stringify({ ...brouillon, base: reference, baseSnapshotId: etat.snapshot?.id || null, le: Date.now() });
+        memoEcrire(cleParOnglet(cleBrouillon()), copie);
+        memoEcrire(cleBrouillon(), copie);
+      }
     } catch { /* stockage indisponible : on continue sans filet, sans casser */ }
   }
 
   function lireBrouillon() {
     try {
-      const brut = localStorage.getItem(cleBrouillon());
+      const brut = lireCopieOnglet(cleBrouillon());
       return brut ? JSON.parse(brut) : null;
     } catch { return null; }
   }
@@ -3512,6 +3526,7 @@
   const memeListe = (a, b) => a.length === b.length && [...a].sort().join() === [...b].sort().join();
 
   function estModifie() {
+    if (!SpherierCore.equal(reference.practice || {}, brouillon.practice || {})) return true;
     const codes = new Set([...Object.keys(reference.levels), ...Object.keys(brouillon.levels)]);
     for (const c of codes) if ((reference.levels[c] ?? 0) !== (brouillon.levels[c] ?? 0)) return true;
     if (signaturePriorites(reference.priorites) !== signaturePriorites(brouillon.priorites)) return true;
@@ -3526,6 +3541,7 @@
     });
     return {
       niveaux,
+      pratique: !SpherierCore.equal(reference.practice || {}, brouillon.practice || {}),
       cibles: !memeListe(reference.current, brouillon.current),
       plusTard: !memeListe(reference.later, brouillon.later),
       // Réordonner le classement ne change ni l'ensemble des cibles ni celui de la
@@ -3599,6 +3615,7 @@
   // MODIFICATIONS
   // ============================================================
   function appliquerChangement(majEtat) {
+    if (conflitSnapshot) { ouvrirConflit(); return; }
     const avant = JSON.stringify(Object.entries(etat.computed.themes).map(([k, v]) => k + v.status));
     majEtat();
     etat.computed.levels = { ...etat.computed.levels, ...brouillon.levels };
@@ -3638,6 +3655,7 @@
   // enregistrement. Une compétence absente du classement — gardée depuis la carte, par
   // exemple — suit l'ancien chemin.
   function basculerPlusTard(code) {
+    initialiserClassementDepuisSelections();
     const p = etatPriorites();
     const rang = p.classement.indexOf(code);
     if (rang >= 0) {
@@ -3668,38 +3686,20 @@
   }
 
   function basculerMaintenant(code) {
-    const p = etatPriorites();
-    if (p.classement.length > 0) {
-      if (brouillon.current.includes(code)) deplacerDansClassement(code, MAX_MAINTENANT);
-      else deplacerDansClassement(code, Math.min(brouillon.current.length, MAX_MAINTENANT - 1));
-      memoriserPriorites();
-      return;
-    }
-    appliquerChangement(() => {
-      if (brouillon.current.includes(code)) {
-        brouillon.current = brouillon.current.filter((c) => c !== code);
-      } else {
-        brouillon.current = [...brouillon.current, code];
-        brouillon.later = brouillon.later.filter((c) => c !== code);
-      }
-    });
+    initialiserClassementDepuisSelections();
+    if (brouillon.current.includes(code)) { retirerDuClassement(code); return; }
+    if (brouillon.current.length >= MAX_MAINTENANT) return;
+    deplacerDansClassement(code, brouillon.current.length);
+    memoriserPriorites();
   }
 
   function remplacerMaintenant(sortant, entrant) {
-    const p = etatPriorites();
-    if (p.classement.length > 0) {
-      const rang = p.classement.indexOf(sortant);
-      deplacerDansClassement(entrant, rang >= 0 ? rang : 0);
-      deplacerDansClassement(sortant, MAX_MAINTENANT);
-      memoriserPriorites();
-      return;
-    }
-    appliquerChangement(() => {
-      brouillon.current = [...new Set(
-        brouillon.current.filter((c) => c !== sortant).concat(entrant)
-      )];
-      brouillon.later = brouillon.later.filter((c) => c !== entrant);
-    });
+    initialiserClassementDepuisSelections();
+    const rang = etatPriorites().classement.indexOf(sortant);
+    retirerDuClassement(sortant);
+    brouillon.later = [...new Set([...brouillon.later, sortant])];
+    deplacerDansClassement(entrant, Math.max(0, rang));
+    memoriserPriorites();
   }
 
   // Une cible « maintenant » dont la thématique s'est refermée doit partir avec elle,
@@ -3764,7 +3764,7 @@
   let noteMinuteur = null;
   let noteEnVol = null;
 
-  const cleNote = (code) => `spherier-v2-note-${CLIENT_ID}-${code}`;
+  const cleNote = (code) => cleParOnglet(`spherier-v2-note-${CLIENT_ID}-${code}`);
 
   function texteNote(code) {
     return (etat.notes && etat.notes[code] ? etat.notes[code].texte : '') || '';
@@ -3803,15 +3803,15 @@
 
   function lireBrouillonNote(code) {
     try {
-      const v = localStorage.getItem(cleNote(code));
+      const v = lireCopieOnglet(`spherier-v2-note-${CLIENT_ID}-${code}`);
       return v === null ? null : v;
     } catch { return null; }
   }
 
   function ecrireBrouillonNote(code, texte) {
     try {
-      if (texte === texteNote(code)) localStorage.removeItem(cleNote(code));
-      else localStorage.setItem(cleNote(code), texte);
+      if (texte === texteNote(code)) memoRetirer(cleNote(code));
+      else memoEcrire(cleNote(code), texte);
     } catch { /* stockage indisponible : on continue sans filet */ }
   }
 
@@ -3822,88 +3822,7 @@
     el.innerHTML = message ? `<i></i>${echapper(message)}` : '';
   }
 
-  function brancherNote(competence) {
-    const bloc = document.getElementById('note-bloc');
-    const champ = document.getElementById('note-champ');
-    const bouton = document.getElementById('note-btn');
-    const compteur = document.getElementById('note-compteur');
-    if (!bloc || !champ) return;
-
-    document.getElementById('note-entete').addEventListener('click', () => {
-      const ouverte = bloc.classList.toggle('ouverte');
-      document.getElementById('note-entete').setAttribute('aria-expanded', String(ouverte));
-      if (ouverte) champ.focus();
-    });
-
-    const majCompteur = () => {
-      const n = champ.value.length;
-      compteur.textContent = n > NOTE_MAX - 400 ? `${n} / ${NOTE_MAX}` : '';
-    };
-
-    const modifiee = () => champ.value.trim() !== texteNote(competence.id).trim();
-
-    const majBouton = () => {
-      bouton.disabled = !modifiee();
-      if (modifiee()) etatNote('Pas encore enregistrée', '');
-    };
-
-    const enregistrerLaNote = async () => {
-      if (!modifiee()) return;
-      clearTimeout(noteMinuteur);
-      const texte = champ.value;
-      etatNote('Enregistrement…', 'encours');
-      bouton.disabled = true;
-      noteEnVol = competence.id;
-      try {
-        const reponse = await fetch('/api/note', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uuid: CLIENT_ID, code: competence.id, texte }),
-        });
-        if (!reponse.ok) {
-          const d = await reponse.json().catch(() => ({}));
-          throw new Error(d.erreur || `Le serveur a répondu ${reponse.status}`);
-        }
-        const { note } = await reponse.json();
-        if (!etat.notes) etat.notes = {};
-        if (note.supprimee) delete etat.notes[competence.id];
-        else etat.notes[competence.id] = { texte: note.texte, cree_le: note.cree_le, maj_le: note.maj_le };
-
-        try { localStorage.removeItem(cleNote(competence.id)); } catch {}
-        etatNote('Enregistrée', 'enregistree');
-        bouton.disabled = true;
-        // Le signalement « Note » doit apparaître aussitôt là où la compétence est listée.
-        if (themeAffiche) { /* la liste sera régénérée au retour */ }
-      } catch (err) {
-        // Rien n'est perdu : le texte reste à l'écran et sur l'appareil.
-        etatNote(`Non enregistrée — ${err.message}`, 'echec');
-        bouton.disabled = false;
-      } finally {
-        noteEnVol = null;
-      }
-    };
-
-    champ.addEventListener('input', () => {
-      ecrireBrouillonNote(competence.id, champ.value);
-      majCompteur();
-      majBouton();
-      clearTimeout(noteMinuteur);
-      noteMinuteur = setTimeout(enregistrerLaNote, NOTE_DELAI_MS);
-    });
-    // Sortir du champ enregistre sans attendre la pause : c'est le geste qui signale
-    // que l'on a fini d'écrire.
-    champ.addEventListener('blur', enregistrerLaNote);
-    bouton.addEventListener('click', enregistrerLaNote);
-
-    majCompteur();
-    if (modifiee()) {
-      etatNote('Retrouvée sur cet appareil, pas encore enregistrée', '');
-      bouton.disabled = false;
-    } else if (texteNote(competence.id)) {
-      const d = etat.notes[competence.id].maj_le;
-      etatNote(`Enregistrée le ${new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`, '');
-    }
-  }
+  function brancherNote(competence) { brancherNoteFiable(competence); }
 
   function carteRessource(r) {
     const meta = (r.type || []).join(' · ');
@@ -3999,8 +3918,9 @@
         : 'Tu es à la marche la plus haute. Reclique dessus pour revenir en arrière.');
 
     return `<section class="panneau-section">
-      ${competence.markers ? `<p class="panneau-label">Marqueurs observables</p>
-        <div class="marche-enonce" style="margin-bottom:18px">${marqueursListe(competence.markers)}</div>` : ''}
+      ${competence.markers ? `<div class="repere-observable"><p class="panneau-label">Marqueurs observables</p>
+        <p class="marqueurs-apercu">${echapper(competence.markers.replace(/[*#]/g, '').split('\n')[0].slice(0, 180))}${competence.markers.length > 180 ? '…' : ''}</p>
+        <details class="marqueurs-details"><summary>Lire tous les marqueurs</summary><div class="marche-enonce">${marqueursListe(competence.markers)}</div></details></div>` : ''}
       <p class="panneau-label">Où tu en es</p>
       <div class="escalier">${marches}</div>
       <p class="escalier-note">${note}</p>
@@ -4076,6 +3996,7 @@
   // énoncés, ressources, auto-évaluation et « plus tard ». Seule l'action « maintenant »
   // est bloquée. C'est ce qui en fait un horizon et non un mur.
   function ouvrirTheme(themeId, idDimension) {
+    retourDashboard = false; retourApresFiche = null;
     const theme = etat.referentiel.themes.find((t) => t.id === themeId);
     if (!theme) return;
     configurerPleinEcran(false);
@@ -4102,15 +4023,15 @@
         brouillon.current.includes(c.id) ? '<span class="comp-marque comp-marque-maintenant">Ce mois</span>' : '',
         brouillon.later.includes(c.id) ? '<span class="comp-marque comp-marque-plus-tard">Plus tard</span>' : '',
       ].filter(Boolean).join('');
-      return `<button type="button" class="comp-item" data-competence="${echapper(c.id)}">
+      return `<div class="comp-item">
         <span class="comp-astre">${astreCran(Math.max(niveau, 1), ouverte ? teinte : '#8d8677')
           .replace('fill-opacity="' + CRANS[Math.max(niveau, 1)].opacite + '"', `fill-opacity="${niveau === 0 ? 0.22 : CRANS[niveau].opacite}"`)}</span>
         <span>
-          <span class="comp-nom">${lierLexique(typoFr(echapper(c.name)), { dansBouton: true })}</span>
+          <span class="comp-nom">${lierLexique(typoFr(echapper(c.name)))}</span><button type="button" class="comp-ouvrir" data-competence="${echapper(c.id)}" aria-label="Ouvrir ${echapper(c.name)}">Voir la compétence</button>
           <span class="comp-marques">${pastilleDifficulte(c)}${marqueNote(c.id)}${marques}</span>
         </span>
         <span class="comp-palier">${niveau === 0 ? 'À évaluer' : echapper(etat.referentiel.scale[niveau])}</span>
-      </button>`;
+      </div>`;
     }).join('');
 
     elPanneau.style.setProperty('--teinte-p', teinte);
@@ -4167,7 +4088,7 @@
     if (versResultat) versResultat.addEventListener('click', () => ouvrirResultatTheme({
       dimensionId: idDimension, themeId, suite: 'theme',
     }));
-    elPanneauCorps.querySelectorAll('.comp-item[data-competence]').forEach((btn) => {
+    elPanneauCorps.querySelectorAll('[data-competence]').forEach((btn) => {
       // Un mot du lexique cliqué dans l'énoncé ouvre sa définition, pas la fiche : les
       // deux gestionnaires voient le même clic, celui-ci se retire.
       btn.addEventListener('click', (evenement) => {
@@ -4197,7 +4118,7 @@
 
   function majBoutonMois() {
     const n = brouillon.current.length + brouillon.later.length;
-    elBtnMois.hidden = n === 0;
+    elBtnMois.hidden = false;
     elBtnMoisCompte.textContent = brouillon.current.length + '/' + MAX_MAINTENANT;
   }
 
@@ -4232,98 +4153,7 @@
     </div>`;
   }
 
-  function ouvrirMois() {
-    configurerPleinEcran(false);
-    competenceAffichee = null;
-    themeAffiche = null;
-    elPanneau.style.setProperty('--teinte-p', '#c9a661');
-
-    elPanneauTete.innerHTML = `
-      <p class="panneau-fil"><b>Tes choix</b></p>
-      <h2 class="panneau-titre" id="panneau-titre">Mon mois</h2>
-      <p class="panneau-def">Ce que tu travailles maintenant, et ce que tu gardes pour la suite.</p>`;
-
-    const classement = etatPriorites().classement;
-    const suiteClassement = classement.slice(MAX_MAINTENANT);
-
-    const cibles = brouillon.current.length
-      ? brouillon.current.map((c) => ligneSelection(c, { cible: true })).join('')
-      : `<p class="sel-vide">Aucune compétence choisie pour ce mois. Trois au maximum : c'est peu, et c'est voulu — mieux vaut trois compétences travaillées qu'une liste d'intentions.</p>`;
-
-    // La suite du classement garde SON ordre : c'est celui que le membre a posé sur
-    // l'écran de récap, et le regrouper par dimension l'effacerait. Le reste de la
-    // liste d'attente, qui n'a jamais été classé, reste groupé par dimension : c'est
-    // ce qui transforme un fourre-tout en file d'attente lisible.
-    const parDim = new Map();
-    brouillon.later.filter((code) => !classement.includes(code)).forEach((code) => {
-      const c = etat.referentiel.competencies.find((x) => x.id === code);
-      if (!c) return;
-      const d = dimensionDe(c);
-      const cle = d ? d.id : '?';
-      if (!parDim.has(cle)) parDim.set(cle, { dimension: d, codes: [] });
-      parDim.get(cle).codes.push(code);
-    });
-    const ordre = etat.referentiel.dimensions.map((d) => d.id);
-    const groupes = [...parDim.entries()]
-      .sort((a, b) => ordre.indexOf(a[0]) - ordre.indexOf(b[0]))
-      .map(([id, g]) => `
-        <p class="sel-dim" style="--h: ${TEINTES_HEX[id] || '#f0ebe0'}"><i></i>${echapper(g.dimension ? g.dimension.name : '')}</p>
-        ${g.codes.map((c) => ligneSelection(c)).join('')}`).join('');
-
-    const suiteHtml = suiteClassement.length
-      ? `<p class="sel-dim sel-dim-classement"><i></i>Dans ton classement</p>
-         ${suiteClassement.map((code) => ligneSelection(code)).join('')}`
-      : '';
-
-    const plusTard = brouillon.later.length
-      ? suiteHtml + groupes
-      : `<p class="sel-vide">Rien en attente. Sur n'importe quelle compétence, « Garder pour plus tard » la range ici — y compris dans une thématique encore fermée.</p>`;
-
-    // « Réordonner » renvoie vers l'écran de récap, le seul endroit où l'ordre se
-    // décide. Sans dimension bouclée, il s'ouvre en mode global.
-    const reordonner = classement.length
-      ? '<button type="button" class="choix-lien" id="mois-reordonner">Réordonner</button>'
-      : '';
-
-    ecrireCorps(`
-      <section class="panneau-section sel-groupe">
-        <div class="sel-entete">
-          <p class="panneau-label">Ce mois-ci — ${brouillon.current.length}/${MAX_MAINTENANT}</p>
-          ${reordonner}
-        </div>
-        ${cibles}
-      </section>
-      <section class="panneau-section sel-groupe">
-        <p class="panneau-label">Pour plus tard${brouillon.later.length ? ' — ' + brouillon.later.length : ''}</p>
-        ${plusTard}
-      </section>
-      <div id="zone-remplacement"></div>
-      <p class="sel-rappel">Touche une compétence pour la retrouver dans sa constellation.</p>`);
-    elPanneauCorps.scrollTop = 0;
-
-    const boutonReordonner = document.getElementById('mois-reordonner');
-    if (boutonReordonner) boutonReordonner.addEventListener('click', () => ouvrirRecapDimension(derniereDimensionEvaluee()));
-
-    elPanneauCorps.querySelectorAll('[data-aller]').forEach((btn) => {
-      btn.addEventListener('click', () => allerVersCompetence(btn.dataset.aller));
-    });
-    elPanneauCorps.querySelectorAll('[data-promouvoir]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const code = btn.dataset.promouvoir;
-        const competence = etat.referentiel.competencies.find((c) => c.id === code);
-        if (brouillon.current.length >= MAX_MAINTENANT) {
-          proposerRemplacement(competence, () => ouvrirMois());
-          document.getElementById('zone-remplacement').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-          return;
-        }
-        basculerMaintenant(code);
-        ouvrirMois();
-      });
-    });
-
-    afficherPanneau();
-    document.body.dataset.panneau = 'mois';
-  }
+  function ouvrirMois() { afficherDashboard(); }
 
   // Rejoindre une compétence dans la carte : déplie sa dimension, dessine sa
   // constellation au besoin, puis ouvre son panneau.
@@ -4531,12 +4361,16 @@
         <p class="situer-astuce" id="situer-astuce">${surMobile() ? astuceCourte : `${astuceLongue}<span class="tinder-clavier">Tape 1, 2 ou 3 au clavier</span>`}</p>
         <button type="button" class="situer-btn situer-passer" id="situer-passer">Suivante →</button>
       </div>`;
+    const reponses = elPanneauCorps.querySelector('.escalier');
+    reponses.id = 'situer-reponses';
+    reponses.setAttribute('aria-label', 'Où tu en es');
+    elPanneauPied.prepend(reponses);
     elPanneauCorps.scrollTop = 0;
 
     // Cocher une marche fait avancer tout seul : c'est ce qui rend le parcours fluide.
     // Le passage est retardé de 250 ms, marche colorée et astuce explicite : sans ce
     // retour, une testeuse a cru que son clic n'avait pas été pris en compte.
-    elPanneauCorps.querySelectorAll('.marche[data-niveau]').forEach((btn) => {
+    elPanneau.querySelectorAll('.marche[data-niveau]').forEach((btn) => {
       btn.addEventListener('click', () => {
         if (situer.enAttente) return;
         const n = Number(btn.dataset.niveau);
@@ -4550,7 +4384,7 @@
         situer.enAttente = true;
         btn.classList.add('audit-marche-confirmee');
         const astuce = document.getElementById('situer-astuce');
-        if (astuce) astuce.textContent = 'Enregistré, compétence suivante.';
+        if (astuce) astuce.textContent = 'Réponse retenue, compétence suivante.';
         clearTimeout(minuteurConfirmation);
         minuteurConfirmation = setTimeout(() => {
           minuteurConfirmation = null;
@@ -4675,17 +4509,6 @@
   // compétences passées et le repère de reprise, eux, doivent survivre à ce cas —
   // ils décrivent un parcours, pas une modification en attente. On les réécrit donc
   // à la main quand l'écriture automatique vient de les emporter.
-  function persisterAudit() {
-    const priorites = brouillon.priorites;
-    const aDesPriorites = Boolean(priorites) && (
-      Object.keys(priorites.themes || {}).length > 0
-      || Object.keys(priorites.dimensions || {}).length > 0
-      || (priorites.classement || []).length > 0);
-    if ((brouillon.passees || []).length === 0 && !brouillon.derniere && !aDesPriorites) return;
-    try {
-      localStorage.setItem(cleBrouillon(), JSON.stringify({ ...brouillon, le: Date.now() }));
-    } catch { /* stockage indisponible : on continue sans filet */ }
-  }
 
   function memoriserAudit() {
     appliquerChangement(() => {});
@@ -4706,15 +4529,6 @@
 
   // Repère de reprise : où le membre en était, à la compétence près. Simple signet,
   // donc on l'écrit sans repasser par un redessin complet de la carte.
-  function noterDerniere(contexte, code) {
-    if (!contexte) return;
-    const avant = brouillon.derniere;
-    if (avant && avant.themeId === contexte.themeId && avant.code === code) return;
-    brouillon.derniere = { dimensionId: contexte.dimensionId, themeId: contexte.themeId, code };
-    // Simple signet : pas de redessin. Le bloc d'accueil est masqué tant que le panneau
-    // est ouvert, le rafraîchir à chaque question ne servait à personne.
-    persisterAudit();
-  }
 
   // --- Priorités et classement --------------------------------------------------
   // Trois priorités par thématique, trois par dimension, et UN classement qui les
@@ -4771,7 +4585,7 @@
   // classement sont les cibles du mois, la suite rejoint la file d'attente.
   function deriverSelectionsLocales() {
     const p = etatPriorites();
-    if (p.classement.length === 0) return;
+    if (p.classement.length === 0 && p.initialized !== true) return;
     const ouverte = (code) => estOuverte(competenceParCode(code)?.theme);
     const tete = p.classement.slice(0, MAX_MAINTENANT);
     const current = tete.filter(ouverte);
@@ -4782,13 +4596,14 @@
       // Ce que le membre travaillait AVANT d'avoir un classement entre ici, en tête de
       // l'ancienne file d'attente. Sans cette ligne, les trois priorités choisies par
       // l'ancienne synthèse sortaient du modèle au premier classement.
-      ...brouillon.current,
+      ...((p.initialized && p.classement.length === 0) ? [] : brouillon.current),
       ...brouillon.later,
     ])].filter((code) => !current.includes(code));
     brouillon.current = current;
   }
 
   function memoriserPriorites() {
+    etatPriorites().initialized = true;
     recomposerClassement();
     deriverSelectionsLocales();
     appliquerChangement(() => {});
@@ -4823,7 +4638,7 @@
     const q = p && typeof p === 'object' && !Array.isArray(p) ? p : {};
     const groupe = (obj) => Object.keys(obj || {}).sort()
       .map((cle) => cle + ':' + [...(obj[cle] || [])].sort().join(',')).join('|');
-    return `${groupe(q.themes)}#${groupe(q.dimensions)}#${(q.classement || []).join(',')}`;
+    return `${q.initialized === true ? '1' : '0'}#${groupe(q.themes)}#${groupe(q.dimensions)}#${(q.classement || []).join(',')}`;
   }
 
   // L'accueil porte le sous-texte de reprise : il se met à jour quand on le redécouvre.
@@ -4840,7 +4655,7 @@
     const cible = evenement.target;
     if (cible && (cible.tagName === 'INPUT' || cible.tagName === 'TEXTAREA' || cible.isContentEditable)) return;
     if (['1', '2', '3'].includes(evenement.key)) {
-      const marche = elPanneauCorps.querySelector(`.marche[data-niveau="${evenement.key}"]`);
+      const marche = elPanneau.querySelector(`.marche[data-niveau="${evenement.key}"]`);
       if (!marche) return;
       evenement.preventDefault();
       marche.click();
@@ -4883,9 +4698,8 @@
       passees,
       aFaire,
       complete: aFaire.length === 0,
-      // Même formule que `scoreThemeAudit` : le score se lit sur TOUTES les
-      // compétences de la thématique, une passée pèse donc comme un zéro.
-      score: codes.length ? Math.round((somme / (codes.length * 3)) * 100) : 0,
+      // La maîtrise porte uniquement sur les compétences évaluées.
+      score: scoreCodes(codes).percent,
     };
   }
 
@@ -4899,7 +4713,7 @@
       codes,
       evaluees: codes.filter(estEvaluee).length,
       complete: themes.length > 0 && themes.every((item) => item.complete),
-      score: codes.length ? Math.round((somme / (codes.length * 3)) * 100) : 0,
+      score: scoreCodes(codes).percent,
     };
   }
 
@@ -4931,12 +4745,9 @@
     if (evaluees.length === 0) {
       return { pct: null, texte: 'Pas encore évalué', comptes, compte: 'Pas encore évalué', score: '' };
     }
-    if (complets === 0) {
-      return { pct: null, texte: 'Score à la fin de la thématique', comptes, compte: comptes, score: '' };
-    }
     const maitrisees = evaluees.filter((code) => brouillon.levels[code] >= NIVEAU_ACQUIS).length;
-    const pct = Math.round((maitrisees / evaluees.length) * 100);
-    const suite = `maîtrisées sur ${complets}/${themes.length} thématiques`;
+    const pct = scoreCodes(codes).percent;
+    const suite = `maîtrisées sur ${complets}/${themes.length} thématiques terminées`;
     return {
       pct,
       texte: `${pct} % ${suite}`,
@@ -4987,42 +4798,13 @@
   // pour proposer la bifurcation la plus probable en premier.
   // `depart` : une thématique déjà complète n'a plus rien « à faire », la reprise
   // l'enverrait droit au résultat. Repartir de zéro est ce qu'on attend d'un « Revoir ».
-  function evaluerTheme(dimensionId, themeId, suite = 'theme', { depart = null } = {}) {
-    const dimension = dimensionParId(dimensionId);
-    const theme = themeParId(themeId);
-    if (!dimension || !theme) { ouvrirChoixDimension(); return; }
-    ouvrirMeSituer({
-      codes: codesDeTheme(theme.id),
-      titre: theme.name,
-      teinte: TEINTES_HEX[dimension.id] || '#c9a661',
-      depart,
-      contexte: { dimensionId: dimension.id, themeId: theme.id, suite },
-    });
-  }
 
   // « Évaluer toute la dimension » : on enchaîne les thématiques non complètes dans
   // l'ordre, une à la fois, avec un résultat entre chacune.
-  function evaluerDimension(dimensionId) {
-    const dimension = dimensionParId(dimensionId);
-    if (!dimension) { ouvrirChoixDimension(); return; }
-    const suivante = themesDeDimension(dimension).find((theme) => !etatTheme(theme).complete);
-    if (!suivante) { ouvrirResultatDimension(dimension.id); return; }
-    evaluerTheme(dimension.id, suivante.id, 'dimension');
-  }
 
   // Reprise : on retourne là où le membre s'est arrêté, à la compétence près. Sans
   // repère utilisable — première visite, ou thématique terminée depuis — on repose la
   // question du départ plutôt que d'imposer un point de reprise arbitraire.
-  function reprendreAudit() {
-    const repere = brouillon.derniere;
-    const theme = repere ? themeParId(repere.themeId) : null;
-    const dimension = repere ? dimensionParId(repere.dimensionId) : null;
-    if (theme && dimension && !etatTheme(theme).complete) {
-      evaluerTheme(dimension.id, theme.id, 'theme');
-      return;
-    }
-    ouvrirChoixDimension();
-  }
 
   // --- Écran « Choisir une dimension » -----------------------------------------
   // Les écrans de résultat s'ouvrent agrandis : ils tiennent deux colonnes, et le
@@ -5049,7 +4831,7 @@
 
   function jauge(faits, total) {
     const pct = total ? Math.round((faits / total) * 100) : 0;
-    return `<span class="choix-jauge" aria-hidden="true"><i style="width:${pct}%"></i></span>`;
+    return `<span class="choix-jauge" aria-hidden="true"><i style="width:${pct ?? 0}%"></i></span>`;
   }
 
   // Avec une catégorie, l'écran se resserre sur ses dimensions et prend son nom ; sans
@@ -5190,11 +4972,11 @@
     ecrireCorps(`<div class="encourage-passees">
       <span class="mark">✧</span>
       <h3 class="encourage-titre" id="panneau-titre">Il te reste ${oubliees.length} compétence${oubliees.length > 1 ? 's' : ''} passée${oubliees.length > 1 ? 's' : ''} dans cette ${enchaine ? 'dimension' : 'thématique'}.</h3>
-      <p class="encourage-texte">Le score est plus juste quand tout est évalué.</p>
+      <p class="encourage-texte">Les compétences passées restent hors du calcul. Tu peux les reprendre quand tu le souhaites.</p>
       ${listeCompetences(oubliees)}
       <div class="encourage-boutons">
         <button type="button" class="encourage-primaire" id="encourage-terminer">Terminer ${enchaine ? 'la dimension' : 'la thématique'}</button>
-        <button type="button" class="situer-btn" id="encourage-resultat">Voir mon résultat quand même</button>
+        <button type="button" class="situer-btn" id="encourage-resultat">Voir mon résultat</button>
       </div>
     </div>`);
     elPanneauCorps.scrollTop = 0;
@@ -5226,45 +5008,10 @@
   // contexte suit la compétence affichée : c'est lui qui dit, à chaque instant, dans
   // quelle thématique on se trouve, et c'est son changement qui déclenche
   // l'enregistrement silencieux de celle qu'on vient de finir.
-  function codesEnchaines(dimension) {
-    return themesDeDimension(dimension)
-      .filter((theme) => !etatTheme(theme).complete)
-      .flatMap((theme) => codesDeTheme(theme.id));
-  }
 
-  function evaluerDimensionEnchainee(dimensionId) {
-    const dimension = dimensionParId(dimensionId);
-    if (!dimension) { ouvrirChoixDimension(); return; }
-    const codes = codesEnchaines(dimension);
-    if (codes.length === 0) { ouvrirResultatDimension(dimension.id, 'dimension'); return; }
-    const premier = competenceParCode(codes[0]);
-    ouvrirMeSituer({
-      codes,
-      titre: dimension.name,
-      teinte: TEINTES_HEX[dimension.id] || '#c9a661',
-      contexte: {
-        dimensionId: dimension.id,
-        themeId: premier ? premier.theme : null,
-        suite: 'dimension',
-        // Ce drapeau est tout ce qui distingue les deux modes : même écran, même
-        // enregistrement, seule la longueur de la liste et les bornes changent.
-        enchaine: true,
-      },
-    });
-  }
 
   // Met le contexte à jour sur la compétence affichée. Renvoie la thématique qu'on
   // vient de quitter, ou `null` si l'on est toujours dans la même.
-  function suivreThemeEnchaine() {
-    const contexte = situer && situer.contexte;
-    if (!contexte || !contexte.enchaine) return null;
-    const competence = competenceParCode(situer.codes[situer.index]);
-    const courant = competence ? competence.theme : contexte.themeId;
-    if (!courant || courant === contexte.themeId) return null;
-    const precedent = contexte.themeId;
-    contexte.themeId = courant;
-    return precedent;
-  }
 
   // Enregistrement de fin de thématique en mode enchaîné : pas d'écran de résultat, pas
   // d'interruption, un bandeau et c'est tout. La promesse « tes réponses sont
@@ -5278,7 +5025,7 @@
     // compétence suivante, et deux lignes en recouvraient l'énoncé pendant quatre
     // secondes. La confirmation tient en une phrase, le parcours continue dessous.
     if (ok && theme) {
-      bandeau(`Thématique enregistrée · ${etatTheme(theme).score} % de maîtrise`, '', 'succes');
+      bandeau(`Thématique enregistrée · ${scoreTexte(etatTheme(theme).score)} de maîtrise`, '', 'succes');
     }
   }
 
@@ -5316,7 +5063,7 @@
       // Le bandeau posé par `enregistrer` est générique : on le réécrit avec le score,
       // pour que la maîtrise se lise à l'instant où la thématique se referme.
       if (enregistrement === 'ok' && theme) {
-        bandeau(`Thématique enregistrée · ${etatTheme(theme).score} % de maîtrise`,
+        bandeau(`Thématique enregistrée · ${scoreTexte(etatTheme(theme).score)} de maîtrise`,
           'Tes réponses sont en sécurité. Tu peux continuer ou t\'arrêter là.', 'succes');
       }
     }
@@ -5340,7 +5087,7 @@
       // Le bandeau posé par `enregistrer` annonce une thématique : ici c'est la dimension
       // entière qui vient de se refermer, et c'est son score que le membre attend.
       if (ok && dimension) {
-        bandeau(`Dimension enregistrée · ${etatDimension(dimension).score} % de maîtrise`,
+        bandeau(`Dimension enregistrée · ${scoreTexte(etatDimension(dimension).score)} de maîtrise`,
           'Tes réponses sont en sécurité.', 'succes');
       }
     }
@@ -5501,17 +5248,17 @@
     const competence = competenceParCode(code);
     if (!competence) return '';
     return `<div class="prio-ligne${retenue ? ' retenue' : ''}" data-ligne-priorite="${echapper(code)}">
-      <label class="prio-choix">
-        <input type="checkbox" class="prio-case" data-${cle}="${echapper(code)}"${retenue ? ' checked' : ''}>
+      <div class="prio-choix">
+        <input type="checkbox" class="prio-case" aria-label="Prioriser ${echapper(competence.name)}" data-${cle}="${echapper(code)}"${retenue ? ' checked' : ''}>
         <span class="prio-texte">
-          <span class="prio-nom">${lierLexique(typoFr(echapper(competence.name)), { dansBouton: true })}</span>
+          <span class="prio-nom">${lierLexique(typoFr(echapper(competence.name)))}</span>
           <span class="prio-meta">
             ${pastilleNiveau(code)}
             ${origine ? `<span class="prio-origine">${echapper(origine)}</span>` : ''}
             ${proposee ? '<span class="prio-proposee">proposée</span>' : ''}
           </span>
         </span>
-      </label>
+      </div>
       ${ficheRepliee(code)}
     </div>`;
   }
@@ -5977,7 +5724,7 @@
                 <span class="audit-classement-nom">${echapper(item.theme.name)}</span>
                 <span>${pctHtml(item.score)}</span>
                 <span class="audit-chevron" aria-hidden="true">▾</span>
-                <span class="choix-jauge" aria-hidden="true"><i style="width:${item.score}%"></i></span>
+                <span class="choix-jauge" aria-hidden="true"><i style="width:${item.score ?? 0}%"></i></span>
               </button>
               ${detailThemeHtml(item)}
             </article>`;
@@ -6040,7 +5787,7 @@
     return {
       total,
       evaluees: evaluees.length,
-      pct: evaluees.length ? Math.round((maitrisees / evaluees.length) * 100) : 0,
+      pct: scoreCodes(etat.referentiel.competencies.map(c => c.id)).percent,
     };
   }
 
@@ -6192,7 +5939,7 @@
     const global = scoreGlobalPartiel();
 
     elPanneauTete.innerHTML = `
-      <p class="panneau-fil audit-fil">M'évaluer <span>›</span> <b>${dimension ? echapper(dimension.name) : 'Mon classement'}</b></p>
+      ${!dimension ? '<button type="button" class="panneau-retour" id="classement-retour-mois">← Mon mois</button>' : ''}<p class="panneau-fil audit-fil">M'évaluer <span>›</span> <b>${dimension ? echapper(dimension.name) : 'Mon classement'}</b></p>
       <h2 class="panneau-titre" id="panneau-titre">${dimension ? `Récap après ${echapper(dimension.name)}` : 'Ton classement'}</h2>
       <p class="audit-sous-compteur" id="recap-compte" role="status">${texteCompteClassement()}</p>`;
 
@@ -6230,6 +5977,7 @@
     </div></div>`);
     elPanneauCorps.scrollTop = 0;
 
+    document.getElementById('classement-retour-mois')?.addEventListener('click', () => ouvrirMois());
     brancherClassement();
     const enregistrerClassement = document.getElementById('recap-enregistrer');
     enregistrerClassement.addEventListener('click', async () => {
@@ -6256,7 +6004,7 @@
   function scoreThemeAudit(theme) {
     const competences = etat.referentiel.competencies.filter((c) => c.theme === theme.id);
     const somme = competences.reduce((total, competence) => total + (brouillon.levels[competence.id] ?? 0), 0);
-    const score = competences.length ? Math.round((somme / (competences.length * 3)) * 100) : 100;
+    const score = scoreCodes(competences.map(c => c.id)).percent;
     const decouverte = competences.filter((c) => (brouillon.levels[c.id] ?? 0) === 1).length;
     return { theme, competences, score, decouverte };
   }
@@ -6272,13 +6020,7 @@
   }
 
   function basculerPrioriteAudit(code) {
-    const index = brouillon.current.indexOf(code);
-    if (index >= 0) brouillon.current.splice(index, 1);
-    else if (brouillon.current.length < MAX_MAINTENANT) {
-      brouillon.current.push(code);
-      brouillon.later = brouillon.later.filter((item) => item !== code);
-    }
-    appliquerChangement(() => {});
+    basculerMaintenant(code);
     ouvrirSelectionAudit();
   }
 
@@ -6402,7 +6144,7 @@
 
     ecrireCorps(`<section class="carte-resultat">
       ${auditModulaireComplet()
-        ? `<p class="carte-resultat-complet">Audit complet <span>·</span> ${scoreGlobalPartiel().pct} % de maîtrise</p>`
+        ? `<p class="carte-resultat-complet">Audit complet <span>·</span> ${scoreTexte(scoreGlobalPartiel().pct)} de maîtrise</p>`
         : ''}
       <p class="carte-resultat-intro">Voici la carte de ta pratique. Les pourcentages portent sur ce que tu as déjà évalué, et chaque territoire dit sur combien de ses thématiques il repose.${
         complets < totalThemes
@@ -6512,6 +6254,7 @@
   // Pourcentage mis en avant, coloré par seuil : vert à partir de 80 %, orange entre
   // 50 et 80 %, rouge en dessous de 50 %.
   function pctHtml(pct) {
+    if (pct === null) return '<span class="score-non-evalue">Non évalué</span>';
     const classe = pct >= 80 ? 'haut' : (pct >= 50 ? 'moyen' : 'bas');
     return `<b class="syn-pct ${classe}">${pct} %</b>`;
   }
@@ -6590,7 +6333,10 @@
       ${blocRendezVous('audit-rdv-bas')}`;
   }
 
+  let synRecherche = '';
+  let synTri = 'referentiel';
   function ouvrirSynthese(finalAudit = null) {
+    retourDashboard = false; retourApresFiche = null;
     if (typeof finalAudit === 'boolean') synModeFinal = finalAudit;
     configurerPleinEcran(true);
     competenceAffichee = null;
@@ -6598,7 +6344,7 @@
     situer = null;
     elPanneau.style.setProperty('--teinte-p', '#c9a661');
 
-    const retenues = etat.referentiel.competencies.filter(synGardeScope);
+    const retenues = etat.referentiel.competencies.filter(synGardeScope).filter(c => normaliserRecherche(c.name + ' ' + origineDe(c.id)).includes(normaliserRecherche(synRecherche)));
     // Le parcours doit suivre l'ordre du TABLEAU, pas celui de la liste plate renvoyée
     // par Notion — qui trie par code et donne donc AUT avant MOI. Un membre qui lit ses
     // trous de haut en bas puis clique « M'évaluer sur ces N compétences » attend de
@@ -6616,13 +6362,13 @@
       const comps = etat.referentiel.competencies.filter((c) => c.difficulty === d.nom);
       const evaluees = comps.filter((c) => (brouillon.levels[c.id] ?? 0) > 0).length;
       const maitrisees = comps.filter((c) => (brouillon.levels[c.id] ?? 0) >= NIVEAU_ACQUIS).length;
-      const pct = comps.length ? Math.round((maitrisees / comps.length) * 100) : 0;
+      const pct = scoreCodes(comps.map(c => c.id)).percent;
       return `<button type="button" class="syn-maitrise-item" data-scope-difficulte="${echapper(d.nom)}" style="--dc:${echapper(d.couleur)}">
         <div class="syn-maitrise-tete">
           <span class="syn-maitrise-nom">${echapper(d.nom)}</span>
           <span class="syn-maitrise-score">${pctHtml(pct)} maîtrisées</span>
         </div>
-        <div class="syn-maitrise-barre" role="progressbar" aria-label="${echapper(d.nom)} maîtrisé à ${pct} %" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div>
+        <div class="syn-maitrise-barre" role="progressbar" aria-label="${echapper(d.nom)} ${scoreTexte(pct)} de maîtrise" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct ?? 0}"><i style="width:${pct ?? 0}%"></i></div>
         <p class="syn-maitrise-detail">${evaluees}/${comps.length} évaluées</p>
       </button>`;
     }).join('');
@@ -6643,7 +6389,7 @@
           <span class="syn-categorie-nom">${echapper(categorie.name)}</span>
           <span class="syn-categorie-score">${pctHtml(progression.pourcentage)} maîtrisées · ${evaluees}/${codes.length} évaluées</span>
         </div>
-        <div class="syn-categorie-barre" role="progressbar" aria-label="${echapper(categorie.name)} maîtrisé à ${progression.pourcentage} %" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progression.pourcentage}"><i style="width:${progression.pourcentage}%"></i></div>
+        <div class="syn-categorie-barre" role="progressbar" aria-label="${echapper(categorie.name)} ${scoreTexte(progression.pourcentage)} de maîtrise" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progression.pourcentage ?? 0}"><i style="width:${progression.pourcentage ?? 0}%"></i></div>
       </button>`;
     }).join('');
 
@@ -6664,7 +6410,7 @@
     // plus faible au plus fort, puis par thématique la moins maîtrisée. Le regroupement
     // par dimension disparaît, l'étiquette de chaque carte le remplace.
     const themeDe = (c) => etat.referentiel.themes.find((t) => t.id === c.theme);
-    const corpsZoom = () => [1, 2, 3].map((n) => {
+    const corpsZoom = () => [0, 1, 2, 3].map((n) => {
       const comps = ordreDeLecture(retenues.filter((c) => (brouillon.levels[c.id] ?? 0) === n))
         .sort((a, b) => {
           const ta = themeDe(a); const tb = themeDe(b);
@@ -6672,12 +6418,21 @@
         });
       if (comps.length === 0) return '';
       return `<section class="syn-niveau">
-        <p class="syn-section-titre">${echapper(etat.referentiel.scale[n] || '')} · ${comps.length}</p>
+        <p class="syn-section-titre">${echapper(etat.referentiel.scale[n] || 'Non évalué')} · ${comps.length}</p>
         ${comps.map((c) => ligneCompetence(c, { contexte: true })).join('')}
       </section>`;
     }).join('');
 
-    const corps = synScope ? corpsZoom() : etat.referentiel.dimensions.map((d) => {
+    const listeTriee = () => ordreDeLecture(retenues).sort((a, b) => {
+      if (synTri === 'priorites') {
+        const ordre = [...brouillon.current, ...brouillon.later];
+        const rang = c => ordre.includes(c.id) ? ordre.indexOf(c.id) : 999;
+        return rang(a) - rang(b);
+      }
+      if (synTri === 'travail') return ((brouillon.levels[a.id] || 4) - (brouillon.levels[b.id] || 4));
+      return 0;
+    }).map(c => ligneCompetence(c, { contexte: true })).join('');
+    const corps = (synRecherche || synTri !== 'referentiel') ? listeTriee() : synScope ? corpsZoom() : etat.referentiel.dimensions.map((d) => {
       const teinte = TEINTES_HEX[d.id];
       const themes = etat.referentiel.themes
         .filter((t) => t.dimension === d.name)
@@ -6736,7 +6491,8 @@
 
     const titreDimensions = synScope ? '' : '<p class="syn-section-titre">Progression par dimension</p>';
 
-    ecrireCorps(rdvHaut
+    const outils = `<div class="syn-outils"><label>Rechercher une compétence<input type="search" id="syn-recherche" value="${echapper(synRecherche)}" placeholder="Un mot, une thématique…"></label><label>Trier les compétences<select id="syn-tri"><option value="referentiel">Ordre du référentiel</option><option value="priorites">Mes priorités d’abord</option><option value="travail">Compétences à travailler</option></select></label></div>`;
+    ecrireCorps(outils + rdvHaut
       + enteteVue
       + actionSituer
       + titreDimensions
@@ -6744,7 +6500,16 @@
       + finAudit);
     elPanneauCorps.scrollTop = 0;
 
+    const recherche = document.getElementById('syn-recherche');
+    recherche.addEventListener('input', () => {
+      const curseur = recherche.selectionStart; synRecherche = recherche.value; ouvrirSynthese();
+      const champ = document.getElementById('syn-recherche'); champ.focus({ preventScroll: true });
+      try { champ.setSelectionRange(curseur, curseur); } catch {}
+    });
+    const tri = document.getElementById('syn-tri'); tri.value = synTri;
+    tri.onchange = () => { synTri = tri.value; ouvrirSynthese(); document.getElementById('syn-tri').focus({ preventScroll: true }); };
     elPanneauCorps.querySelectorAll('[data-plier]').forEach((btn) => {
+      btn.setAttribute('aria-expanded', String(synDeplies.has(btn.dataset.plier)));
       btn.addEventListener('click', () => {
         const cle = btn.dataset.plier;
         // Bascule en place : redessiner tout le panneau remettait le défilement en haut
@@ -6757,7 +6522,7 @@
       });
     });
     elPanneauCorps.querySelectorAll('[data-aller]').forEach((btn) => {
-      btn.addEventListener('click', () => allerVersCompetence(btn.dataset.aller));
+      btn.addEventListener('click', () => { const c = competenceParCode(btn.dataset.aller); retourApresFiche = { libelle: 'Ma synthèse', synthese: true, scroll: elPanneauCorps.scrollTop }; ouvrirCompetence(c.id, dimensionDe(c).id); });
     });
     elPanneauCorps.querySelectorAll('[data-scope-categorie]').forEach((bouton) => {
       bouton.addEventListener('click', () => {
@@ -6851,7 +6616,7 @@
 
 
   function brancherPanneau(competence) {
-    elPanneauCorps.querySelectorAll('.marche[data-niveau]').forEach((btn) => {
+    elPanneau.querySelectorAll('.marche[data-niveau]').forEach((btn) => {
       btn.addEventListener('click', () => {
         definirNiveau(competence.id, Number(btn.dataset.niveau));
         rafraichirPanneau(competence.id);
@@ -6900,6 +6665,7 @@
     elPanneau.style.setProperty('--teinte-p', teinte);
     // Un retour vers un écran d'audit prime sur le retour vers la thématique : c'est de
     // là que le membre vient, et c'est son score qu'il attend au retour.
+    if (retourDashboard) retourApresFiche = { libelle: 'Mon mois', dashboard: true };
     const retourAudit = retourApresFiche;
     const retour = !retourAudit && themeAffiche && themeAffiche.id === competence.theme;
     elPanneauTete.innerHTML = `
@@ -6928,7 +6694,9 @@
       retourApresFiche = null;
       // L'écran est redessiné de bout en bout : le score, la barre et le dépliage
       // repartent des niveaux du brouillon, corrections comprises.
-      if (cible.themeId) ouvrirResultatTheme({ dimensionId: cible.dimensionId, themeId: cible.themeId, suite: cible.suite });
+      if (cible.dashboard) { retourDashboard = false; afficherDashboard(); }
+      else if (cible.synthese) { ouvrirSynthese(); elPanneauCorps.scrollTop = cible.scroll; }
+      else if (cible.themeId) ouvrirResultatTheme({ dimensionId: cible.dimensionId, themeId: cible.themeId, suite: cible.suite });
       else ouvrirResultatDimension(cible.dimensionId, cible.suite);
     });
 
@@ -6940,6 +6708,7 @@
     competenceAffichee = null;
     themeAffiche = null;
     retourApresFiche = null;
+    retourDashboard = false;
     clearTimeout(minuteurConfirmation);
     minuteurConfirmation = null;
     situer = null;
@@ -7015,6 +6784,7 @@
   // porte déjà un `transform` et sert donc de repère aux positions absolues.
   let bulleLexique = null;
   let motLexiqueActif = null;
+  let retourFocusLexique = false;
 
   // `rendreFocus` : une fermeture au survol ne doit pas déplacer le focus, sinon la
   // souris promenée sur un énoncé déplacerait le curseur clavier à chaque mot.
@@ -7026,7 +6796,7 @@
     motLexiqueActif = null;
     // Le focus revient au mot cliqué s'il est encore à l'écran : le panneau peut
     // avoir été redessiné entre-temps par une navigation dans l'audit.
-    if (rendreFocus && mot && mot.isConnected && elVoile.classList.contains('visible')) mot.focus({ preventScroll: true });
+    if (rendreFocus && mot && mot.isConnected && elVoile.classList.contains('visible')) { retourFocusLexique = true; mot.focus({ preventScroll: true }); retourFocusLexique = false; }
   }
 
   // `focus` : à l'ouverture au survol, la bulle ne prend pas le focus. Au clic, si.
@@ -7261,6 +7031,8 @@
   }
 
   function majBarre() {
+    elBarre.inert = !estModifie();
+    elBarre.setAttribute('aria-hidden', String(!estModifie()));
     if (!estModifie()) { elBarre.classList.remove('visible'); return; }
     const c = changements();
     if (brouillonRestaure) {
@@ -7281,6 +7053,7 @@
       return;
     }
     const bouts = [];
+    if (c.pratique) bouts.push('tes notes de pratique');
     if (c.niveaux.length) bouts.push(`<b>${c.niveaux.length}</b> positionnement${c.niveaux.length > 1 ? 's' : ''}`);
     if (c.cibles) bouts.push('tes cibles du mois');
     if (c.plusTard) bouts.push('ta liste « plus tard »');
@@ -7337,6 +7110,7 @@
     // ses quatre secondes. Il se glisse donc sous l'en-tête du panneau, dont la hauteur
     // varie d'un écran à l'autre et se mesure ici.
     const panneauOuvert = !elVoile.hidden && document.body.dataset.panneau !== undefined;
+    (panneauOuvert ? document.getElementById('panneau-feedback') : document.body).appendChild(elBandeau);
     // `bottom: auto` explicite : la règle qui rapproche le bandeau de la barre de
     // sauvegarde pose un `bottom`, et le laisser avec un `top` étirerait la boîte.
     if (panneauOuvert) {
@@ -7365,13 +7139,14 @@
   // photographie ce qu'il envoie au moment où il part.
   let chaineEnregistrement = Promise.resolve();
 
-  function enregistrer(libelleAuto = null) {
-    const suite = chaineEnregistrement.catch(() => {}).then(() => enregistrerMaintenant(libelleAuto));
+  function enregistrer(libelleAuto = null, kind = 'autosave') {
+    const suite = chaineEnregistrement.catch(() => {}).then(() => enregistrerMaintenant(libelleAuto, kind));
     chaineEnregistrement = suite.catch(() => {});
     return suite;
   }
 
-  async function enregistrerMaintenant(libelleAuto = null) {
+  async function enregistrerMaintenant(libelleAuto = null, kind = 'autosave') {
+    if (conflitSnapshot) { ouvrirConflit(); return false; }
     const repli = typeof libelleAuto === 'string' ? libelleAuto.trim() : '';
     const retires = elaguerCiblesFermees();
     elBtnEnregistrer.disabled = true;
@@ -7384,6 +7159,7 @@
     const memeListe = (a, b) => a.length === b.length && a.every((item, rang) => item === b[rang]);
     const envoyes = {
       levels: { ...brouillon.levels },
+      practice: SpherierCore.clone(brouillon.practice || {}),
       passees: [...(brouillon.passees || [])],
       derniere: JSON.stringify(brouillon.derniere || null),
       current: [...brouillon.current],
@@ -7392,15 +7168,18 @@
     };
 
     try {
-      const reponse = await fetch('/api/snapshot', {
+      const reponse = await apiFetch('/api/snapshot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           uuid: CLIENT_ID,
+          base_snapshot_id: etat.snapshot?.id || null,
+          kind,
+          practice: brouillon.practice || {},
           // Reprise de la version que le serveur vient de servir, jamais une constante
           // écrite en dur : elle avait déjà divergé au passage du référentiel en v3.
           referential_version: etat.referentiel.version,
-          label: elLibelle.value.trim() || repli || null,
+          label: kind === 'checkpoint' ? (repli || 'Bilan') : (elLibelle.value.trim() || repli || null),
           levels: brouillon.levels,
           selections: { current: brouillon.current, later: brouillon.later },
           // Contexte de l'audit modulaire : ce qui a été passé sciemment, et où le
@@ -7412,6 +7191,7 @@
           priorites: etatPriorites(),
         }),
       });
+      if (reponse.status === 409) { enregistrerBrouillon(); return await traiterConflitSnapshot(brouillon); }
       if (!reponse.ok) {
         const d = await reponse.json().catch(() => ({}));
         throw new Error(d.erreur || `Le serveur a répondu ${reponse.status}`);
@@ -7425,6 +7205,7 @@
       const prioritesEnregistrees = data.priorites ?? data.snapshot.blob.priorites ?? etatPriorites();
       reference = {
         levels: { ...data.snapshot.blob.levels },
+        practice: SpherierCore.clone(data.snapshot.blob.practice || {}),
         current: [...sel.current],
         later: [...sel.later],
         priorites: JSON.parse(JSON.stringify(prioritesEnregistrees)),
@@ -7457,6 +7238,7 @@
 
       brouillon = {
         levels: { ...reference.levels, ...niveauxDepuis },
+        practice: SpherierCore.equal(envoyes.practice, brouillon.practice || {}) ? SpherierCore.clone(reference.practice) : SpherierCore.clone(brouillon.practice || {}),
         current: currentBouge ? [...brouillon.current] : [...reference.current],
         later: laterBouge ? [...brouillon.later] : [...reference.later],
         passees: [...new Set([...passeesServeur, ...passeesAjoutees])]
@@ -7467,12 +7249,15 @@
           : JSON.parse(JSON.stringify(prioritesEnregistrees)),
       };
 
+      etat.computed.levels = { ...brouillon.levels };
+      etat.computed.themes = calculerOuvertureLocale(brouillon.levels);
       // Effacer le brouillon local alors qu'il reste des écarts les perdrait au
       // prochain rechargement : on le réécrit dans ce cas au lieu de le supprimer.
       try {
         if (estModifie() || passeesDivergent()) enregistrerBrouillon();
-        else localStorage.removeItem(cleBrouillon());
+        else effacerBrouillon();
       } catch { /* stockage indisponible : on continue sans filet */ }
+      persisterAudit();
       elLibelle.value = '';
       majDernierPoint();
       majBarre();
@@ -7483,17 +7268,17 @@
         rendreCiel();
         rendreNiveauxAccueil();
       }
-      if (competenceAffichee) rafraichirPanneau(competenceAffichee.code);
+      if (competenceAffichee && document.activeElement?.id !== 'note-champ') rafraichirPanneau(competenceAffichee.code);
 
       // « Tu peux fermer cette page. » tombait mal en fin de thématique, à l'instant
       // précis où l'écran de résultat invite à poursuivre. Un libellé auto n'est posé
       // que par la fin d'une thématique : il sert de repère pour choisir la phrase.
-      bandeau(repli !== '' ? 'Thématique enregistrée.' : 'Ton sphérier est enregistré.',
+      bandeau(kind === 'checkpoint' ? 'Bilan enregistré.' : 'Ton sphérier est enregistré.',
         retires > 0
           ? `${retires} cible${retires > 1 ? 's ont' : ' a'} été retirée${retires > 1 ? 's' : ''} : sa thématique s'est refermée.`
           : (repli !== ''
             ? 'Tes réponses sont en sécurité. Tu peux continuer ou t\'arrêter là.'
-            : 'Tu peux fermer cette page.'),
+            : (estModifie() ? 'Tes derniers changements attendent encore une sauvegarde.' : 'Tes changements sont conservés dans ton espace.')),
         'succes');
       const evaluees = etat.referentiel.competencies
         .filter((competence) => (brouillon.levels[competence.id] ?? 0) > 0).length;
@@ -7505,7 +7290,7 @@
     } catch (err) {
       // Rien n'est perdu : le brouillon local tient, l'écran garde les modifications.
       bandeau("L'enregistrement n'a pas abouti.",
-        `${err.message}. Tes modifications sont conservées sur cet appareil : réessaie quand la connexion revient.`,
+        `${err.message}. ${messageConservation()} Réessaie quand la connexion revient.`,
         'echec', { libelle: 'Réessayer', faire: () => enregistrer(repli) });
       return false;
     } finally {
@@ -7521,6 +7306,7 @@
     if (modifies > 5 && !window.confirm(`Annuler ${modifies} positionnements non enregistrés ?`)) return;
     brouillon = {
       levels: { ...reference.levels },
+      practice: SpherierCore.clone(reference.practice || {}),
       current: [...reference.current],
       later: [...reference.later],
       // Annuler des positionnements ne revient pas sur les compétences écartées
@@ -7535,7 +7321,13 @@
     };
     etat.computed.levels = { ...reference.levels };
     etat.computed.themes = calculerOuvertureLocale(brouillon.levels);
-    try { localStorage.removeItem(cleBrouillon()); } catch {}
+    if (brouillon.derniere) {
+      const dimension = dimensionParId(brouillon.derniere.dimensionId);
+      const codes = brouillon.derniere.mode === 'dimension' && dimension ? codesDeDimension(dimension) : codesDeTheme(brouillon.derniere.themeId);
+      const premier = codes.find(estAFaire);
+      if (premier) brouillon.derniere.code = premier;
+    }
+    effacerBrouillon();
     // Le brouillon vient d'être effacé : le contexte d'audit, lui, doit y retourner.
     persisterAudit();
     majBarre();
@@ -7618,7 +7410,7 @@
     const liens = positions.slice(1, dimensions.length).map((position) => `<line class="ciel-lien" x1="${positions[0].x}" y1="${positions[0].y}" x2="${position.x}" y2="${position.y}"/>`).join('');
     const prioriteDansCategorie = resultat && brouillon.current.some((code) => codes.includes(code));
     const attribut = resultat ? 'data-resultat-categorie' : 'data-categorie';
-    return `<section class="ciel-categorie" ${attribut}="${echapper(categorie.id)}" role="button" tabindex="0" style="--sphere-color:${categorie.couleur || '#c9a661'}">
+    return `<section class="ciel-categorie" ${attribut}="${echapper(categorie.id)}" style="--sphere-color:${categorie.couleur || '#c9a661'}">
       ${prioriteDansCategorie ? '<span class="priorite-marque">Priorité choisie</span>' : ''}
       <h2 class="ciel-categorie-titre">${echapper(categorie.name)}</h2>
       ${categorie.definition && !resultat ? `<p class="ciel-categorie-def">${echapper(categorie.definition)}</p>` : ''}
@@ -7641,9 +7433,7 @@
         ouvrirCategorie(bloc.dataset.categorie);
       };
       bloc.addEventListener('click', ouvrir);
-      bloc.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); ouvrir(event); }
-      });
+
     });
     elCielPiste.querySelectorAll('[data-ouvrir]').forEach((bouton) => {
       bouton.addEventListener('click', (event) => { event.stopPropagation(); ouvrirDimensionDepuisCiel(bouton.dataset.ouvrir); });
@@ -7738,6 +7528,7 @@
     }
   }
 
+  document.getElementById('detail-accueil').onclick = () => { allerAuCiel(); requestAnimationFrame(() => elCiel.scrollIntoView({ block: 'start', behavior: 'auto' })); };
   document.getElementById('detail-retour').addEventListener('click', () => {
     if (etat.vue === 'detail' && etat.categorieOuverte) ouvrirCategorie(etat.categorieOuverte);
     else allerAuCiel();
@@ -7771,7 +7562,7 @@
   // CHARGEMENT
   // ============================================================
   async function lireJson(url) {
-    const reponse = await fetch(url);
+    const reponse = await apiFetch(url);
     if (!reponse.ok) {
       const detail = await reponse.json().catch(() => ({}));
       throw new Error(detail.erreur || `Le serveur a répondu ${reponse.status}`);
@@ -7782,7 +7573,7 @@
   async function signalerProspect(type, details = {}, options = {}) {
     if (!CLIENT_ID) return;
     try {
-      await fetch('/api/prospect-event', {
+      await apiFetch('/api/prospect-event', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uuid: CLIENT_ID, type, ...details }),
@@ -7856,6 +7647,7 @@
         ?? { themes: {}, dimensions: {}, classement: [] };
       reference = {
         levels: { ...etat.computed.levels },
+        practice: SpherierCore.clone(etatClient.snapshot?.blob?.practice || {}),
         current: cur,
         later: [...new Set(sel.later || [])].filter((c) => !cur.includes(c)),
         priorites: JSON.parse(JSON.stringify(prioritesServeur)),
@@ -7865,6 +7657,7 @@
       const auditServeur = etatClient.audit ?? etatClient.snapshot?.blob?.audit ?? {};
       brouillon = {
         levels: { ...reference.levels },
+        practice: SpherierCore.clone(reference.practice || {}),
         current: [...reference.current],
         later: [...reference.later],
         passees: [...(auditServeur.passees || [])],
@@ -7874,34 +7667,16 @@
 
       // Reprise d'un travail interrompu : page fermée, onglet perdu, réseau tombé.
       const repris = lireBrouillon();
-      if (repris && repris.levels) {
-        brouillon = {
-          levels: { ...repris.levels },
-          current: [...(repris.current || [])],
-          later: [...(repris.later || [])],
-          // Le brouillon local est plus récent que le snapshot : il fait autorité sur
-          // le contexte d'audit aussi, sinon un « Passer » non enregistré disparaîtrait.
-          passees: [...(repris.passees || brouillon.passees || [])],
-          derniere: repris.derniere || brouillon.derniere || null,
-          // Même raisonnement pour les priorités : le brouillon local est plus récent.
-          priorites: JSON.parse(JSON.stringify(repris.priorites || brouillon.priorites)),
-        };
-        if (estModifie()) {
-          brouillonRestaure = true;
-          etat.computed.levels = { ...etat.computed.levels, ...brouillon.levels };
-          etat.computed.themes = calculerOuvertureLocale(brouillon.levels);
-          bandeau('Tes modifications ont été retrouvées.',
-            "Elles n'avaient pas été enregistrées : elles t'attendaient sur cet appareil.",
-            'succes', null, { enHaut: true });
-        } else if ((brouillon.passees || []).length === 0 && !brouillon.derniere
-          && (brouillon.priorites?.classement || []).length === 0) {
-          // Le brouillon ne diffère de la référence que sur des niveaux : rien à garder.
-          // S'il porte des compétences passées ou un repère de reprise, on le laisse :
-          // `estModifie()` ne les voit pas, et les effacer les perdrait au rechargement
-          // suivant.
-          try { localStorage.removeItem(cleBrouillon()); } catch {}
+      restaurerTravailLocal(repris, reference);
+      try {
+        const navigation = JSON.parse(memoLire(cleNavigation()) || 'null');
+        if (navigation?.baseSnapshotId === (etat.snapshot?.id || null)) {
+          brouillon.derniere = navigation.derniere || brouillon.derniere;
+          brouillon.passees = navigation.passees || brouillon.passees;
         }
-      }
+      } catch { /* Invalid navigation is safely ignored. */ }
+      etat.computed.levels = { ...brouillon.levels };
+      etat.computed.themes = calculerOuvertureLocale(brouillon.levels);
 
       rendreDimensions();
       // Afficher AVANT de dessiner : getBBox() renvoie zéro dans un élément masqué, et
@@ -7922,6 +7697,7 @@
 
       majAuditInitial();
 
+      if (new URLSearchParams(location.search).get('vue') === 'mois') afficherDashboard();
       document.body.dataset.pret = 'oui';
       document.body.dataset.snapshotCharge = etat.snapshot ? 'oui' : 'non';
     } catch (err) {
@@ -7948,6 +7724,7 @@
     return brut || 'Erreur inconnue.';
   }
 
+  initialiserProgression();
   demarrer();
 </script>
 

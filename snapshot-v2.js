@@ -12,20 +12,16 @@ function estUuidV4(valeur) {
   return typeof valeur === 'string' && UUID_V4_RE.test(valeur.trim());
 }
 
-// Dernier snapshot v2 du membre.
-//
-// Les snapshots antérieurs (référentiel v1) restent en base mais sont ignorés : leur
-// blob décrit une tout autre structure, les comparer n'aurait aucun sens. On ne peut
-// pas filtrer en SQL sur une clé JSON via PostgREST de façon lisible ici, donc on
-// récupère les plus récents et on retient le premier qui est en v2.
+// Dernière sauvegarde compatible, filtrée côté base avant la limite.
 async function lireDernierSnapshotV2(clientId) {
   const supabase = creerClientServeur();
   const { data, error } = await supabase
     .from(TABLE_SNAPSHOTS)
     .select('id, client_id, libelle, cree_le, blob')
     .eq('client_id', clientId)
-    .order('cree_le', { ascending: false })
-    .limit(50);
+    .eq('blob->>referential_version', String(VERSION_REFERENTIEL))
+    .order('cree_le', { ascending: false }).order('id', { ascending: false })
+    .limit(1);
 
   if (error) throw new Error(`Lecture du snapshot impossible : ${error.message}`);
 
@@ -146,7 +142,7 @@ function validerPriorites({ referentiel, brut, competenceParCode, erreurs }) {
     }
   }
 
-  return { themes, dimensions, classement };
+  return { themes, dimensions, classement, ...(brut.initialized === true ? { initialized: true } : {}) };
 }
 
 // Dérive « maintenant » et « plus tard » du classement. `current` reste EXACTEMENT les
@@ -160,7 +156,7 @@ function validerPriorites({ referentiel, brut, competenceParCode, erreurs }) {
 // aujourd'hui donne le même résultat qu'un snapshot écrit aujourd'hui.
 function deriverSelections({ priorites, maxMaintenant, laterExistant = [], estOuverte = () => true }) {
   const classement = priorites?.classement ?? [];
-  if (classement.length === 0) return null;
+  if (classement.length === 0 && priorites?.initialized !== true) return null;
 
   const tete = classement.slice(0, maxMaintenant);
   // Une compétence dont la thématique est fermée ne peut pas être une cible : le
@@ -197,7 +193,7 @@ function composerEtat({ referentiel, snapshot }) {
     // L'ancien « maintenant » entre dans la file d'attente avant l'ancien « plus tard ».
     // Sans lui, les trois priorités choisies avant l'existence du classement
     // disparaîtraient du modèle au premier classement, sans un mot.
-    laterExistant: [...(selectionsBlob.current ?? []), ...(selectionsBlob.later ?? [])],
+    laterExistant: [...((priorites.initialized && priorites.classement.length === 0) ? [] : (selectionsBlob.current ?? [])), ...(selectionsBlob.later ?? [])],
     estOuverte: (code) => themesOuverts[competenceParCode.get(code)?.theme]?.status === 'open',
   });
   const snapshotSorti = derivees && snapshot
@@ -222,6 +218,9 @@ function composerEtat({ referentiel, snapshot }) {
 // forgée ne doit pas pouvoir contourner le plafond ni le verrouillage pédagogique.
 function validerEtNormaliser({ referentiel, corps }) {
   const erreurs = [];
+  if (!corps || typeof corps !== 'object' || Array.isArray(corps)) return { erreurs: ['Le corps doit être un objet JSON.'] };
+  if (corps.kind !== undefined && !['autosave', 'checkpoint'].includes(corps.kind)) erreurs.push('Type de point invalide.');
+  if (corps.label != null && (typeof corps.label !== 'string' || corps.label.length > 160)) erreurs.push('Libellé limité à 160 caractères.');
 
   if (!estUuidV4(corps.uuid)) {
     erreurs.push('uuid manquant ou invalide (UUID v4 attendu).');
@@ -286,7 +285,7 @@ function validerEtNormaliser({ referentiel, corps }) {
     maxMaintenant: MAX_CIBLES_MAINTENANT,
     // Même raison qu'à la relecture : ce que le membre travaillait avant de classer
     // passe en tête de sa file d'attente au lieu de sortir du modèle.
-    laterExistant: [...currentBrut, ...laterBrut],
+    laterExistant: [...((priorites.initialized && priorites.classement.length === 0) ? [] : currentBrut), ...laterBrut],
     estOuverte: (code) => ouverture[competenceParCode.get(code)?.theme]?.status === 'open',
   });
   const currentFiltre = derivees ? derivees.current : currentBrut;
@@ -328,9 +327,27 @@ function validerEtNormaliser({ referentiel, corps }) {
     const dimensionId = identifiantBorne(brute.dimensionId);
     const themeId = identifiantBorne(brute.themeId);
     if (code && dimensionId && themeId && competenceParCode.has(code)) {
-      derniere = { dimensionId, themeId, code };
+      const theme = (referentiel.themes || []).find(t => t.id === themeId);
+      const dimension = (referentiel.dimensions || []).find(d => d.id === dimensionId);
+      if (competenceParCode.get(code).theme === themeId && dimension?.name === theme?.dimension) {
+        derniere = { dimensionId, themeId, code, ...(brute.mode === 'dimension' ? { mode: 'dimension' } : {}) };
+      }
     }
   }
+
+  const practice = {};
+  if (corps.practice !== undefined && (!corps.practice || typeof corps.practice !== 'object' || Array.isArray(corps.practice))) erreurs.push('La pratique doit être un objet.');
+  else for (const [code, entry] of Object.entries(corps.practice || {})) {
+    if (!competenceParCode.has(code)) continue;
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) { erreurs.push('Pratique invalide.'); continue; }
+    const clean = {};
+    for (const key of ['action', 'situation', 'evidence', 'observation']) {
+      if (entry[key] !== undefined && (typeof entry[key] !== 'string' || entry[key].length > 2000)) erreurs.push('Chaque champ de pratique est limité à 2000 caractères.');
+      else clean[key] = (entry[key] || '').trim();
+    }
+    practice[code] = clean;
+  }
+  if (erreurs.length) return { erreurs };
 
   return {
     erreurs: [],
@@ -338,6 +355,8 @@ function validerEtNormaliser({ referentiel, corps }) {
     libelle: typeof corps.label === 'string' && corps.label.trim() !== '' ? corps.label.trim() : null,
     blob: {
       referential_version: VERSION_REFERENTIEL,
+      kind: corps.kind || 'autosave',
+      practice,
       levels,
       // « plus tard » est libre : sans plafond, et autorisé même en thématique verrouillée.
       selections: { current: currentFiltre, later: laterFiltre },
@@ -351,16 +370,13 @@ function validerEtNormaliser({ referentiel, corps }) {
 }
 
 // Écriture append-only : jamais d'UPDATE, chaque enregistrement est une nouvelle ligne.
-async function ecrireSnapshotV2({ clientId, libelle, blob }) {
-  const supabase = creerClientServeur();
-  const { data, error } = await supabase
-    .from(TABLE_SNAPSHOTS)
-    .insert({ client_id: clientId, libelle, blob })
-    .select('id, client_id, libelle, cree_le, blob')
-    .single();
-
+async function ecrireSnapshotV2({ clientId, libelle, blob, baseSnapshotId }) {
+  const { data, error } = await creerClientServeur().rpc('save_spherier_snapshot', {
+    p_client_id: clientId, p_base_id: baseSnapshotId, p_libelle: libelle, p_blob: blob,
+  });
   if (error) throw new Error(`Insertion du snapshot impossible : ${error.message}`);
-  return data;
+  if (data.conflict) throw Object.assign(new Error('Une version plus récente existe.'), { status: 409, current: data.current });
+  return data.snapshot;
 }
 
 module.exports = {

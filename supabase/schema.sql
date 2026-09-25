@@ -50,6 +50,7 @@ create table if not exists public.notes (
   texte      text not null,
   cree_le    timestamptz not null default now(),
   maj_le     timestamptz not null default now(),
+  revision   bigint not null default 1,
   constraint notes_client_code_unique unique (client_id, code)
 );
 
@@ -66,3 +67,6 @@ alter table public.notes     enable row level security;
 --     -> notes     | true
 --   select count(*) from pg_policies where schemaname='public';
 --     -> 0
+
+-- Après ce schéma, appliquer les migrations du dossier migrations dans l’ordre.
+-- 20260925_progression.sql installe les écritures atomiques et l’index des bilans.
